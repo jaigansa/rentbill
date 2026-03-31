@@ -1,6 +1,6 @@
 module rentbill
 
-go 1.26.1
+go 1.23.0
 
 require (
 	github.com/gin-contrib/sessions v1.0.4
