@@ -1,0 +1,78 @@
+:root {
+    /* E-Ink High Contrast Palette */
+    --primary: #000000;
+    --primary-hover: #333333;
+    --primary-light: #eeeeee;
+    --secondary: #444444;
+    --success: #000000;
+    --danger: #000000;
+    --warning: #000000;
+    --info: #000000;
+
+    /* E-Ink Theme Variables */
+    --bg-main: #ffffff;
+    --bg-card: #f0f0f0; /* Slightly off-white for E-ink depth */
+    --bg-input: #fafafa;
+    --text-main: #000000;
+    --text-muted: #4a4a4a;
+    --border: #000000;
+    --shadow: none;
+
+    /* Sharp Corner Aesthetic (Strict 0px) */
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-xl: 0px;
+
+    --font-main:
+        "ui-monospace", "Cascadia Code", "Source Code Pro", Menlo, Monaco,
+        Consolas, "Courier New", monospace;
+    --font-heading:
+        "ui-monospace", "Cascadia Code", "Source Code Pro", Menlo, Monaco,
+        Consolas, "Courier New", monospace;
+
+    /* Accessibility: Minimum Touch Target Size */
+    --touch-target-min: 44px;
+    --touch-target-gap: 8px;
+
+    /* Focus Indicators for Accessibility */
+    --focus-ring: 2px solid #000000;
+    --focus-outline: 2px dotted #000000;
+}
+
+/* E-Ink Responsive Variables */
+@media (min-width: 768px) {
+    :root {
+        --text-base: 0.875rem;
+        --text-sm: 0.75rem;
+        --text-xs: 0.625rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    :root {
+        --text-base: 1rem;
+    }
+}
+
+/* E-Ink Dark Mode (Inverse High Contrast) */
+body.dark-mode {
+    --bg-main: #000000;
+    --bg-card: #121212; /* Deeper black for main cards */
+    --bg-input: #1a1a1a; /* Lighter than card for form fields */
+    --text-main: #ffffff;
+    --text-muted: #b0b0b0;
+    --border: #ffffff;
+    --primary: #ffffff;
+    --success: #ffffff;
+    --danger: #ffffff;
+    --warning: #ffffff;
+    --info: #ffffff;
+    --primary-light: #222222; /* High contrast highlight for active rows */
+    --shadow: none;
+}
+
+@media (min-width: 768px) {
+    body.dark-mode {
+        --text-muted: #d0d0d0;
+    }
+}

@@ -1,0 +1,260 @@
+/* --- ANIMATIONS: E-INK OPTIMIZED --- */
+/* E-Ink has no transitions - use instant state changes */
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+@keyframes toastSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+@keyframes pulse {
+    from {
+        opacity: 0.6;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes blink {
+    from {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Reduced animations for E-ink feel */
+* {
+    transition: none !important;
+}
+
+/* Exception: Only essential state changes */
+.btn,
+.sidebar-btn,
+input,
+select {
+    transition:
+        box-shadow 0s,
+        transform 0s,
+        background-color 0s !important;
+}
+
+/* --- PIN DOTS: TOUCH-FRIENDLY --- */
+.pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    cursor: pointer;
+}
+
+.dot.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+/* --- PROGRESS BAR: NO TRANSITIONS --- */
+.progress-container {
+    background: var(--bg-main);
+    height: 12px;
+    border-radius: 0px;
+    overflow: hidden;
+    margin: 1.25rem 0;
+    border: 2px solid var(--border);
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--text-main);
+    width: 0%;
+}
+
+/* --- NOTIFICATIONS: E-INK STYLE --- */
+#notification-container {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 400px;
+}
+
+.notification {
+    background: var(--bg-card);
+    color: var(--text-main);
+    padding: 1rem 1.5rem;
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    border-left: 4px solid var(--primary);
+    font-weight: 700;
+    animation: toastSlideIn 0.2s ease;
+    display: flex;
+    align-items: center;
+    min-width: 280px;
+    min-height: 52px; /* Minimum touch target */
+    cursor: default;
+}
+
+.notification.success {
+    border-left-color: var(--success);
+}
+.notification.error {
+    border-left-color: var(--danger);
+}
+.notification.info {
+    border-left-color: var(--info);
+}
+.notification.warning {
+    border-left-color: var(--warning);
+}
+
+/* --- LOGS: E-INK STYLE --- */
+.log-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem 0;
+    border-bottom: 2px solid var(--border);
+}
+
+.log-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--text-main);
+    color: var(--bg-card);
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    font-weight: 900;
+    font-size: 1rem;
+}
+
+.log-action {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+}
+
+/* --- RESPONSIVE UTILITIES --- */
+/* Mobile first adjustments */
+@media (max-width: 768px) {
+    .notification {
+        width: 100%;
+        max-width: 100%;
+        padding: 0.875rem 1rem;
+    }
+
+    .log-item {
+        padding: 1rem 0;
+    }
+
+    .log-icon-box {
+        width: 38px;
+        height: 38px;
+        font-size: 0.875rem;
+    }
+
+    .log-action {
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .notification {
+        padding: 0.75rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .log-icon-box {
+        width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+    }
+
+    .log-action {
+        font-size: 0.6rem;
+    }
+}
+
+/* Focus indicators for accessibility */
+:focus-visible {
+    outline: 2px solid var(--text-main);
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast toggle */
+@media (prefers-contrast: high) {
+    :root {
+        --bg-card: #ffffff;
+        --text-main: #000000;
+        --border: #000000;
+    }
+
+    body.dark-mode {
+        --bg-card: #000000;
+        --text-main: #ffffff;
+        --border: #ffffff;
+    }
+}

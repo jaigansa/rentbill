@@ -1,0 +1,24 @@
+# Binaries
+rentbill
+rentbill_prod
+
+# Databases
+*.db
+*.db-journal
+
+# Backups
+backups/
+
+# Local Config
+config.json
+
+# Releases
+*.tar.gz
+rentbill_release/
+
+# Project Audits
+UI_UX_IMPROVEMENTS.md
+
+# OS files
+.DS_Store
+Thumbs.db

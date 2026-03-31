@@ -1,0 +1,596 @@
+/* --- BUTTONS --- */
+.btn {
+    border: 3px solid var(--border); /* Thick E-Ink Stroke */
+    border-radius: 0px; /* STRICT SHARP CORNER */
+    padding: 1rem 1.75rem;
+    min-height: 48px;
+    font-weight: 900;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    transition: none; /* Instant for E-ink */
+    white-space: nowrap;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-card);
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.btn:hover {
+    box-shadow: 2px 2px 0px var(--border);
+}
+
+.btn:active {
+    background: var(--text-main);
+    color: var(--bg-card);
+    transform: translate(2px, 2px);
+}
+
+.btn.active {
+    background: var(--text-main) !important;
+    color: var(--bg-card) !important;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background: var(--text-main);
+    color: var(--bg-card);
+    border: 3px solid var(--border);
+}
+
+.btn-danger {
+    border-style: dashed; /* E-ink distinction */
+    border: 3px solid var(--border);
+}
+
+/* Icon-only Buttons */
+.btn-icon {
+    width: 44px;
+    height: 44px;
+    padding: 0 !important;
+    min-height: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon-sm {
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    min-height: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon svg,
+.btn-icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.btn-icon-sm svg,
+.btn-icon-sm i {
+    width: 16px;
+    height: 16px;
+}
+
+/* --- TOP SECRET / E-INK ENHANCEMENTS --- */
+.card {
+    background: var(--bg-card);
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    border: 2px solid var(--border);
+    padding: 1.5rem;
+    position: relative;
+}
+
+/* Enhanced Card Header */
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border);
+}
+
+.section-title {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em; /* Enhanced E-ink readability */
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--text-main);
+    color: var(--bg-card);
+    padding: 5px 12px;
+}
+
+@media (max-width: 480px) {
+    .section-title {
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        padding: 4px 10px;
+    }
+}
+
+.section-title i,
+.section-title svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* --- E-INK RIGID INPUTS --- */
+.input-group {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.input-group label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    background: var(--bg-card); /* Match card for notch */
+    padding: 0 8px;
+    z-index: 5;
+    pointer-events: none;
+    letter-spacing: 0.05em;
+}
+
+body.dark-mode .input-group label {
+    background: var(--bg-main); /* In dark mode, labels sit on top of cards or main bg */
+}
+
+.input-group input,
+.input-group select {
+    width: 100%;
+    padding: 1.1rem 1.25rem;
+    border-radius: 0px;
+    border: 3px solid var(--border);
+    background: var(--bg-card); /* Match label bg */
+    color: var(--text-main);
+    font-weight: 800;
+    text-transform: uppercase;
+    outline: none;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    appearance: none;
+}
+
+.input-group select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2rem;
+    padding-right: 3rem;
+}
+
+body.dark-mode .input-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border: 3px solid var(--text-main);
+    background: var(--bg-card);
+    box-shadow: 3px 3px 0px var(--text-main); /* High-contrast focus shadow */
+    outline: none;
+}
+
+/* Ensure the custom arrow is always visible and consistent */
+.input-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 1rem !important;
+    padding-right: 3rem !important;
+}
+
+body.dark-mode .input-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+.input-group:focus-within label {
+    color: var(--primary);
+    font-weight: 900;
+}
+
+.input-group select::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
+/* Custom Options List - E-ink dropdown menu */
+.input-group select option {
+    font-family: var(--font-main);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    padding: 0.5rem;
+    border-radius: 0px; /* Force sharp corners */
+}
+
+.input-group select option:hover,
+.input-group select option:focus {
+    background: var(--text-main);
+    color: var(--bg-card);
+    outline: none;
+}
+
+.input-group select option:checked {
+    background: var(--text-main);
+    color: var(--bg-card);
+}
+
+/* Custom E-ink Select Wrapper for Better Control */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrapper .select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 48px;
+    padding: 0.75rem 1rem;
+    border: 3px solid var(--border);
+    border-radius: 0px;
+    background: var(--bg-input);
+    color: var(--text-main);
+    cursor: pointer;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    box-shadow: 2px 2px 0px var(--border);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+.select-wrapper .select-trigger:hover {
+    box-shadow: 1px 1px 0px var(--border);
+}
+
+.select-wrapper .select-trigger:active {
+    box-shadow: 0px 0px 0px var(--border);
+    transform: translate(2px, 2px);
+}
+
+.select-wrapper .select-trigger:focus-visible {
+    outline: 3px solid var(--text-main);
+    outline-offset: 2px;
+}
+
+.select-wrapper .select-trigger::after {
+    content: "";
+    width: 16px;
+    height: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='m4 7 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    margin-left: 0.75rem;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+body.dark-mode .select-trigger {
+    background: var(--bg-input);
+    color: var(--text-main);
+}
+
+body.dark-mode .select-trigger::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='square'%3E%3Cpath d='m4 7 4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* Hide default select */
+.select-wrapper select {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Custom Dropdown Options Container */
+.select-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    background: var(--bg-input);
+    border: 3px solid var(--border);
+    border-radius: 0px;
+    box-shadow: 4px 4px 0px var(--border);
+    z-index: 1000;
+    font-family: var(--font-main);
+}
+
+.select-dropdown::-webkit-scrollbar {
+    width: 10px;
+}
+
+.select-dropdown::-webkit-scrollbar-track {
+    background: var(--bg-input);
+}
+
+.select-dropdown::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border: 2px solid var(--bg-input);
+    border-radius: 0px;
+}
+
+.select-dropdown option {
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+}
+
+.select-dropdown option:hover,
+.select-dropdown option:focus {
+    background: var(--text-main);
+    color: var(--bg-card);
+}
+
+/* Multiple Select E-ink Style */
+.multiple-select .select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.select-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--text-main);
+    color: var(--bg-card);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 2px solid var(--border);
+    border-radius: 0px;
+}
+
+/* Select Button for Toggle */
+.select-wrapper .select-trigger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Mobile touch-friendly inputs */
+@media (max-width: 480px) {
+    .input-group input,
+    .input-group select {
+        padding: 1.1rem 1.35rem;
+        font-size: 1rem;
+    }
+}
+
+.tenant-row {
+    background: var(--bg-card);
+    border: 3px solid var(--border);
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.tenant-header {
+    padding: 1.1rem 1.35rem; /* Better touch target */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.tenant-row:hover .tenant-header {
+    background: var(--bg-input);
+}
+
+.billing-controls {
+    padding: 1.5rem;
+    background: var(--bg-input);
+    border-top: 3px solid var(--border);
+}
+
+.billing-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+    .billing-inputs {
+        grid-template-columns: 1fr; /* Stack on mobile */
+        gap: 1.25rem;
+    }
+}
+
+.room-badge {
+    background: var(--text-main);
+    color: var(--bg-card);
+    border: 3px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    min-width: 44px; /* MINIMUM TOUCH TARGET */
+    height: 44px; /* MINIMUM TOUCH TARGET */
+    padding: 0 0.5rem;
+    text-transform: uppercase;
+}
+
+/* --- BADGES --- */
+.badge {
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    border: 3px solid var(--border);
+    font-weight: 900;
+    padding: 0.5rem 0.75rem;
+}
+
+/* --- ICONS & STATS --- */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 1024px) {
+    .stats-row {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 850px) {
+    .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .stats-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+}
+
+.stat-card {
+    border: 3px solid var(--border);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.stat-icon {
+    width: 44px;
+    height: 44px; /* MINIMUM TOUCH TARGET */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0px; /* FORCE SHARP CORNER */
+    border: 3px solid var(--border);
+}
+
+.icon-primary {
+    color: var(--primary);
+    background: var(--primary-light);
+}
+.icon-success {
+    color: var(--success);
+    background: #ecfdf5;
+}
+.icon-danger {
+    color: var(--danger);
+    background: #fff1f2;
+}
+.icon-warning {
+    color: var(--warning);
+    background: #fffbeb;
+}
+
+body.dark-mode .icon-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid var(--success);
+}
+body.dark-mode .icon-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid var(--danger);
+}
+body.dark-mode .icon-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid var(--warning);
+}
+
+/* --- TABLES --- */
+.styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.styled-table th {
+    text-align: left;
+    padding: 1.25rem 1.5rem;
+    color: var(--text-muted);
+    border-bottom: 3px solid var(--border);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    font-weight: 900;
+}
+
+.styled-table td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+}
+
+.styled-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Mobile Table View */
+@media (max-width: 600px) {
+    .sm\:hidden {
+        display: block !important;
+    }
+    .styled-table thead {
+        display: none;
+    }
+    .styled-table,
+    .styled-table tbody,
+    .styled-table tr,
+    .styled-table td {
+        display: block;
+        width: 100%;
+    }
+    .styled-table tr {
+        padding: 1.25rem;
+        border-bottom: 3px solid var(--border);
+        position: relative;
+        background: var(--bg-card);
+        margin-bottom: 0.75rem;
+    }
+    .styled-table td {
+        padding: 0 !important;
+        border: none !important;
+        margin-bottom: 0.75rem;
+    }
+    .styled-table td:last-child {
+        margin-bottom: 0;
+    }
+
+    .history-actions-mobile {
+        position: absolute;
+        top: 1.25rem;
+        right: 1.25rem;
+    }
+}
+
+@media (min-width: 601px) {
+    .sm\:hidden {
+        display: none !important;
+    }
+}

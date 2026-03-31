@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head></head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Ink Dropdown Component Examples</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/modules/variables.css">
+    <link rel="stylesheet" href="../css/modules/base.css">
+    <link rel="stylesheet" href="../css/modules/layout.css">
+    <link rel="stylesheet" href="../css/modules/components.css">
+    <link rel="stylesheet" href="../css/modules/utilities.css">
+    <style></style>
+        body {
+            padding: 2rem 1rem;
+            background: var(--bg-main);
+            font-family: var(--font-main);
+        }
+        .example-section {
+            margin: 2rem 0;
+            border: 3px solid var(--border);
+            padding: 1.5rem;
+            border-radius: 0px;
+        }
+        .example-title {
+            font-size: 1rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+        .example-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .example-select {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 3px solid var(--border);
+            border-radius: 0px;
+            font-family: var(--font-main);
+            font-weight: 800;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            background: var(--bg-input);
+            color: var(--text-main);
+            appearance: none;
+            cursor: pointer;
+        }
+        .example-select:focus {
+            border: 3px solid var(--text-main);
+            outline: none;
+            box-shadow: 2px 2px 0px var(--text-main);
+        }
+        .options-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .option-card {
+            border: 2px solid var(--border);
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: none;
+        }
+        .option-card.selected {
+            background: var(--text-main);
+            color: var(--bg-card);
+        }
+        .dark-mode-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            width: 48px;
+            height: 48px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body></body>
+    <button class="btn btn-icon-sm dark-mode-toggle" onclick="toggleDarkMode()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3 8 7 4 3m0 10 4 4 4-4M5 3v10M11 3v10M3 8h10" stroke-linecap="square" stroke-linejoin="miter"/>
+        </svg>
+    </button>
+
+    <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 2rem 1rem;">
+        <h1 style="font-weight: 900; text-transform: uppercase; margin-bottom: 2rem; border-bottom: 3px solid var(--border); padding-bottom: 0.5rem;">
+            E-Ink Dropdown Component Examples
+        </h1>
+
+        <div class="example-section">
+            <div class="example-title">Basic Select Input</div>
+
+            <label class="example-label">Room Number</label>
+            <select class="example-select">
+                <option value="" disabled selected>Select Room</option>
+                <option value="1">Room 1</option>
+                <option value="2">Room 2</option>
+                <option value="3">Room 3</option>
+                <option value="4">Room 4</option>
+                <option value="5">Room 5</option>
+            </select>
+        </div>
+
+        <div class="example-section">
+            <div class="example-title">Tenant Type Selection</div>
+
+            <label class="example-label">Tenant Type</label>
+            <select class="example-select">
+                <option value="" disabled selected>Tenant Type</option>
+                <option value="individual">Individual</option>
+                <option value="joint">Joint</option>
+                <option value="sublet">Sublet</option>
+            </select>
+        </div>
+
+        <div class="example-section">
+            <div class="example-title">Payment Method</div>
+
+            <label class="example-label">Payment Method</label>
+            <select class="example-select">
+                <option value="" disabled selected>Select Payment Method</option>
+                <option value="credit">Credit Card</option>
+                <option value="debit">Debit Card</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="cash">Cash</option>
+            </select>
+        </div>
+
+        <div class="example-section">
+            <div class="example-title">Notification Settings</div>
+
+            <label class="example-label">Email Notifications</label>
+            <select class="example-select">
+                <option value="" disabled selected></option>Frequency</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="never">Never</option>
+            </select>
+        </div>
+
+        <div class="example-section">
+            <div class="example-title">Multi-Select Example</div>
+
+            <label class="example-label">Features (Select multiple)</label>
+            <div class="options-list">
+                <div class="option-card" onclick="selectOption(this, 'feature1')">
+                    <strong></strong>Feature 1</strong>
+                </div>
+                <div class="option-card" onclick="selectOption(this, 'feature2')">
+                    <strong></strong>Feature 2</strong>
+                </div>
+                <div class="option-card" onclick="selectOption(this, 'feature3')">
+                    <strong></strong>Feature 3</strong>
+                </div>
+                <div class="option-card" onclick="selectOption(this, 'feature4')">
+                    <strong></strong>Feature 4</strong>
+                </div>
+                <div class="option-card" onclick="selectOption(this, 'feature5')">
+                    <strong></strong>Feature 5</strong>
+                </div>
+                <div class="option-card" onclick="selectOption(this, 'feature6')">
+                    <strong></strong>Feature 6</strong>
+                </div>
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">
+                Click items to select/deselect
+            </p>
+        </div>
+
+        <div class="example-section">
+            <div class="example-title">Touch-Friendly Mobile Example</div>
+            <p style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                Minimum 48px height for touch targets
+            </p>
+            <select class="example-select" style="min-height: 48px;">
+                <option value="" disabled selected></option>Touch Test</option>
+                <option value="touch1">Touch 1</option>
+                <option value="touch2">Touch 2</option>
+                <option value="touch3">Touch 3</option>
+            </select>
+        </div>
+    </div>
+
+    <script></script>
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        function selectOption(element, value) {
+            // Add/remove selected class for visual feedback
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+            } else {
+                element.classList.add('selected');
+            }
+        }
+    </script>
+</body>
+</html>

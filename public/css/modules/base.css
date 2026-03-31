@@ -1,0 +1,41 @@
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    -webkit-tap-highlight-color: transparent; 
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.4;
+    padding-bottom: env(safe-area-inset-bottom, 90px);
+    transition: none; /* E-ink has no transitions */
+    min-height: 100vh;
+    -webkit-font-smoothing: none; /* Sharper for E-ink */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+input, select, textarea, button {
+    font-family: inherit;
+    /* Prevent iOS zoom on focus */
+    font-size: 16px !important; 
+}
+
+@media (min-width: 851px) {
+    input, select, textarea, button {
+        font-size: 0.9rem !important;
+    }
+}
+
+.hidden { display: none !important; }
+
+/* Scrollbar Utilities */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

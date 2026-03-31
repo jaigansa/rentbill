@@ -1,0 +1,14 @@
+[Unit]
+Description=Rent Bill Pro Local Server
+After=network.target
+
+[Service]
+User=jaigansa
+Group=jaigansa
+WorkingDirectory=/home/jaigansa/Projects/accounts/rent
+ExecStart=/home/jaigansa/Projects/accounts/rent/rentbill
+Restart=always
+Environment=GIN_MODE=release
+
+[Install]
+WantedBy=multi-user.target

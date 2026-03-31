@@ -1,0 +1,10 @@
+{
+  "db_path": "./rentbill.db",
+  "master_pin_hash": "",
+  "username": "admin",
+  "email_user": "your-email@gmail.com",
+  "email_pass": "",
+  "email_bcc": "",
+  "session_secret": "generate-a-random-secret",
+  "upi_accounts": []
+}
