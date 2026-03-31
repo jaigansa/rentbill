@@ -14,7 +14,7 @@ echo "🚀 Starting build process..."
 
 # 1. Build Go Binary
 echo "Hamster Building Go application..."
-go build -o rentbill cmd/rentbill/main.go
+go build -o rentbill ./cmd/rentbill/main.go
 if [ $? -ne 0 ]; then
     echo "❌ Go Build failed!"
     exit 1
