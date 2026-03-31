@@ -109,13 +109,11 @@ function populateOwnerDropdown(accounts) {
     if (!select) return;
     const currentVal = select.value;
     
-    const allNames = [...new Set(accounts.map(a => a.owner_name))].filter(n => n);
-
-    select.innerHTML = '<option value="">-- Select Account --</option>';
-    allNames.forEach(name => {
+    select.innerHTML = '<option value="">-- Select Receiving Account --</option>';
+    accounts.forEach(acc => {
         const opt = document.createElement('option');
-        opt.value = name;
-        opt.innerText = name;
+        opt.value = acc.owner_name;
+        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
         select.appendChild(opt);
     });
     select.value = currentVal;

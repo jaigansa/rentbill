@@ -49,17 +49,15 @@ async function loadDashboardStats() {
         // Initialize with known owners from settings
         if (typeof appSettings !== 'undefined' && appSettings.receiving_accounts) {
             appSettings.receiving_accounts.forEach(acc => {
-                if (!settlements[acc.owner_name]) settlements[acc.owner_name] = { income: 0, payouts: 0 };
+                if (!settlements[acc.owner_name]) settlements[acc.owner_name] = { income: 0, payouts: 0, maintenance: 0 };
             });
         }
 
         // Add income per owner (Credit whoever actually received the money)
         allPaidBills.forEach(b => {
-            // Prioritize whoever actually received the money at payment time
-            // Fallback to assigned owner if receiver record is empty
             const owner = b.received_by || b.assigned_owner;
             if (owner) {
-                if (!settlements[owner]) settlements[owner] = { income: 0, payouts: 0 };
+                if (!settlements[owner]) settlements[owner] = { income: 0, payouts: 0, maintenance: 0 };
                 settlements[owner].income += b.paid_amount;
             }
         });
@@ -67,8 +65,18 @@ async function loadDashboardStats() {
         // Add payouts per owner
         if (Array.isArray(withdrawals)) {
             withdrawals.forEach(w => {
-                if (!settlements[w.owner_name]) settlements[w.owner_name] = { income: 0, payouts: 0 };
+                if (!settlements[w.owner_name]) settlements[w.owner_name] = { income: 0, payouts: 0, maintenance: 0 };
                 settlements[w.owner_name].payouts += w.amount;
+            });
+        }
+
+        // Add maintenance expenses per owner
+        if (Array.isArray(expenses)) {
+            expenses.forEach(e => {
+                if (e.owner_name) {
+                    if (!settlements[e.owner_name]) settlements[e.owner_name] = { income: 0, payouts: 0, maintenance: 0 };
+                    settlements[e.owner_name].maintenance += e.amount;
+                }
             });
         }
 
@@ -80,14 +88,15 @@ async function loadDashboardStats() {
             } else {
                 settlementList.innerHTML = owners.map(owner => {
                     const s = settlements[owner];
-                    const balance = s.income - s.payouts;
+                    // Balance = Income - (Payouts + Maintenance paid by this owner)
+                    const balance = s.income - (s.payouts + s.maintenance);
                     return `
                         <div class="tenant-row" style="padding: 1rem; border-left: 4px solid var(--primary);">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <div style="font-weight: 900; font-size: 0.9rem; text-transform: uppercase;">${owner}</div>
                                     <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                                        Income: ${currencyFormatter.format(s.income)} | Payouts: ${currencyFormatter.format(s.payouts)}
+                                        In: ${currencyFormatter.format(s.income)} | Out: ${currencyFormatter.format(s.payouts)} | Main: ${currencyFormatter.format(s.maintenance)}
                                     </div>
                                 </div>
                                 <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
@@ -107,7 +116,7 @@ async function loadDashboardStats() {
         }
         
         // --- Store data for timeline ---
-        window.dashboardState = { allPaidBills, withdrawals };
+        window.dashboardState = { allPaidBills, withdrawals, expenses };
 
         // Update Progress Bar
         const percent = finSummary.total_billed > 0 
@@ -282,7 +291,7 @@ function showOwnerTimeline(ownerName) {
     if (!container || !window.dashboardState) return;
 
     titleEl.innerText = ownerName;
-    const { allPaidBills, withdrawals } = window.dashboardState;
+    const { allPaidBills, withdrawals, expenses } = window.dashboardState;
 
     // Filter income
     const income = allPaidBills.filter(b => (b.received_by || b.assigned_owner) === ownerName).map(b => ({
@@ -292,33 +301,44 @@ function showOwnerTimeline(ownerName) {
         details: `Rent from ${b.tenant_name} (Unit ${b.room_no}) via ${b.payment_method || 'Unknown'}`
     }));
 
-    // Filter payouts
-    const payouts = withdrawals.filter(w => w.owner_name === ownerName).map(w => ({
+    // Filter payouts (Withdrawals)
+    const payouts = (withdrawals || []).filter(w => w.owner_name === ownerName).map(w => ({
         type: 'PAYOUT',
         date: w.date,
         amount: w.amount,
-        details: w.notes || 'No notes provided'
+        details: `CASH WITHDRAWAL: ${w.notes || 'No notes'}`
+    }));
+
+    // Filter maintenance expenses
+    const maintenance = (expenses || []).filter(e => e.owner_name === ownerName).map(e => ({
+        type: 'EXPENSE',
+        date: e.date,
+        amount: e.amount,
+        details: `MAINTENANCE (${e.category.toUpperCase()}): ${e.notes || 'Work'}`
     }));
 
     // Combine and sort by date descending
-    const timeline = [...income, ...payouts].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const timeline = [...income, ...payouts, ...maintenance].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (timeline.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">No transactions found.</p>';
     } else {
-        container.innerHTML = timeline.map(item => `
-            <div class="tenant-row" style="padding: 0.75rem; border-left: 4px solid ${item.type === 'INCOME' ? 'var(--success)' : 'var(--danger)'}; margin-bottom: 0.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date} &bull; ${item.type}</div>
-                        <div style="font-size: 0.8rem; font-weight: 700; margin: 2px 0;">${item.details}</div>
-                    </div>
-                    <div style="font-weight: 900; font-size: 1rem; color: ${item.type === 'INCOME' ? 'var(--success)' : 'var(--danger)'};">
-                        ${item.type === 'INCOME' ? '+' : '-'}${currencyFormatter.format(item.amount)}
+        container.innerHTML = timeline.map(item => {
+            const isOut = item.type === 'PAYOUT' || item.type === 'EXPENSE';
+            return `
+                <div class="tenant-row" style="padding: 0.75rem; border-left: 4px solid ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date} &bull; ${item.type}</div>
+                            <div style="font-size: 0.8rem; font-weight: 700; margin: 2px 0;">${item.details}</div>
+                        </div>
+                        <div style="font-weight: 900; font-size: 1rem; color: ${isOut ? 'var(--danger)' : 'var(--success)'};">
+                            ${isOut ? '-' : '+'}${currencyFormatter.format(item.amount)}
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     document.getElementById('ownerTimelineModal').classList.remove('hidden');

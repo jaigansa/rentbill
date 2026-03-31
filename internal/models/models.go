@@ -73,6 +73,7 @@ type Expense struct {
 	Amount    float64 `json:"amount"`
 	Date      string  `json:"date"`
 	Notes     string  `json:"notes"`
+	OwnerName string  `json:"owner_name"`
 	Timestamp string  `json:"timestamp"`
 }
 

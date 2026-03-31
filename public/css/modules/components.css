@@ -170,29 +170,36 @@ body.dark-mode .input-group label {
     appearance: none;
 }
 
+/* Global Select & Option Styling */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    font-family: var(--font-main);
+}
+
+select option {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    font-family: var(--font-main);
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 12px;
+}
+
+/* Chrome/Safari/Edge specific handling for dropdown items */
+select:focus option,
+select option:hover, 
+select option:focus,
+select option:checked {
+    background-color: var(--text-main) !important;
+    color: var(--bg-card) !important;
+}
+
 .input-group select {
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 1rem center;
-    background-size: 1.2rem;
-    padding-right: 3rem;
-}
-
-body.dark-mode .input-group select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-}
-
-.input-group input:focus,
-.input-group select:focus {
-    border: 3px solid var(--text-main);
-    background: var(--bg-card);
-    box-shadow: 3px 3px 0px var(--text-main); /* High-contrast focus shadow */
-    outline: none;
-}
-
-/* Ensure the custom arrow is always visible and consistent */
-.input-group select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: right 1rem center !important;
@@ -204,35 +211,12 @@ body.dark-mode .input-group select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
 }
 
-.input-group:focus-within label {
-    color: var(--primary);
-    font-weight: 900;
-}
-
-.input-group select::-webkit-calendar-picker-indicator {
-    display: none;
-}
-
-/* Custom Options List - E-ink dropdown menu */
-.input-group select option {
-    font-family: var(--font-main);
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 0.95rem;
-    padding: 0.5rem;
-    border-radius: 0px; /* Force sharp corners */
-}
-
-.input-group select option:hover,
-.input-group select option:focus {
-    background: var(--text-main);
-    color: var(--bg-card);
+.input-group input:focus,
+.input-group select:focus {
+    border: 3px solid var(--text-main);
+    background: var(--bg-card);
+    box-shadow: 3px 3px 0px var(--text-main); /* High-contrast focus shadow */
     outline: none;
-}
-
-.input-group select option:checked {
-    background: var(--text-main);
-    color: var(--bg-card);
 }
 
 /* Custom E-ink Select Wrapper for Better Control */

@@ -56,12 +56,12 @@ function populateWithdrawalOwnerDropdown() {
     const select = document.getElementById('wOwnerName');
     if (!select || !appSettings.receiving_accounts) return;
     const currentVal = select.value;
-    const names = [...new Set(appSettings.receiving_accounts.map(a => a.owner_name))].filter(n => n);
-    select.innerHTML = '<option value="">-- Select --</option>';
-    names.forEach(n => {
+    
+    select.innerHTML = '<option value="">-- Select Owner --</option>';
+    appSettings.receiving_accounts.forEach(acc => {
         const opt = document.createElement('option');
-        opt.value = n;
-        opt.innerText = n;
+        opt.value = acc.owner_name;
+        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
         select.appendChild(opt);
     });
     select.value = currentVal;

@@ -48,6 +48,7 @@ func InitDB() {
 		`CREATE TABLE IF NOT EXISTS expenses (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			category TEXT, amount REAL, date DATE, notes TEXT,
+			owner_name TEXT,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS users (
@@ -71,8 +72,9 @@ func InitDB() {
 		}
 	}
 
-	// Simple migration: ignore error if column already exists
+	// Simple migrations: ignore error if columns already exist
 	DB.Exec("ALTER TABLE bills ADD COLUMN arrears_included REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE expenses ADD COLUMN owner_name TEXT")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)

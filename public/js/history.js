@@ -26,7 +26,8 @@ async function initHistorySection(reset = false) {
         allTenants.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.innerText = `[${t.room_no}] ${t.name} ${t.is_active === 0 ? '(Archived)' : ''}`;
+            const status = t.is_active === 0 ? ' (ARCHIVED)' : '';
+            opt.innerText = `UNIT ${t.room_no} • ${t.name}${status}`;
             select.appendChild(opt);
         });
         select.value = currentVal;
