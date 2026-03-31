@@ -151,7 +151,7 @@
 }
 
 body.dark-mode .input-group label {
-    background: var(--bg-main); /* In dark mode, labels sit on top of cards or main bg */
+    background: var(--bg-card); /* Match card background in dark mode */
 }
 
 .input-group input,
@@ -499,28 +499,21 @@ body.dark-mode .select-trigger::after {
 }
 .icon-success {
     color: var(--success);
-    background: #ecfdf5;
+    background: var(--bg-success-light);
 }
 .icon-danger {
     color: var(--danger);
-    background: #fff1f2;
+    background: var(--bg-danger-light);
 }
 .icon-warning {
     color: var(--warning);
-    background: #fffbeb;
+    background: var(--bg-warning-light);
 }
 
-body.dark-mode .icon-success {
-    background: rgba(16, 185, 129, 0.1);
-    border: 2px solid var(--success);
-}
-body.dark-mode .icon-danger {
-    background: rgba(239, 68, 68, 0.1);
-    border: 2px solid var(--danger);
-}
+body.dark-mode .icon-success,
+body.dark-mode .icon-danger,
 body.dark-mode .icon-warning {
-    background: rgba(245, 158, 11, 0.1);
-    border: 2px solid var(--warning);
+    border: 2px solid var(--border);
 }
 
 /* --- TABLES --- */

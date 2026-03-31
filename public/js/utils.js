@@ -108,6 +108,10 @@ function applyTheme() {
     const isDark = theme === 'dark';
     document.body.classList.toggle('dark-mode', isDark);
     
+    // Update Theme Color Meta Tag
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', isDark ? '#000000' : '#ffffff');
+    
     const btn = document.getElementById('darkModeToggle');
     if (btn) {
         btn.innerHTML = isDark ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';

@@ -55,6 +55,7 @@ const API = {
         getMonthlyReport: (month) => API.request(`/reports/monthly/${month}`),
         getFinancialSummary: () => API.request('/reports/financial-summary'),
         getPendingBills: () => API.request('/reports/pending-bills'),
+        getTenantLedger: () => API.request('/reports/tenant-ledger'),
         getAllPaidBills: () => API.request('/reports/all-paid-bills'),
         getLastEB: (renterId) => API.request(`/last-eb/${renterId}`)
         },

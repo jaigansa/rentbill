@@ -1,3 +1,5 @@
+let accountEditIndex = null;
+
 async function loadSettings() {
     try {
         const data = await API.system.getSettings();
@@ -26,25 +28,62 @@ async function saveReceivingAccount() {
     if (!upi && !bank) return showNotification("Please provide either UPI or Bank details", "error");
 
     const accounts = appSettings.receiving_accounts || [];
-    accounts.push({
+    const accountData = {
         owner_name: name,
         label: label,
         upi: upi,
         bank_name: bank,
         account_number: num,
         ifsc: ifsc
-    });
+    };
+
+    if (accountEditIndex !== null) {
+        accounts[accountEditIndex] = accountData;
+    } else {
+        accounts.push(accountData);
+    }
     
     try {
         await API.system.updateSettings({ receiving_accounts: accounts });
-        showNotification("Account added", "success");
-        // Clear fields
-        ['acc_name', 'acc_label', 'acc_upi', 'acc_bank', 'acc_num', 'acc_ifsc'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = '';
-        });
+        showNotification(accountEditIndex !== null ? "Account updated" : "Account added", "success");
+        cancelAccountEdit();
         loadSettings();
-    } catch (e) { showNotification("Failed to add account", "error"); }
+    } catch (e) { showNotification("Failed to save account", "error"); }
+}
+
+function editReceivingAccount(index) {
+    const acc = appSettings.receiving_accounts[index];
+    if (!acc) return;
+
+    accountEditIndex = index;
+    document.getElementById('acc_name').value = acc.owner_name || '';
+    document.getElementById('acc_label').value = acc.label || '';
+    document.getElementById('acc_upi').value = acc.upi || '';
+    document.getElementById('acc_bank').value = acc.bank_name || '';
+    document.getElementById('acc_num').value = acc.account_number || '';
+    document.getElementById('acc_ifsc').value = acc.ifsc || '';
+
+    const btn = document.getElementById('addAccBtn');
+    if (btn) btn.innerText = "Update Account Record";
+    
+    const cancelBtn = document.getElementById('cancelAccEditBtn');
+    if (cancelBtn) cancelBtn.classList.remove('hidden');
+
+    document.getElementById('acc_name').focus();
+}
+
+function cancelAccountEdit() {
+    accountEditIndex = null;
+    ['acc_name', 'acc_label', 'acc_upi', 'acc_bank', 'acc_num', 'acc_ifsc'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    const btn = document.getElementById('addAccBtn');
+    if (btn) btn.innerText = "Add Account Record";
+
+    const cancelBtn = document.getElementById('cancelAccEditBtn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
 }
 
 function renderUnifiedAccounts(accounts) {
@@ -204,60 +243,60 @@ async function viewAuditReport() {
 
         let logsHtml = data.logs && data.logs.length > 0 
             ? data.logs.map(l => `
-                <div style="border-bottom: 1px dashed #eee; padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
+                <div style="border-bottom: 1px dashed var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
-                        <div style="font-weight: bold; font-size: 0.75rem; text-transform: uppercase;">${l.action.replace('_', ' ')}</div>
-                        <div style="font-size: 0.7rem; color: #444;">${l.details}</div>
+                        <div style="font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: var(--text-main);">${l.action.replace('_', ' ')}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">${l.details}</div>
                     </div>
-                    <div style="font-size: 0.65rem; color: #999; font-family: monospace;">${l.timestamp.slice(11, 16)}</div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); font-family: monospace;">${l.timestamp.slice(11, 16)}</div>
                 </div>`).join('')
-            : '<p style="text-align: center; color: #999; padding: 2rem;">No financial activities found for this period.</p>';
+            : '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No financial activities found for this period.</p>';
 
         const netProfit = (data.summary.total_paid + data.summary.total_advances) - (data.summary.total_expenses + data.summary.total_payouts);
 
         auditContent.innerHTML = `
             <div id="printableAudit">
-                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                    <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 2px;">MONTHLY BUSINESS AUDIT</h1>
-                    <p style="margin: 5px 0; font-weight: bold; text-transform: uppercase; background: #000; color: #fff; display: inline-block; padding: 2px 15px;">PERIOD: ${new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
+                <div style="text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                    <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 2px; color: var(--text-main);">MONTHLY BUSINESS AUDIT</h1>
+                    <p style="margin: 5px 0; font-weight: bold; text-transform: uppercase; background: var(--text-main); color: var(--bg-card); display: inline-block; padding: 2px 15px;">PERIOD: ${new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
                 </div>
 
                 <!-- Primary Metrics -->
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem;">
-                    <div style="border: 2px solid #000; padding: 10px; text-align: center;">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: #666;">TOTAL INCOME</div>
-                        <div style="font-size: 1.1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_paid)}</div>
+                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--bg-card);">
+                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted);">TOTAL INCOME</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_paid)}</div>
                     </div>
-                    <div style="border: 2px solid #000; padding: 10px; text-align: center;">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: #666;">NEW ADVANCES</div>
-                        <div style="font-size: 1.1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_advances)}</div>
+                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--bg-card);">
+                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted);">NEW ADVANCES</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_advances)}</div>
                     </div>
-                    <div style="border: 2px solid #000; padding: 10px; text-align: center; background: #eee;">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: #000;">NET CASH FLOW</div>
-                        <div style="font-size: 1.1rem; font-weight: 900;">${currencyFormatter.format(netProfit)}</div>
+                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--primary-light);">
+                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-main);">NET CASH FLOW</div>
+                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(netProfit)}</div>
                     </div>
                 </div>
 
                 <!-- Secondary Metrics -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 2rem;">
-                    <div style="border: 1px solid #000; padding: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.7rem; font-weight: bold;">MAINTENANCE EXPENSES</span>
-                        <span style="font-weight: 900;">${currencyFormatter.format(data.summary.total_expenses)}</span>
+                    <div style="border: 1px solid var(--border); padding: 8px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted);">MAINTENANCE EXPENSES</span>
+                        <span style="font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_expenses)}</span>
                     </div>
-                    <div style="border: 1px solid #000; padding: 8px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.7rem; font-weight: bold;">OWNER PAYOUTS</span>
-                        <span style="font-weight: 900;">${currencyFormatter.format(data.summary.total_payouts)}</span>
+                    <div style="border: 1px solid var(--border); padding: 8px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted);">OWNER PAYOUTS</span>
+                        <span style="font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_payouts)}</span>
                     </div>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 0.85rem; border-left: 5px solid #000; padding-left: 10px; margin-bottom: 10px; text-transform: uppercase;">Transaction History</h3>
-                    <div style="border: 1px solid #eee; padding: 0 10px;">
+                    <h3 style="font-size: 0.85rem; border-left: 5px solid var(--border); padding-left: 10px; margin-bottom: 10px; text-transform: uppercase; color: var(--text-main);">Transaction History</h3>
+                    <div style="border: 1px solid var(--border); padding: 0 10px; background: var(--bg-input);">
                         ${logsHtml}
                     </div>
                 </div>
 
-                <div style="margin-top: 3rem; border-top: 1px solid #000; padding-top: 10px; text-align: center; font-size: 0.6rem; color: #666; font-style: italic;">
+                <div style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 10px; text-align: center; font-size: 0.6rem; color: var(--text-muted); font-style: italic;">
                     This document is a system-generated financial summary for RentBill Pro.
                     <br>Generated on: ${new Date().toLocaleString('en-IN')}
                 </div>

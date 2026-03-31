@@ -1,11 +1,14 @@
 async function loadDashboardStats() {
     try {
-        const [tenants, expenses, finSummary, withdrawals] = await Promise.all([ 
+        const [tenants, expenses, finSummary, withdrawals, tenantLedger] = await Promise.all([ 
             API.tenants.getAll(), 
             API.expenses.getAll(),
             API.bills.getFinancialSummary(),
-            API.withdrawals.getAll()
+            API.withdrawals.getAll(),
+            API.bills.getTenantLedger()
         ]);
+        
+        window.allTenants = tenants; // Store for other functions
         
         // Potential Monthly Income (Sum of all units' base rent)
         const potentialIncome = tenants.reduce((sum, t) => sum + (t.base_rent || 0), 0);
@@ -114,13 +117,59 @@ async function loadDashboardStats() {
         const percentEl = document.getElementById('statCollectionPercent');
         const barEl = document.getElementById('collectionProgressBar');
         const detailsEl = document.getElementById('collectionDetails');
+        const duesEl = document.getElementById('statTotalDues');
+        const arrearsEl = document.getElementById('statTotalArrears');
         
         if (percentEl) percentEl.innerText = `${percent}%`;
         if (barEl) barEl.style.width = `${percent}%`;
         if (detailsEl) detailsEl.innerText = `${finSummary.paid_count || 0} of ${finSummary.total_count || 0} bills settled`;
+        if (duesEl) duesEl.innerText = currencyFormatter.format(finSummary.total_dues || 0);
+        if (arrearsEl) arrearsEl.innerText = currencyFormatter.format(finSummary.total_arrears || 0);
 
+        renderTenantLedger(tenantLedger);
         loadMonthlyTracker();
     } catch (e) { console.error("Stats failed", e); }
+}
+
+function renderTenantLedger(ledger) {
+    const list = document.getElementById('tenantLedgerList');
+    if (!list) return;
+
+    if (!ledger || ledger.length === 0) {
+        list.innerHTML = '<p style="text-align:center; font-size:0.75rem; color:var(--text-muted);">No tenant records.</p>';
+        return;
+    }
+
+    list.innerHTML = ledger.map(e => {
+        const hasDues = e.balance > 0;
+        return `
+            <div class="tenant-row" style="padding: 1rem; border-left: 4px solid ${hasDues ? 'var(--danger)' : 'var(--success)'};">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                            <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 6px; font-size: 0.6rem;">${e.room_no}</span>
+                            <div style="font-weight: 900; font-size: 0.9rem; text-transform: uppercase;">${e.name}</div>
+                        </div>
+                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                            Billed: ${currencyFormatter.format(e.total_billed)} | Paid: ${currencyFormatter.format(e.total_paid)}
+                        </div>
+                        <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 2px;">
+                            SECURITY DEPOSIT: ${currencyFormatter.format(e.advance)}
+                        </div>
+                    </div>
+                    <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+                        <div>
+                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted);">BALANCE DUE</div>
+                            <div style="font-weight: 900; font-size: 1.1rem; color: ${hasDues ? 'var(--danger)' : 'var(--success)'};">
+                                ${currencyFormatter.format(e.balance)}
+                            </div>
+                        </div>
+                        <button onclick="showSection('history-section'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 async function loadMonthlyTracker() {
@@ -130,6 +179,28 @@ async function loadMonthlyTracker() {
     if (!container) return;
     try {
         const tasks = await API.bills.getPendingBills();
+        
+        // Add arrears-only entries from tenants who don't have a task yet
+        if (window.allTenants) {
+            window.allTenants.forEach(t => {
+                if (t.pending_arrears > 0) {
+                    // Check if this tenant already has a PENDING_PAYMENT task
+                    const hasTask = tasks.some(tk => tk.renter_id === t.id && (tk.type === 'PENDING_PAYMENT' || tk.type === 'ARREARS_ONLY'));
+                    if (!hasTask) {
+                        tasks.push({
+                            type: 'ARREARS_ONLY',
+                            renter_id: t.id,
+                            name: t.name,
+                            room_no: t.room_no,
+                            billing_month: 'Previous Balance',
+                            amount: t.pending_arrears,
+                            arrears: t.pending_arrears
+                        });
+                    }
+                }
+            });
+        }
+
         container.innerHTML = '';
         if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
             container.innerHTML = `
@@ -143,26 +214,32 @@ async function loadMonthlyTracker() {
 
         tasks.forEach(s => {
             const isMissing = s.type === 'MISSING_BILL';
+            const isArrears = s.type === 'ARREARS_ONLY';
             const item = document.createElement('div');
             item.className = 'card';
             item.style.padding = '1rem';
             item.style.marginBottom = '0.75rem';
-            item.style.border = `2px solid ${isMissing ? 'var(--danger)' : 'var(--primary)'}`;
+            item.style.border = `2px solid ${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}`;
 
             const actionBtn = isMissing 
                 ? `<button onclick="draftBillNow(${s.renter_id}, '${s.billing_month}')" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px; border-style: dashed;">Draft Now</button>`
-                : `<button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn btn-primary btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">Pay Now</button>`;
+                : `<button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>`;
+
+            const arrearNotice = s.arrears > 0 ? `<div style="font-size: 0.6rem; color: var(--danger); font-weight: 900; margin-top: 2px;">INCLUDES ARREARS: ${currencyFormatter.format(s.arrears)}</div>` : '';
 
             item.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 8px; font-size: 0.6rem; min-width: 0; background: ${isMissing ? 'var(--danger)' : 'var(--primary)'}; color: var(--bg-card);">UNIT ${s.room_no}</span>
+                        <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 8px; font-size: 0.6rem; min-width: 0; background: ${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}; color: var(--bg-card);">UNIT ${s.room_no}</span>
                         ${actionBtn}
                     </div>
                     <div style="font-size: 1rem; font-weight: 900; color: var(--text-main); text-transform: uppercase; margin-top: 2px;">${s.name}</div>
-                    <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:800; color:${isMissing ? 'var(--danger)' : 'var(--primary)'}; text-transform: uppercase; border-top: 1px dashed var(--border); padding-top: 6px;">
-                        <i data-lucide="${isMissing ? 'file-plus' : 'calendar'}" style="width:12px; height:12px;"></i> 
-                        ${s.billing_month} ${!isMissing ? `&bull; ${currencyFormatter.format(s.amount)}` : '(Bill Missing)'}
+                    <div style="display:flex; flex-direction: column; border-top: 1px dashed var(--border); padding-top: 6px;">
+                        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:800; color:${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}; text-transform: uppercase;">
+                            <i data-lucide="${isMissing ? 'file-plus' : (isArrears ? 'alert-circle' : 'calendar')}" style="width:12px; height:12px;"></i> 
+                            ${s.billing_month} ${!isMissing ? `&bull; ${currencyFormatter.format(s.amount)}` : '(Bill Missing)'}
+                        </div>
+                        ${arrearNotice}
                     </div>
                 </div>`;
             container.appendChild(item);
@@ -236,7 +313,7 @@ function showOwnerTimeline(ownerName) {
                         <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date} &bull; ${item.type}</div>
                         <div style="font-size: 0.8rem; font-weight: 700; margin: 2px 0;">${item.details}</div>
                     </div>
-                    <div style="font-weight: 900; font-size: 1rem; color: ${item.type === 'INCOME' ? '#2e7d32' : '#d32f2f'};">
+                    <div style="font-weight: 900; font-size: 1rem; color: ${item.type === 'INCOME' ? 'var(--success)' : 'var(--danger)'};">
                         ${item.type === 'INCOME' ? '+' : '-'}${currencyFormatter.format(item.amount)}
                     </div>
                 </div>

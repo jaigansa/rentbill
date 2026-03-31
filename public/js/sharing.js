@@ -139,21 +139,69 @@ async function prepareAndShare(type, id, extraDetails = null) {
 
             // Resolve Payment Details from Owner Name
             let paymentInfo = '';
+            let htmlPaymentInfo = '';
             if (!bill.is_paid && t.assigned_upi && typeof appSettings !== 'undefined') {
                 const ownerName = t.assigned_upi;
                 const ownerAcc = appSettings.receiving_accounts?.find(a => a.owner_name === ownerName);
 
                 if (ownerAcc) {
+                    paymentInfo = `*PAYMENT DETAILS:*\n`;
+                    htmlPaymentInfo = `
+                        <div style="margin-bottom: 20px; border: 2px solid #000; padding: 12px; background: #fafafa;">
+                            <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 13px; text-decoration: underline;">HOW TO PAY</p>
+                            <p style="margin: 5px 0; font-size: 12px;">Transfer <strong>${currencyFormatter.format(bill.total_amount)}</strong> using details below:</p>
+                    `;
+
                     if (ownerAcc.upi) {
-                        paymentInfo = `*PAYMENT DETAILS:*\n` +
-                            `UPI ID: ${ownerAcc.upi}\n` +
+                        paymentInfo += `UPI ID: ${ownerAcc.upi}\n` +
                             `Direct Pay: upi://pay?pa=${ownerAcc.upi}&pn=RentBill&am=${bill.total_amount}&cu=INR&tn=${encodeURIComponent(`Rent for ${bill.billing_month}`)}\n`;
-                    } else if (ownerAcc.bank_name) {
-                        paymentInfo = `*BANK DETAILS:*\n` +
+                        
+                        htmlPaymentInfo += `
+                            <div style="background: #fff; border: 1px dashed #000; padding: 10px; margin: 10px 0; text-align: center;">
+                                <div style="margin-bottom: 12px;">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${ownerAcc.upi}&pn=RentBill&am=${bill.total_amount}&cu=INR&tn=Rent for ${bill.billing_month}`)}" 
+                                         alt="UPI QR Code" style="display: block; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); max-width: 150px; width: 100%;">
+                                    <p style="font-size: 9px; color: #666; margin-top: 5px;">Scan with any UPI App</p>
+                                </div>
+                                <div style="border-top: 1px solid #eee; padding-top: 10px;">
+                                    <div style="background: #f9f9f9; border: 1px solid #ddd; padding: 6px; margin-bottom: 10px; word-break: break-all;">
+                                        <code style="font-size: 12px; font-weight: bold; color: #000;">${ownerAcc.upi}</code>
+                                    </div>
+                                    <a href="upi://pay?pa=${ownerAcc.upi}&pn=RentBill&am=${bill.total_amount}&cu=INR&tn=Rent%20for%20${bill.billing_month.replace(' ', '%20')}" 
+                                       target="_blank"
+                                       style="text-decoration: none; background: #000; color: #fff; display: block; padding: 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">
+                                        TAP TO PAY
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    if (ownerAcc.bank_name) {
+                        paymentInfo += (ownerAcc.upi ? `\n` : ``) +
+                            `*BANK DETAILS:*\n` +
                             `Bank: ${ownerAcc.bank_name}\n` +
                             `Acc: ${ownerAcc.account_number}\n` +
                             `IFSC: ${ownerAcc.ifsc}\n`;
+                        
+                        htmlPaymentInfo += `
+                            <div style="background: #fff; border: 1px dashed #000; padding: 10px; margin-top: 10px; text-align: left;">
+                                <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">Bank Transfer Details</p>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                    <tr><td style="padding: 2px 0; color: #666;">BANK</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.bank_name}</td></tr>
+                                    <tr><td style="padding: 2px 0; color: #666;">ACC NO</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.account_number}</td></tr>
+                                    <tr><td style="padding: 2px 0; color: #666;">IFSC</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.ifsc}</td></tr>
+                                </table>
+                            </div>
+                        `;
                     }
+
+                    if (!ownerAcc.upi && !ownerAcc.bank_name) {
+                        paymentInfo += `CONTACT OWNER FOR PAYMENT`;
+                        htmlPaymentInfo += `<p style="text-align: center; font-weight: bold;">CONTACT OWNER FOR PAYMENT</p>`;
+                    }
+
+                    htmlPaymentInfo += `</div>`;
                 }
             }
 
@@ -249,29 +297,7 @@ async function prepareAndShare(type, id, extraDetails = null) {
                         </div>
 
                         <!-- Payment Instructions -->
-                        ${!bill.is_paid ? `
-                        <div style="margin-bottom: 20px; border: 2px solid #000; padding: 12px; background: #fafafa;">
-                            <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 13px; text-decoration: underline;">HOW TO PAY</p>
-                            <p style="margin: 5px 0; font-size: 12px;">Transfer <strong>${currencyFormatter.format(bill.total_amount)}</strong> using details below:</p>
-                            <div style="background: #fff; border: 1px dashed #000; padding: 10px; margin: 10px 0; text-align: center;">
-                                <div style="margin-bottom: 12px;">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${t.assigned_upi}&pn=RentBill&am=${bill.total_amount}&cu=INR&tn=Rent for ${bill.billing_month}`)}" 
-                                         alt="UPI QR Code" style="display: block; margin: 0 auto; border: 5px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); max-width: 150px; width: 100%;">
-                                    <p style="font-size: 9px; color: #666; margin-top: 5px;">Scan with any UPI App</p>
-                                </div>
-                                <div style="border-top: 1px solid #eee; padding-top: 10px;">
-                                    <div style="background: #f9f9f9; border: 1px solid #ddd; padding: 6px; margin-bottom: 10px; word-break: break-all;">
-                                        <code style="font-size: 12px; font-weight: bold; color: #000;">${t.assigned_upi || "CONTACT OWNER"}</code>
-                                    </div>
-                                    <a href="upi://pay?pa=${t.assigned_upi}&pn=RentBill&am=${bill.total_amount}&cu=INR&tn=Rent%20for%20${bill.billing_month.replace(' ', '%20')}" 
-                                       target="_blank"
-                                       style="text-decoration: none; background: #000; color: #fff; display: block; padding: 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">
-                                        TAP TO PAY
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        ` : ''}
+                        ${!bill.is_paid ? htmlPaymentInfo : ''}
 
                         <!-- Status Stamp -->
                         <div style="display: block; margin: 15px auto; width: fit-content; border: 4px double #000; padding: 5px 15px; transform: rotate(-5deg); font-weight: bold; font-size: 18px; text-align: center;">

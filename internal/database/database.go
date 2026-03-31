@@ -42,6 +42,7 @@ func InitDB() {
 			rent_amount REAL DEFAULT 0, water_amount REAL DEFAULT 0,
 			paid_amount REAL DEFAULT 0, discount_amount REAL DEFAULT 0,
 			write_off_amount REAL DEFAULT 0, arrears_amount REAL DEFAULT 0,
+			arrears_included REAL DEFAULT 0,
 			FOREIGN KEY(renter_id) REFERENCES renters(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS expenses (
@@ -69,6 +70,9 @@ func InitDB() {
 			log.Fatalf("Schema error: %v\nQuery: %s", err, q)
 		}
 	}
+
+	// Simple migration: ignore error if column already exists
+	DB.Exec("ALTER TABLE bills ADD COLUMN arrears_included REAL DEFAULT 0")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)

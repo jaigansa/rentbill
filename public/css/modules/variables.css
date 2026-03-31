@@ -37,6 +37,12 @@
     /* Focus Indicators for Accessibility */
     --focus-ring: 2px solid #000000;
     --focus-outline: 2px dotted #000000;
+
+    /* Semantic Backgrounds (Light Mode) */
+    --bg-success-light: #ecfdf5;
+    --bg-danger-light: #fff1f2;
+    --bg-warning-light: #fffbeb;
+    --bg-info-light: #eff6ff;
 }
 
 /* E-Ink Responsive Variables */
@@ -63,12 +69,24 @@ body.dark-mode {
     --text-muted: #b0b0b0;
     --border: #ffffff;
     --primary: #ffffff;
+    --primary-hover: #cccccc;
+    --secondary: #aaaaaa;
     --success: #ffffff;
     --danger: #ffffff;
     --warning: #ffffff;
     --info: #ffffff;
     --primary-light: #222222; /* High contrast highlight for active rows */
     --shadow: none;
+
+    /* Dark Mode Semantic Backgrounds (Subtle Tint) */
+    --bg-success-light: rgba(16, 185, 129, 0.15);
+    --bg-danger-light: rgba(239, 68, 68, 0.15);
+    --bg-warning-light: rgba(245, 158, 11, 0.15);
+    --bg-info-light: rgba(59, 130, 246, 0.15);
+
+    /* Dark Mode Focus Indicators */
+    --focus-ring: 2px solid #ffffff;
+    --focus-outline: 2px dotted #ffffff;
 }
 
 @media (min-width: 768px) {

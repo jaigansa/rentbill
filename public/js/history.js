@@ -201,14 +201,14 @@ function showBillBreakdown(b, unitPrice) {
         </div>
 
         ${b.is_paid ? `
-            <div style="border: 2px solid var(--success); padding: 1rem; background: #f1f8e9;">
+            <div style="border: 2px solid var(--success); padding: 1rem; background: var(--bg-success-light);">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span style="font-size: 0.7rem; font-weight: 800; color: #2e7d32;">AMOUNT PAID</span>
-                    <span style="font-weight: 900; color: #2e7d32;">${currencyFormatter.format(b.paid_amount)}</span>
+                    <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted);">AMOUNT PAID</span>
+                    <span style="font-weight: 900; color: var(--text-main);">${currencyFormatter.format(b.paid_amount)}</span>
                 </div>
-                ${b.discount_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #2e7d32;"><span>DISCOUNT</span><span>-${currencyFormatter.format(b.discount_amount)}</span></div>` : ''}
-                ${b.write_off_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #d32f2f;"><span>WRITE-OFF</span><span>-${currencyFormatter.format(b.write_off_amount)}</span></div>` : ''}
-                ${b.arrears_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #f57c00;"><span>CARRY FORWARD</span><span>${currencyFormatter.format(b.arrears_amount)}</span></div>` : ''}
+                ${b.discount_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);"><span>DISCOUNT</span><span style="color: var(--text-main)">-${currencyFormatter.format(b.discount_amount)}</span></div>` : ''}
+                ${b.write_off_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--danger);"><span>WRITE-OFF</span><span style="color: var(--danger)">-${currencyFormatter.format(b.write_off_amount)}</span></div>` : ''}
+                ${b.arrears_amount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--warning);"><span>CARRY FORWARD</span><span style="color: var(--warning)">${currencyFormatter.format(b.arrears_amount)}</span></div>` : ''}
                 <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 8px;">
                     Method: ${b.payment_method} &bull; Date: ${b.payment_date}
                 </div>

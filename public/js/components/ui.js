@@ -15,7 +15,7 @@ const UI = {
                             <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
                                 <i data-lucide="phone" style="width: 10px; height: 10px; margin-right: 2px; vertical-align: middle;"></i> ${t.mobile_number}
                             </span>
-                            <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--border);"></span>
+                            <span style="width: 4px; height: 4px; background: var(--border);"></span>
                             <span style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase;">
                                 <i data-lucide="indian-rupee" style="width: 10px; height: 10px; margin-right: 2px; vertical-align: middle;"></i> ${currencyFormatter.format(t.base_rent)}
                             </span>
@@ -101,9 +101,14 @@ const UI = {
                             </div>
                         ` : ''}
                     </div>
-                    <button onclick="deleteReceivingAccount(${index})" class="btn btn-secondary btn-icon-sm" style="border: none; background: transparent;">
-                        <i data-lucide="trash-2" style="width: 16px; color: var(--danger);"></i>
-                    </button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="editReceivingAccount(${index})" class="btn btn-secondary btn-icon-sm" style="border: none; background: transparent;">
+                            <i data-lucide="edit-2" style="width: 16px; color: var(--primary);"></i>
+                        </button>
+                        <button onclick="deleteReceivingAccount(${index})" class="btn btn-secondary btn-icon-sm" style="border: none; background: transparent;">
+                            <i data-lucide="trash-2" style="width: 16px; color: var(--danger);"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         `;

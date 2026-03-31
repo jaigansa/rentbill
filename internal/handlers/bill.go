@@ -193,18 +193,58 @@ func GetFinancialSummary(c *gin.Context) {
 		TotalBilled   float64 `json:"total_billed"`
 		TotalPaid     float64 `json:"total_paid"`
 		TotalDues     float64 `json:"total_dues"`
+		TotalArrears  float64 `json:"total_arrears"`
 		TotalAdvances float64 `json:"total_advances"`
 		TotalCount    int     `json:"total_count"`
 		PaidCount     int     `json:"paid_count"`
 	}
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
 	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
+	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE is_paid = 0").Scan(&summary.TotalDues)
 	database.DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalAdvances)
-	
-	summary.TotalDues = summary.TotalBilled - summary.TotalPaid
+	database.DB.QueryRow("SELECT COALESCE(SUM(pending_arrears), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalArrears)
+
 	c.JSON(http.StatusOK, summary)
 }
 
+func GetTenantLedger(c *gin.Context) {
+	type Entry struct {
+		ID             int     `json:"id"`
+		Name           string  `json:"name"`
+		RoomNo         string  `json:"room_no"`
+		TotalBilled    float64 `json:"total_billed"`
+		TotalPaid      float64 `json:"total_paid"`
+		PendingArrears float64 `json:"pending_arrears"`
+		Advance        float64 `json:"advance"`
+		Balance        float64 `json:"balance"`
+	}
+
+	rows, err := database.DB.Query(`
+		SELECT r.id, r.name, r.room_no, r.advance_amount, r.pending_arrears,
+		COALESCE((SELECT SUM(total_amount) FROM bills WHERE renter_id = r.id), 0) as billed,
+		COALESCE((SELECT SUM(paid_amount) FROM bills WHERE renter_id = r.id AND is_paid = 1), 0) as paid,
+		COALESCE((SELECT SUM(total_amount) FROM bills WHERE renter_id = r.id AND is_paid = 0), 0) as unpaid_bills
+		FROM renters r WHERE r.is_active = 1
+		ORDER BY r.room_no ASC`)
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+	defer rows.Close()
+
+	var ledger []Entry
+	for rows.Next() {
+		var e Entry
+		var unpaidBills float64
+		rows.Scan(&e.ID, &e.Name, &e.RoomNo, &e.Advance, &e.PendingArrears, &e.TotalBilled, &e.TotalPaid, &unpaidBills)
+		// Balance = Outstanding Bills + Unbilled Arrears
+		e.Balance = unpaidBills + e.PendingArrears
+		ledger = append(ledger, e)
+	}
+	if ledger == nil { ledger = []Entry{} }
+	c.JSON(http.StatusOK, ledger)
+}
 func GetAllPendingBills(c *gin.Context) {
 	// Replacing old GetAllPendingBills with a more comprehensive GetDueCheck logic
 	// but keeping the name or adding a new one. I'll add GetDueCheck.
@@ -226,6 +266,7 @@ func GetDueCheck(c *gin.Context) {
 		RoomNo       string  `json:"room_no"`
 		BillingMonth string  `json:"billing_month"`
 		Amount       float64 `json:"amount"`
+		Arrears      float64 `json:"arrears"`
 	}
 	var results []Item
 
@@ -242,15 +283,15 @@ func GetDueCheck(c *gin.Context) {
 		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.MoveInDate)
 
 		// 1. Get all existing bills for this renter
-		billRows, _ := database.DB.Query("SELECT billing_month, total_amount, is_paid FROM bills WHERE renter_id = ?", r.ID)
+		billRows, _ := database.DB.Query("SELECT billing_month, total_amount, is_paid, arrears_included FROM bills WHERE renter_id = ?", r.ID)
 		billsMap := make(map[string]bool)   // month -> is_paid
 		billedAmount := make(map[string]float64)
 		
 		for billRows.Next() {
 			var bMonth string
-			var bAmount float64
+			var bAmount, bArrears float64
 			var bPaid int
-			billRows.Scan(&bMonth, &bAmount, &bPaid)
+			billRows.Scan(&bMonth, &bAmount, &bPaid, &bArrears)
 			billsMap[strings.ToUpper(bMonth)] = (bPaid == 1)
 			billedAmount[strings.ToUpper(bMonth)] = bAmount
 			
@@ -263,6 +304,7 @@ func GetDueCheck(c *gin.Context) {
 					RoomNo:       r.RoomNo,
 					BillingMonth: bMonth,
 					Amount:       bAmount,
+					Arrears:      bArrears,
 				})
 			}
 		}

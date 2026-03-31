@@ -29,11 +29,11 @@ function createTenantCard(t) {
                 <div style="font-weight: 900; font-size: 1.1rem; color: var(--text-main); letter-spacing: -0.01em;">${t.name}</div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">${currencyFormatter.format(t.base_rent)}</span>
-                    <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--border);"></span>
+                    <span style="width: 4px; height: 4px; background: var(--border);"></span>
                     <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Standard Unit</span>
                     ${t.pending_arrears > 0 ? `
-                        <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--border);"></span>
-                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--danger); text-transform: uppercase; background: #ffebee; padding: 2px 6px;">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>
+                        <span style="width: 4px; height: 4px; background: var(--border);"></span>
+                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--danger); text-transform: uppercase; background: var(--bg-danger-light); padding: 2px 6px; border: 1px solid var(--border);">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>
                     ` : ''}
                 </div>
             </div>

@@ -101,13 +101,35 @@ const Templates = {
 
             <div class="card" style="margin-bottom: 2rem;">
                 <div class="card-header">
+                    <h3 class="section-title"><i data-lucide="contact-2"></i> Tenant Financial Ledger</h3>
+                </div>
+                <div id="tenantLedgerList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto; padding-right: 5px;" class="no-scrollbar">
+                    <!-- Tenant ledger items will be injected here -->
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
                     <h3 class="section-title"><i data-lucide="pie-chart"></i> Collection Check (All Dues)</h3>
                     <div id="statCollectionPercent" style="font-weight: 900; color: var(--primary);">0%</div>
                 </div>
                 <div class="progress-container">
                     <div id="collectionProgressBar" class="progress-bar"></div>
                 </div>
-                <p id="collectionDetails" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">0 of 0 bills settled</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <p id="collectionDetails" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">0 of 0 bills settled</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; border-top: 1px dashed var(--border); padding-top: 1rem;">
+                    <div style="background: var(--bg-input); padding: 0.75rem; border: 1px solid var(--border);">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Billed Dues</div>
+                        <div id="statTotalDues" style="font-weight: 900; color: var(--danger); font-size: 1rem;">₹0</div>
+                    </div>
+                    <div style="background: var(--bg-input); padding: 0.75rem; border: 1px solid var(--border);">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Potential Arrears</div>
+                        <div id="statTotalArrears" style="font-weight: 900; color: var(--warning); font-size: 1rem;">₹0</div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid-layout">
@@ -307,7 +329,10 @@ const Templates = {
                             <div class="input-group"><label>IFSC Code</label><input type="text" id="acc_ifsc"></div>
                         </div>
 
-                        <button onclick="saveReceivingAccount()" class="btn btn-primary btn-sm" style="width: 100%; margin-top: 1rem;">Add Account Record</button>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="saveReceivingAccount()" id="addAccBtn" class="btn btn-primary btn-sm" style="flex: 1;">Add Account Record</button>
+                            <button onclick="cancelAccountEdit()" id="cancelAccEditBtn" class="btn btn-secondary btn-sm hidden">Cancel</button>
+                        </div>
 
                         <div id="unifiedAccountList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
                     </div>
@@ -371,19 +396,19 @@ const Templates = {
         </div></div>
 
         <div id="deletePinModal" class="modal-overlay hidden"><div class="modal-content" style="max-width: 350px; text-align: center;">
-            <div style="width: 50px; height: 50px; background: #fff1f2; color: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;"><i data-lucide="shield-alert"></i></div>
+            <div class="stat-icon icon-danger" style="width: 50px; height: 50px; margin: 0 auto 1rem;"><i data-lucide="shield-alert"></i></div>
             <h3 id="confirmationTitle" class="section-title" style="justify-content: center;">Authorize</h3>
             <p id="confirmationMessage" style="font-size: 0.75rem; color: var(--text-muted); margin: 0.5rem 0 1.5rem;">Enter Master PIN to confirm action.</p>
-            <input type="password" id="deletePinInput" maxlength="4" style="width: 100%; text-align: center; font-size: 2rem; letter-spacing: 1.5rem; padding: 0.5rem; border: 2px solid var(--border); border-radius: var(--radius-md); outline: none; margin-bottom: 1.5rem;">
-            <div style="display: flex; gap: 0.5rem;"><button onclick="confirmActionWithPin()" class="btn btn-danger" style="flex: 1;">Confirm</button><button onclick="closeDeleteModal()" class="btn btn-secondary">Cancel</button></div>
+            <input type="password" id="deletePinInput" maxlength="4" style="width: 100%; text-align: center; font-size: 2rem; letter-spacing: 1.5rem; padding: 0.5rem; border: 3px solid var(--border); border-radius: var(--radius-md); background: var(--bg-input); color: var(--text-main); outline: none; margin-bottom: 1.5rem;">
+            <div style="display: flex; gap: 0.5rem;"><button onclick="confirmActionWithPin()" class="btn btn-danger" style="flex: 1;">Confirm</button><button onclick="closeDeleteModal()" class="btn btn-secondary" style="flex: 1;">Cancel</button></div>
         </div></div>
 
         <div id="paymentModal" class="modal-overlay hidden"><div class="modal-content" style="max-width: 450px;">
             <h3 class="section-title" style="margin-bottom: 1.5rem;">Record Payment</h3>
             
-            <div id="paySummary" style="background: var(--primary-light); padding: 1rem; margin-bottom: 1.5rem; border: 2px solid var(--border);">
+            <div id="paySummary" style="background: var(--primary-light); padding: 1.5rem; margin-bottom: 1.5rem; border: 3px solid var(--border);">
                 <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Due</div>
-                <div id="payTotalLabel" style="font-size: 1.5rem; font-weight: 900;">₹0</div>
+                <div id="payTotalLabel" style="font-size: 1.5rem; font-weight: 900; color: var(--primary);">₹0</div>
             </div>
 
             <div class="grid-inputs">
@@ -396,7 +421,7 @@ const Templates = {
             <div id="adjustmentSection" class="hidden" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                     <span style="font-size: 0.75rem; font-weight: 800; color: var(--danger);">Balance: <span id="payBalanceLabel">₹0</span></span>
-                    <select id="adjType" style="font-size: 0.7rem; padding: 4px; border: 2px solid var(--border);" onchange="calculateAdjustments()">
+                    <select id="adjType" style="font-size: 0.7rem; padding: 4px; border: 2px solid var(--border); background: var(--bg-input); color: var(--text-main);" onchange="calculateAdjustments()">
                         <option value="CARRY">Carry Forward (Next Bill)</option>
                         <option value="DISCOUNT">Give Discount (Waiver)</option>
                         <option value="WRITEOFF">Write-Off (Loss)</option>
@@ -432,7 +457,7 @@ const Templates = {
 
         <div id="auditModal" class="modal-overlay hidden"><div class="modal-content" style="max-width: 800px; height: 90vh; display: flex; flex-direction: column;">
             <div class="card-header"><h3 class="section-title">Audit Record</h3><button onclick="closeAuditModal()" class="btn btn-secondary btn-icon-sm" style="border: none; background: none; cursor: pointer;"><i data-lucide="x"></i></button></div>
-            <div id="auditContent" style="flex: 1; overflow-y: auto; padding: 1rem; font-family: monospace; border: 1px solid var(--border); background: #fff; color: #000;">
+            <div id="auditContent" style="flex: 1; overflow-y: auto; padding: 1rem; font-family: monospace; border: 3px solid var(--border); background: var(--bg-card); color: var(--text-main);">
                 <!-- Audit content will be injected here -->
             </div>
             <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
