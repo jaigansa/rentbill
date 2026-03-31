@@ -16,6 +16,9 @@ import (
 
 func GetLogs(c *gin.Context) {
 	filter := c.DefaultQuery("filter", "ALL")
+	limit := c.DefaultQuery("limit", "30")
+	offset := c.DefaultQuery("offset", "0")
+
 	query := "SELECT id, action, details, username, timestamp FROM activity_logs "
 	switch filter {
 	case "PAYMENTS":
@@ -24,10 +27,13 @@ func GetLogs(c *gin.Context) {
 		query += "WHERE action IN ('BILL_GENERATED', 'BILL_DELETED') "
 	case "TENANTS":
 		query += "WHERE action IN ('TENANT_REGISTERED', 'TENANT_UPDATED', 'TENANT_DELETED', 'UNIT_VACATED', 'TENANT_RESTORED') "
+	case "MAINTENANCE":
+		query += "WHERE action IN ('EXPENSE_RECORDED', 'EXPENSE_REMOVED') "
 	case "SYSTEM":
-		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN') "
+		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED') "
 	}
-	query += "ORDER BY id DESC LIMIT 30"
+	query += fmt.Sprintf("ORDER BY id DESC LIMIT %s OFFSET %s", limit, offset)
+	
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})

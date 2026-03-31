@@ -1,44 +1,27 @@
-let hFullPayouts = [];
-let hPayoutsVisibleCount = 10;
+let resetWithdrawalsScroll = null;
 
 async function loadWithdrawals() {
     const listDiv = document.getElementById('withdrawalList');
-    const loadMoreBtn = document.getElementById('payoutLoadMoreContainer');
-    if (!listDiv) return;
-    try {
-        const withdrawals = await API.withdrawals.getAll();
-        hFullPayouts = withdrawals || [];
-        hPayoutsVisibleCount = 10;
-        renderPayoutsSlice();
-    } catch (e) { console.error("Withdrawals failed", e); }
-}
-
-function renderPayoutsSlice() {
-    const listDiv = document.getElementById('withdrawalList');
-    const loadMoreBtn = document.getElementById('payoutLoadMoreContainer');
     if (!listDiv) return;
 
-    const slice = hFullPayouts.slice(0, hPayoutsVisibleCount);
-
-    if (slice.length === 0) {
-        listDiv.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding:2rem;">No payout records yet.</p>';
-        if (loadMoreBtn) loadMoreBtn.classList.add('hidden');
-        return;
+    if (resetWithdrawalsScroll) {
+        resetWithdrawalsScroll();
     }
 
-    listDiv.innerHTML = slice.map(w => UI.renderWithdrawalItem(w, deleteWithdrawal)).join('');
-    
-    if (hPayoutsVisibleCount < hFullPayouts.length) {
-        loadMoreBtn?.classList.remove('hidden');
-    } else {
-        loadMoreBtn?.classList.add('hidden');
-    }
-    lucide.createIcons();
+    resetWithdrawalsScroll = setupInfiniteScroll(
+        listDiv,
+        async (offset, limit) => {
+            const data = await API.withdrawals.getAll(limit, offset);
+            return data;
+        },
+        (w) => UI.renderWithdrawalItem(w, deleteWithdrawal),
+        { limit: 20, triggerId: 'withdrawals-scroll-trigger' }
+    );
 }
 
 function loadMoreWithdrawals() {
-    hPayoutsVisibleCount += 10;
-    renderPayoutsSlice();
+    // This is now handled by infinite scroll, but we keep the name for compatibility
+    // with any other calls that might exist.
 }
 
 function toggleWithdrawalForm() {

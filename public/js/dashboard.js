@@ -264,25 +264,37 @@ function draftBillNow(renterId, monthName) {
     }
 }
 
+let resetLogsScroll = null;
+
 async function loadActivityLogs() {
-    try {
-        const filter = document.getElementById('logFilter')?.value || 'ALL';
-        const logs = await API.system.getLogs(filter);
-        const actionIcons = { 'TENANT_REGISTERED': 'user-plus', 'TENANT_UPDATED': 'user-cog', 'TENANT_DELETED': 'user-minus', 'BILL_GENERATED': 'file-text', 'PAYMENT_RECORDED': 'check-circle', 'BILL_DELETED': 'file-x', 'UNIT_VACATED': 'home', 'TENANT_RESTORED': 'rotate-ccw', 'DB_BACKUP': 'database', 'FORGOT_PIN': 'shield-alert' };
-        const listDiv = document.getElementById('activityLog');
-        if (!listDiv) return;
-        if (!logs || logs.length === 0) { 
-            listDiv.innerHTML = `
-                <div class="empty-state" style="padding: 1rem;">
-                    <i data-lucide="history" style="width: 24px; height: 24px; opacity: 0.1;"></i>
-                    <p style="font-size: 0.6rem;">No activity yet</p>
-                </div>`; 
-            lucide.createIcons();
-            return; 
-        }
-        listDiv.innerHTML = logs.map(l => UI.renderLogItem(l, actionIcons)).join('');
-        lucide.createIcons();
-    } catch (e) { console.error("Logs failed", e); }
+    const listDiv = document.getElementById('activityLog');
+    if (!listDiv) return;
+
+    const filter = document.getElementById('logFilter')?.value || 'ALL';
+    
+    // Reset if filter changed
+    if (resetLogsScroll) {
+        resetLogsScroll();
+    }
+
+    const actionIcons = { 
+        'TENANT_REGISTERED': 'user-plus', 'TENANT_UPDATED': 'user-cog', 
+        'TENANT_DELETED': 'user-minus', 'BILL_GENERATED': 'file-text', 
+        'PAYMENT_RECORDED': 'check-circle', 'BILL_DELETED': 'file-x', 
+        'UNIT_VACATED': 'home', 'TENANT_RESTORED': 'rotate-ccw', 
+        'DB_BACKUP': 'database', 'FORGOT_PIN': 'shield-alert',
+        'EXPENSE_RECORDED': 'trending-down', 'EXPENSE_REMOVED': 'trash-2'
+    };
+
+    resetLogsScroll = setupInfiniteScroll(
+        listDiv,
+        async (offset, limit) => {
+            const data = await API.system.getLogs(filter, limit, offset);
+            return data;
+        },
+        (l) => UI.renderLogItem(l, actionIcons),
+        { limit: 30, triggerId: 'logs-scroll-trigger' }
+    );
 }
 
 function showOwnerTimeline(ownerName) {

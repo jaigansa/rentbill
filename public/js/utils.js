@@ -54,6 +54,73 @@ function showNotification(msg, type) {
     }, 3000);
 }
 
+/**
+ * Infinite Scroll Utility
+ * @param {HTMLElement} container - The container element for the list
+ * @param {Function} fetchData - Async function that returns data [ (offset, limit) -> Promise<Array> ]
+ * @param {Function} renderItem - Function that returns HTML string for an item
+ * @param {Object} options - { limit: 20, triggerId: 'scroll-trigger' }
+ */
+function setupInfiniteScroll(container, fetchData, renderItem, options = {}) {
+    const limit = options.limit || 20;
+    let offset = 0;
+    let loading = false;
+    let hasMore = true;
+
+    // Create or find trigger
+    let trigger = document.getElementById(options.triggerId);
+    if (!trigger) {
+        trigger = document.createElement('div');
+        trigger.id = options.triggerId;
+        trigger.style.height = '40px';
+        trigger.style.display = 'flex';
+        trigger.style.alignItems = 'center';
+        trigger.style.justifyContent = 'center';
+        trigger.innerHTML = '<div class="loading-spinner hidden" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; letter-spacing: 1px;">LOADING MORE RECORDS...</div>';
+        container.after(trigger);
+    }
+
+    const observer = new IntersectionObserver(async (entries) => {
+        if (entries[0].isIntersecting && !loading && hasMore) {
+            loading = true;
+            const spinner = trigger.querySelector('.loading-spinner');
+            if (spinner) spinner.classList.remove('hidden');
+            
+            try {
+                const data = await fetchData(offset, limit);
+                if (!data || data.length < limit) {
+                    hasMore = false;
+                    trigger.classList.add('hidden');
+                }
+                
+                if (data && data.length > 0) {
+                    const html = data.map(item => renderItem(item)).join('');
+                    container.insertAdjacentHTML('beforeend', html);
+                    offset += data.length;
+                    lucide.createIcons();
+                }
+            } catch (e) {
+                console.error("Infinite Scroll Error:", e);
+            } finally {
+                loading = false;
+                const spinner = trigger.querySelector('.loading-spinner');
+                if (spinner) spinner.classList.add('hidden');
+            }
+        }
+    }, { rootMargin: '100px' });
+
+    observer.observe(trigger);
+    
+    // Return reset function
+    return () => {
+        offset = 0;
+        loading = false;
+        hasMore = true;
+        container.innerHTML = '';
+        trigger.classList.remove('hidden');
+    };
+}
+
 function generateQRDataURL(data) {
     return new Promise((resolve) => {
         const div = document.createElement('div');
@@ -85,16 +152,6 @@ async function forceRefreshApp() {
     }
     
     window.location.reload(true);
-}
-
-function registerServiceWorker() {
-    /*
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW Registered'))
-            .catch(err => console.log('SW failed', err));
-    }
-    */
 }
 
 function toggleDarkMode() {

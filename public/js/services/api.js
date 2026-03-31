@@ -46,7 +46,7 @@ const API = {
     },
 
     bills: {
-        getByRenter: (renterId) => API.request(`/bills/${renterId}`),
+        getByRenter: (renterId, limit = 10, offset = 0) => API.request(`/bills/${renterId}?limit=${limit}&offset=${offset}`),
         getOne: (id) => API.request(`/bill/${id}`),
         create: (data) => API.request('/bills', { method: 'POST', body: JSON.stringify(data) }),
         pay: (id, data) => API.request(`/bills/${id}/pay`, { method: 'PUT', body: JSON.stringify(data) }),
@@ -61,19 +61,19 @@ const API = {
         },
 
     expenses: {
-        getAll: () => API.request('/expenses'),
+        getAll: (limit = 20, offset = 0) => API.request(`/expenses?limit=${limit}&offset=${offset}`),
         create: (data) => API.request('/expenses', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/expenses/${id}`, { method: 'DELETE' })
     },
 
     withdrawals: {
-        getAll: () => API.request('/withdrawals'),
+        getAll: (limit = 20, offset = 0) => API.request(`/withdrawals?limit=${limit}&offset=${offset}`),
         create: (data) => API.request('/withdrawals', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/withdrawals/${id}`, { method: 'DELETE' })
     },
 
     system: {
-        getLogs: (filter = 'ALL') => API.request(`/logs?filter=${filter}`),
+        getLogs: (filter = 'ALL', limit = 30, offset = 0) => API.request(`/logs?filter=${filter}&limit=${limit}&offset=${offset}`),
         getSettings: () => API.request('/settings'),
         updateSettings: (data) => API.request('/settings', { method: 'POST', body: JSON.stringify(data) }),
         testEmail: () => API.request('/settings/test-email', { method: 'POST' }),

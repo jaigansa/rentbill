@@ -1,13 +1,20 @@
+let resetExpensesScroll = null;
+
 async function loadExpenses() {
     const listDiv = document.getElementById('expenseList');
     if (!listDiv) return;
-    try {
-        const expenses = await API.expenses.getAll();
-        if (!expenses || expenses.length === 0) {
-            listDiv.innerHTML = '<p style="text-align:center; font-size:0.75rem; color:var(--text-muted); padding:2rem;">No maintenance logs yet.</p>';
-            return;
-        }
-        listDiv.innerHTML = expenses.map(e => `
+
+    if (resetExpensesScroll) {
+        resetExpensesScroll();
+    }
+
+    resetExpensesScroll = setupInfiniteScroll(
+        listDiv,
+        async (offset, limit) => {
+            const data = await API.expenses.getAll(limit, offset);
+            return data;
+        },
+        (e) => `
             <div class="tenant-row" style="padding: 1rem; border-left: 4px solid var(--danger);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -23,9 +30,9 @@ async function loadExpenses() {
                     </div>
                 </div>
             </div>
-        `).join('');
-        lucide.createIcons();
-    } catch (e) { console.error("Expenses failed", e); }
+        `,
+        { limit: 20, triggerId: 'expenses-scroll-trigger' }
+    );
 }
 
 function toggleExpenseForm() {

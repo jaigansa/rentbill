@@ -11,7 +11,11 @@ import (
 )
 
 func GetOwnerWithdrawals(c *gin.Context) {
-	rows, err := database.DB.Query("SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals ORDER BY date DESC, id DESC")
+	limit := c.DefaultQuery("limit", "20")
+	offset := c.DefaultQuery("offset", "0")
+
+	query := fmt.Sprintf("SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals ORDER BY date DESC LIMIT %s OFFSET %s", limit, offset)
+	rows, err := database.DB.Query(query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return

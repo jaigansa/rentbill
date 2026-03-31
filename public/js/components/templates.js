@@ -152,9 +152,14 @@ const Templates = {
                 <!-- 6. Activity Timeline -->
                 <div class="card">
                     <div class="card-header">
-                        <h3 class="section-title"><i data-lucide="history"></i> Timeline</h3>
-                        <select id="logFilter" onchange="loadActivityLogs()" style="font-size: 0.7rem; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-input);">
-                            <option value="ALL">All</option><option value="PAYMENTS">Payments</option><option value="BILLS">Bills</option>
+                        <h3 class="section-title"><i data-lucide="history"></i> Activity Timeline</h3>
+                        <select id="logFilter" onchange="loadActivityLogs()" style="font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; border: 2px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase;">
+                            <option value="ALL">Recent Activity</option>
+                            <option value="PAYMENTS">Payments & Dues</option>
+                            <option value="BILLS">Bills & Invoices</option>
+                            <option value="TENANTS">Units & Tenants</option>
+                            <option value="MAINTENANCE">Maintenance</option>
+                            <option value="SYSTEM">System & Security</option>
                         </select>
                     </div>
                     <div id="activityLog" class="activity-feed"></div>

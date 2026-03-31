@@ -14,7 +14,10 @@ import (
 )
 
 func GetBills(c *gin.Context) {
-	rows, err := database.DB.Query("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, date_generated, notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE renter_id = ? ORDER BY date_generated DESC, id DESC", c.Param("renter_id"))
+	limit := c.DefaultQuery("limit", "10")
+	offset := c.DefaultQuery("offset", "0")
+
+	rows, err := database.DB.Query("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, date_generated, notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE renter_id = ? ORDER BY date_generated DESC, id DESC LIMIT ? OFFSET ?", c.Param("renter_id"), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
