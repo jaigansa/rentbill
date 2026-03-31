@@ -1,6 +1,6 @@
 # Binaries
-rentbill
-rentbill_prod
+/rentbill
+/rentbill_prod
 
 # Databases
 *.db
@@ -14,7 +14,8 @@ config.json
 
 # Releases
 *.tar.gz
-rentbill_release/
+/rentbill_release/
+/rentbill_deploy.tar.gz
 
 # Project Audits
 UI_UX_IMPROVEMENTS.md
