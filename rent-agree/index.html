@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RENTAL_AGREEMENT_DOSSIER_V2</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="controls">
+    <!-- UI Header -->
+    <div class="ui-header">
+        <div class="header-top">
+            <div style="display:flex; align-items:center; gap:10px">
+                <i data-lucide="file-text" style="color:var(--primary)"></i>
+                <h2 style="margin:0; font-size:18px; text-transform:uppercase; font-weight:900">Agreement Dossier</h2>
+            </div>
+        </div>
+        <div class="lang-toggle">
+            <button id="btn-en" class="active" onclick="setLanguage('en')">EN</button>
+            <button id="btn-tn" onclick="setLanguage('tn')">TA</button>
+            <button id="btn-entn" onclick="setLanguage('entn')">EN/TA</button>
+        </div>
+    </div>
+
+    <!-- Form Sections -->
+    <div class="form-grid">
+        <div class="form-section">
+            <div class="section-header">
+                <h3><i data-lucide="settings" class="icon"></i> Document Settings</h3>
+            </div>
+            <label id="lbl-type">Agreement Type</label>
+            <select id="in-type" class="input-field" onchange="setLanguage(currentLang, true)">
+                <option value="house">House (Residential)</option>
+                <option value="shop">Shop (Commercial)</option>
+            </select>
+            <div id="house-num-container">
+                <label id="lbl-house-num">House Number</label>
+                <input type="text" id="in-house-num" class="input-field" oninput="updatePaper()">
+            </div>
+            <div id="shop-name-container" style="display:none;">
+                <label id="lbl-shop-info">Shop Information</label>
+                <input type="text" id="in-shop-info" class="input-field" oninput="updatePaper()">
+            </div>
+            <label id="lbl-agreement-date">Execution Date</label>
+            <input type="date" id="in-agreement-date" class="input-field" oninput="updatePaper()">
+            <label id="lbl-start-date">Lease Start Date</label>
+            <input type="date" id="in-start-date" class="input-field" oninput="updatePaper()">
+        </div>
+
+        <div class="form-section">
+            <div class="section-header">
+                <h3><i data-lucide="user" class="icon"></i> Lessor (Owner)</h3>
+            </div>
+            <input type="text" id="in-landlord" class="input-field" placeholder="Full Name" oninput="updatePaper()">
+            <textarea id="in-landlord-addr" class="input-field" placeholder="Complete Address" oninput="updatePaper()"></textarea>
+            <input type="text" id="in-landlord-id" class="input-field" placeholder="Aadhaar Number" oninput="updatePaper()">
+            <input type="tel" id="in-landlord-phone" class="input-field" placeholder="Phone Number" oninput="updatePaper()">
+            <div class="sig-pad-container">
+                <div class="sig-label-row">
+                    <label>Digital Signature</label>
+                    <button onclick="clearSig('owner')" style="border:none;background:none;font-size:10px;cursor:pointer;color:var(--primary);font-weight:bold">RESET</button>
+                </div>
+                <canvas id="sig-canvas-owner"></canvas>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-header">
+                <h3><i data-lucide="users" class="icon"></i> Lessee (Tenant)</h3>
+            </div>
+            <input type="text" id="in-tenant" class="input-field" placeholder="Full Name" oninput="updatePaper()">
+            <textarea id="in-tenant-addr" class="input-field" placeholder="Permanent Address" oninput="updatePaper()"></textarea>
+            <input type="text" id="in-tenant-id" class="input-field" placeholder="Aadhaar Number" oninput="updatePaper()">
+            <input type="tel" id="in-tenant-phone" class="input-field" placeholder="Phone Number" oninput="updatePaper()">
+            
+            <div id="family-members-container" style="margin-top:10px">
+                <label id="lbl-family">Authorized Occupants</label>
+                <div id="members-list"></div>
+                <button onclick="addMember()" class="btn-main btn-secondary" style="height:36px;font-size:11px;width:100%" id="btn-add-member">
+                    <i data-lucide="plus" style="width:14px;height:14px"></i> ADD MEMBER
+                </button>
+            </div>
+
+            <div class="sig-pad-container">
+                <div class="sig-label-row">
+                    <label>Digital Signature</label>
+                    <button onclick="clearSig('tenant')" style="border:none;background:none;font-size:10px;cursor:pointer;color:var(--primary);font-weight:bold">RESET</button>
+                </div>
+                <canvas id="sig-canvas-tenant"></canvas>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="section-header">
+                <h3><i data-lucide="banknote" class="icon"></i> Lease Charges</h3>
+            </div>
+            <label id="lbl-rent">Monthly Rent</label><input type="number" id="in-rent" class="input-field" oninput="calculateTotal(); updatePaper()">
+            <label id="lbl-deposit">Security Deposit</label><input type="number" id="in-deposit" class="input-field" oninput="updatePaper()">
+            <label id="lbl-eb-rate">Electricity Rate (Unit)</label><input type="number" id="in-eb-rate" class="input-field" oninput="updatePaper()">
+            <label id="lbl-water-charge">Water Charges</label><input type="number" id="in-water-charge" class="input-field" oninput="calculateTotal(); updatePaper()">
+            <label id="lbl-maintenance">Maintenance Fee</label><input type="number" id="in-maintenance" class="input-field" oninput="calculateTotal(); updatePaper()">
+        </div>
+
+        <div class="total-banner">
+            <span id="lbl-total-pay" style="font-weight:800; color:#475569">TOTAL MONTHLY FIXED</span>
+            <span class="total-amount">₹ <span id="total-val">0</span></span>
+        </div>
+
+        <div class="form-section" style="grid-column: 1 / -1;">
+            <div class="section-header">
+                <h3><i data-lucide="scroll" class="icon"></i> Custom Clauses & Witnesses</h3>
+            </div>
+            <label id="lbl-terms-edit">Agreement Clauses</label>
+            <textarea id="in-terms" class="input-field" style="height: 120px;" oninput="updatePaper()"></textarea>
+            <label id="lbl-inventory">Inventory / Fixtures</label>
+            <textarea id="in-inventory" class="input-field" style="height: 60px;" oninput="updatePaper()"></textarea>
+            <div class="member-row" style="margin-top:10px">
+                <input type="text" id="in-witness1" class="input-field" placeholder="Witness 1 (Name & ID)" oninput="updatePaper()">
+                <input type="text" id="in-witness2" class="input-field" placeholder="Witness 2 (Name & ID)" oninput="updatePaper()">
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="actions">
+        <button id="btn-reset" onclick="resetApp()" class="btn-main btn-secondary" style="color:#ef4444">
+            <i data-lucide="trash-2"></i>
+            <span id="lbl-btn-reset">Reset</span>
+        </button>
+        <button id="btn-update" onclick="updatePaper()" class="btn-main btn-secondary">
+            <i data-lucide="refresh-cw"></i>
+            <span id="lbl-btn-update">Update</span>
+        </button>
+        <button id="btn-print" onclick="window.print()" class="btn-main btn-primary">
+            <i data-lucide="printer"></i>
+            <span id="lbl-btn-print">Generate Dossier</span>
+        </button>
+    </div>
+</div>
+
+<!-- PRINTABLE DOSSIER PAPER -->
+<div id="agreement-paper">
+    <div class="official-stamp">OFFICIAL RECORD</div>
+
+    <div class="dossier-header">
+        <h1 id="out-header">RENTAL AGREEMENT</h1>
+        <div class="header-sub" id="out-header-sub">வாடகை ஒப்பந்தம்</div>
+    </div>
+
+    <div class="content-block">
+        <div class="bilingual-row" style="border:none">
+            <div class="label-box" id="out-lbl-date">DATE / தேதி:</div>
+            <div class="value-box" id="out-date" style="text-decoration:none;">__________</div>
+        </div>
+    </div>
+
+    <!-- 1. PARTIES -->
+    <div class="print-section">
+        <div class="section-title" id="out-sec1">1. PARTIES / தரப்பினர்</div>
+        <div class="content-block">
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-owner">OWNER / உரிமையாளர்:</div>
+                <div class="value-box" id="out-landlord">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-owner-addr">ADDRESS / முகவரி:</div>
+                <div class="value-box" id="out-landlord-addr" style="text-transform:none">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-owner-aadhaar">AADHAAR ID / ஆதார்:</div>
+                <div class="value-box" id="out-landlord-id">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-owner-phone">PHONE / தொலைபேசி:</div>
+                <div class="value-box" id="out-landlord-phone">__________</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="print-section">
+        <div class="content-block" style="margin-top: 10px;">
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-tenant">TENANT / வாடகைதாரர்:</div>
+                <div class="value-box" id="out-tenant">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-tenant-addr">ADDRESS / முகவரி:</div>
+                <div class="value-box" id="out-tenant-addr" style="text-transform:none">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-tenant-aadhaar">AADHAAR ID / ஆதார்:</div>
+                <div class="value-box" id="out-tenant-id">__________</div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-tenant-phone">PHONE / தொலைபேசி:</div>
+                <div class="value-box" id="out-tenant-phone">__________</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="out-family-section" style="display:none" class="print-section">
+        <div class="section-title" id="out-sec-family-title">CO-OCCUPANTS / குடியிருப்பாளர்கள்</div>
+        <div class="content-block" id="out-members-list"></div>
+    </div>
+
+    <!-- 2. RENT LOCATION -->
+    <div class="print-section">
+        <div class="section-title" id="out-sec2">2. RENT LOCATION / வாடகை இடத்தின் விபரம்</div>
+        <div class="bilingual-row">
+            <div class="label-box" id="out-lbl-premises" >LOCATION / இடத்தின் விபரம்:</div>
+            <div class="value-box" id="out-premises-val" style="font-size:12px;">__________ </div> <span>/</span>
+            <div class="value-box" id="out-usage-val" style="font-size:12px;">__________</div>
+
+        </div>
+    </div>
+
+    <!-- 3. RENT & DEPOSITS -->
+    <div class="print-section">
+        <div class="section-title" id="out-sec3">3. RENT & DEPOSITS / கட்டண விபரம்</div>
+        <table class="legal-table">
+            <tr>
+                <th id="out-lbl-description">DESCRIPTION / விபரம்</th>
+                <th style="text-align: right;" id="out-lbl-amount">AMOUNT / தொகை</th>
+            </tr>
+            <tr>
+                <td id="out-lbl-monthly-rent">MONTHLY LEASE RENT / மாத வாடகை</td>
+                <td style="text-align: right; font-weight: bold;">₹ <span id="out-rent">0</span></td>
+            </tr>
+            <tr>
+                <td id="out-lbl-maintenance">MAINTENANCE CHARGES / பராமரிப்பு</td>
+                <td style="text-align: right; font-weight: bold;">₹ <span id="out-maintenance">0</span></td>
+            </tr>
+            <tr>
+                <td id="out-lbl-water-charge">WATER CHARGES / தண்ணீர்</td>
+                <td style="text-align: right; font-weight: bold;">₹ <span id="out-water-charge">0</span></td>
+            </tr>
+            <tr class="total-row">
+                <td id="out-lbl-total-fixed-monthly">TOTAL FIXED MONTHLY / மொத்தத் தொகை</td>
+                <td style="text-align: right; font-size: 18px;">₹ <span id="out-total">0</span></td>
+            </tr>
+        </table>
+        
+        <div class="content-block">
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-security-deposit">SECURITY DEPOSIT / முன்பணம்:</div>
+                <div class="value-box">₹ <span id="out-deposit">0</span> <span id="out-lbl-interest-free" style="font-size:10px; font-weight:normal">(INTEREST-FREE)</span></div>
+            </div>
+            <div class="bilingual-row">
+                <div class="label-box" id="out-lbl-electricity-charge">ELECTRICITY RATE / மின்சாரக் கட்டணம்:</div>
+                <div class="value-box">₹ <span id="out-eb-rate">0</span> / <span id="out-lbl-per-unit">UNIT</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. TERMS -->
+    <div class="print-section">
+        <div class="section-title" id="out-sec4">4. TERMS & CONDITIONS / நிபந்தனைகள்</div>
+        <div class="content-block" id="out-terms-list" style="font-size:12px; line-height:1.8"></div>
+    </div>
+
+    <!-- 5. INVENTORY -->
+    <div class="print-section">
+        <div class="section-title" id="out-sec5">5. INVENTORY / பொருட்கள்</div>
+        <div class="content-block" id="out-inventory" style="background:#f9f9f9; padding:10px; border:1px solid #ddd">__________</div>
+    </div>
+
+    <!-- SIGNATURES -->
+    <div class="print-section">
+        <div class="signature-space">
+            <div class="sig-box">
+                <img id="sig-img-owner" class="sig-img">
+                <span id="out-lbl-owner-sign-print">LESSOR SIGNATURE / உரிமையாளர்</span>
+            </div>
+            <div class="sig-box">
+                <img id="sig-img-tenant" class="sig-img">
+                <span id="out-lbl-tenant-sign-print">LESSEE SIGNATURE / வாடகைதாரர்</span>
+            </div>
+        </div>
+
+        <div class="content-block" style="margin-top: 30px; border-top: 1px solid #000; padding-top: 10px;">
+            <strong id="out-lbl-witnesses">OFFICIAL WITNESSES / சாட்சிகள்:</strong><br>
+            <div style="margin-top:10px">1. <span id="out-witness1" style="border-bottom:1px solid #ccc; display:inline-block; min-width:300px">__________________________</span></div>
+            <div style="margin-top:10px">2. <span id="out-witness2" style="border-bottom:1px solid #ccc; display:inline-block; min-width:300px">__________________________</span></div>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+    <div class="dossier-header receipt-header">
+        <h1 id="out-rec-title">PAYMENT RECEIPT / பற்றுச் சீட்டு</h1>
+    </div>
+
+    <div class="content-block" style="margin-top:40px">
+        <div style="text-align: right; margin-bottom: 30px; font-family:Arial, sans-serif">
+            <strong id="out-lbl-rec-date">DATE / தேதி:</strong> <span id="rec-date" style="border-bottom:2px solid #000; padding:0 10px">__________</span>
+        </div>
+        <p id="out-rec-body" style="line-height: 2.2; font-size: 16px; border: 1px solid #eee; padding: 25px; background: #fafafa">
+            Received a sum of <strong>Rs. <span id="rec-deposit">0</span></strong> from <strong><span id="rec-tenant">__________</span></strong> as interest-free security deposit for <strong><span id="rec-premises">__________</span></strong>.
+        </p>
+        
+        <div style="margin-top: 80px; display: flex; justify-content: flex-end;">
+            <div class="sig-box" style="width: 350px;">
+                <img id="sig-img-rec-owner" class="sig-img" style="max-height:80px">
+                <span id="out-rec-sig">AUTHORIZED SIGNATURE / அங்கீகரிக்கப்பட்ட கையொப்பம்</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="lucide.min.js"></script>
+<script src="dic.js"></script>
+<script>
+    const canvases = { owner: document.getElementById('sig-canvas-owner'), tenant: document.getElementById('sig-canvas-tenant') };
+    const contexts = { owner: canvases['owner']?.getContext('2d'), tenant: canvases['tenant']?.getContext('2d') };
+    let currentLang = 'en';
+
+    function initCanvases() {
+        Object.keys(canvases).forEach(key => {
+            const canvas = canvases[key];
+            const ctx = contexts[key];
+            if (!canvas || !ctx) return;
+            let drawing = false;
+
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            };
+
+            const start = (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); };
+            const move = (e) => { if(!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); e.preventDefault(); };
+            const stop = () => { drawing = false; updatePaper(); };
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', stop);
+            
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+        });
+    }
+
+    function clearSig(key) { 
+        if (contexts[key]) contexts[key].clearRect(0, 0, canvases[key].width, canvases[key].height); 
+        updatePaper(); 
+    }
+
+    function calculateTotal() {
+        const r = parseFloat(document.getElementById('in-rent')?.value) || 0;
+        const w = parseFloat(document.getElementById('in-water-charge')?.value) || 0;
+        const m = parseFloat(document.getElementById('in-maintenance')?.value) || 0;
+        const total = r + w + m;
+        const totalValEl = document.getElementById('total-val');
+        const outTotalEl = document.getElementById('out-total');
+        if (totalValEl) totalValEl.innerText = total;
+        if (outTotalEl) outTotalEl.innerText = total;
+    }
+
+    function formatDate(val) { return val ? val.split('-').reverse().join('-') : '__________'; }
+
+    function setLanguage(lang, forceTermsUpdate = true) {
+        currentLang = lang;
+        localStorage.setItem('rent_pro_lang', lang);
+        const btnEn = document.getElementById('btn-en');
+        const btnTa = document.getElementById('btn-tn');
+        const btnEntn = document.getElementById('btn-entn');
+        if (btnEn) btnEn.classList.toggle('active', lang === 'en');
+        if (btnTa) btnTa.classList.toggle('active', lang === 'tn');
+        if (btnEntn) btnEntn.classList.toggle('active', lang === 'entn');
+        const uiLang = lang === 'entn' ? 'en' : lang;
+        Object.keys(LEXICON).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') el.placeholder = LEXICON[id][uiLang];
+                else el.innerText = LEXICON[id][uiLang];
+            }
+        });
+        if (forceTermsUpdate) {
+            const startStr = formatDate(document.getElementById('in-start-date')?.value);
+            const inTerms = document.getElementById('in-terms');
+            if (inTerms) {
+                const type = document.getElementById('in-type')?.value;
+                const purposeEn = type === 'house' ? 'residential' : 'shop';
+                const purposeTn = type === 'house' ? 'குடியிருப்பு' : 'கடை';
+                if (lang === 'entn') {
+                    const enTerms = defaultTerms['en'](startStr, type === 'house' ? 'house' : 'shop', purposeEn);
+                    const tnTerms = defaultTerms['tn'](startStr, type === 'house' ? 'வீட்டில்' : 'கடையில்', purposeTn);
+                    inTerms.value = enTerms.map((te, i) => `${te}\n${tnTerms[i]}`).join('\n\n');
+                } else {
+                    const place = type === 'house' ? (lang === 'tn' ? 'வீட்டில்' : 'house') : (lang === 'tn' ? 'கடையில்' : 'shop');
+                    const purpose = lang === 'tn' ? purposeTn : purposeEn;
+                    inTerms.value = defaultTerms[lang](startStr, place, purpose).join('\n');
+                }
+            }
+        }
+        updatePaper();
+    }
+
+    function updatePaper() {
+        const typeEl = document.getElementById('in-type');
+        const type = typeEl ? typeEl.value : 'house';
+        const lang = currentLang;
+        const t = (id) => {
+            if (!LEXICON[id]) return id;
+            if (lang === 'entn') return `${LEXICON[id]['en']} / ${LEXICON[id]['tn']}`;
+            return LEXICON[id][lang];
+        };
+        const members = [];
+        document.querySelectorAll('.member-row-input').forEach(row => {
+            const nameEl = row.querySelector('.member-name');
+            const idEl = row.querySelector('.member-id');
+            if (nameEl && idEl) members.push({ name: nameEl.value, id: idEl.value });
+        });
+        const formData = {};
+        document.querySelectorAll('input, select, textarea').forEach(el => { if(el.id) formData[el.id] = el.value; });
+        formData.members = members;
+        localStorage.setItem('rent_pro_v5_sync', JSON.stringify(formData));
+
+        if (lang === 'entn') {
+            document.getElementById('out-header').innerText = type === 'house' ? 'HOUSE RENTAL AGREEMENT' : 'SHOP RENTAL AGREEMENT';
+            document.getElementById('out-header-sub').innerText = type === 'house' ? 'வீட்டு வாடகை ஒப்பந்தம்' : 'கடை வாடகை ஒப்பந்தம்';
+            document.getElementById('out-header-sub').style.display = 'block';
+        } else {
+            document.getElementById('out-header').innerText = type === 'house' ? LEXICON['house-rental-agreement'][lang] : LEXICON['shop-rental-agreement'][lang];
+            document.getElementById('out-header-sub').style.display = 'none';
+        }
+
+        const labelMapping = {
+            'out-lbl-date': 'out-lbl-date', 'out-lbl-owner': 'out-lbl-owner', 'out-lbl-owner-addr': 'out-lbl-owner-addr',
+            'out-lbl-owner-aadhaar': 'out-lbl-owner-aadhaar', 'out-lbl-owner-phone': 'out-lbl-owner-phone',
+            'out-lbl-tenant': 'out-lbl-tenant', 'out-lbl-tenant-addr': 'out-lbl-tenant-addr',
+            'out-lbl-tenant-aadhaar': 'out-lbl-tenant-aadhaar', 'out-lbl-tenant-phone': 'out-lbl-tenant-phone',
+            'out-sec1': 'out-sec1', 'out-sec2': 'out-sec2', 'out-sec3': 'out-sec3', 'out-sec4': 'out-sec4', 'out-sec5': 'out-sec5',
+            'out-lbl-monthly-rent': 'out-lbl-monthly-rent', 'out-lbl-maintenance': 'out-lbl-maintenance',
+            'out-lbl-water-charge': 'out-lbl-water-charge', 'out-lbl-total-fixed-monthly': 'out-lbl-total-fixed-monthly',
+            'out-lbl-security-deposit': 'out-lbl-security-deposit', 'out-lbl-interest-free': 'out-lbl-interest-free',
+            'out-lbl-electricity-charge': 'out-lbl-electricity-charge', 'out-lbl-per-unit': 'out-lbl-per-unit',
+            'out-lbl-owner-sign-print': 'out-lbl-owner-sign-print', 'out-lbl-tenant-sign-print': 'out-lbl-tenant-sign-print',
+            'out-lbl-witnesses': 'out-lbl-witnesses', 'out-rec-sig': 'out-rec-sig', 'out-rec-title': 'out-rec-title',
+            'out-lbl-description': 'out-lbl-description', 'out-lbl-amount': 'out-lbl-amount', 'out-lbl-rec-date': 'out-lbl-rec-date',
+            'out-lbl-purpose': 'out-lbl-purpose'
+        };
+        Object.keys(labelMapping).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = t(labelMapping[id]);
+        });
+        const usageValEl = document.getElementById('out-usage-val');
+        if (usageValEl) usageValEl.innerText = t(type === 'house' ? 'val-residential' : 'val-shop');
+
+        const outLblPremises = document.getElementById('out-lbl-premises');
+        if (outLblPremises) {
+            outLblPremises.innerHTML = type === 'house' ?
+                (lang === 'entn' ? 'Rent Location / வாடகை இடத்தின் விபரம்:' : (lang === 'tn' ? 'வாடகை இடத்தின் விபரம்:' : 'Rent Location:')) :
+                (lang === 'entn' ? 'Rent Location / வாடகை இடத்தின் விபரம்:' : (lang === 'tn' ? 'வாடகை இடத்தின் விபரம்:' : 'Rent Location:'));
+        }
+        const fields = ['landlord', 'landlord-addr', 'landlord-id', 'landlord-phone', 'tenant', 'tenant-addr', 'tenant-id', 'tenant-phone', 'rent', 'deposit', 'eb-rate', 'water-charge', 'maintenance', 'witness1', 'witness2', 'inventory'];
+        fields.forEach(f => {
+            const el = document.getElementById('in-' + f);
+            if(el) {
+                const val = el.value || (['rent', 'deposit', 'eb-rate', 'water-charge', 'maintenance'].includes(f) ? '0' : '__________');
+                const out = document.getElementById('out-' + f);
+                if (out) out.innerText = val;
+            }
+        });
+        const premisesVal = type === 'house' ? document.getElementById('in-house-num')?.value : document.getElementById('in-shop-info')?.value;
+        const outPremVal = document.getElementById('out-premises-val');
+        if (outPremVal) outPremVal.innerText = premisesVal || '__________';
+        const recPremVal = document.getElementById('rec-premises');
+        if (recPremVal) recPremVal.innerText = premisesVal || '__________';
+        const outMembers = document.getElementById('out-members-list');
+        const outFamilySec = document.getElementById('out-family-section');
+        if (outMembers && outFamilySec) {
+            if (members.length > 0) {
+                outFamilySec.style.display = 'block';
+                outMembers.innerHTML = members.map((m, i) => `${i+1}. ${m.name} (ID: ${m.id})`).join('<br>');
+                const familyTitleEl = document.getElementById('out-sec-family-title');
+                if (familyTitleEl) familyTitleEl.innerText = t('authorized-co-occupants');
+            } else { outFamilySec.style.display = 'none'; }
+        }
+        const inTerms = document.getElementById('in-terms');
+        const outTermsList = document.getElementById('out-terms-list');
+        if (inTerms && outTermsList) outTermsList.innerHTML = inTerms.value.split('\n').filter(l => l.trim()).map((te, i) => `<div>${i+1}. ${te}</div>`).join('');
+
+        ['owner', 'tenant'].forEach(key => {
+            const img = document.getElementById('sig-img-' + key);
+            if (img && canvases[key]) {
+                const data = canvases[key].toDataURL();
+                if (data.length > 2000) { 
+                    img.src = data; img.style.display = 'block'; 
+                    if(key === 'owner') {
+                        const recImg = document.getElementById('sig-img-rec-owner');
+                        if(recImg) { recImg.src = data; recImg.style.display = 'block'; }
+                    }
+                } else { 
+                    img.style.display = 'none'; 
+                    if(key === 'owner') {
+                        const recImg = document.getElementById('sig-img-rec-owner');
+                        if(recImg) recImg.style.display = 'none';
+                    }
+                }
+            }
+        });
+        calculateTotal();
+        const dateVal = formatDate(document.getElementById('in-agreement-date')?.value);
+        const outDateEl = document.getElementById('out-date');
+        if (outDateEl) outDateEl.innerText = dateVal;
+        const recDateEl = document.getElementById('rec-date');
+        if (recDateEl) recDateEl.innerText = dateVal;
+        const recDepositEl = document.getElementById('rec-deposit');
+        if (recDepositEl) recDepositEl.innerText = document.getElementById('in-deposit')?.value || '0';
+        const recTenantEl = document.getElementById('rec-tenant');
+        if (recTenantEl) recTenantEl.innerText = document.getElementById('in-tenant')?.value || '__________';
+        const recBodyEl = document.getElementById('out-rec-body');
+        if (recBodyEl) {
+            const deposit = document.getElementById('in-deposit')?.value || '0';
+            const tenant = document.getElementById('in-tenant')?.value || '__________';
+            if (lang === 'entn') {
+                recBodyEl.innerHTML = `Received a sum of <strong>Rs. ${deposit}</strong> from <strong>${tenant}</strong> as interest-free security deposit for <strong>${premisesVal || '__________'}</strong>.<br>` +
+                    `<span class="ta"><strong>${premisesVal || '__________'}</strong> இடத்திற்கான வட்டி இல்லா முன்பணமாக <strong>ரூ. ${deposit}</strong> ஐ <strong>${tenant}</strong> என்பவரிடமிருந்து பெற்றுக்கொண்டேன்.</span>`;
+            } else if (lang === 'tn') {
+                recBodyEl.innerHTML = `<span class="ta"><strong>${premisesVal || '__________'}</strong> இடத்திற்கான வட்டி இல்லா முன்பணமாக <strong>ரூ. ${deposit}</strong> ஐ <strong>${tenant}</strong> என்பவரிடமிருந்து பெற்றுக்கொண்டேன்.</span>`;
+            } else {
+                recBodyEl.innerHTML = `Received a sum of <strong>Rs. ${deposit}</strong> from <strong>${tenant}</strong> as interest-free security deposit for <strong>${premisesVal || '__________'}</strong>.`;
+            }
+        }
+        const houseCont = document.getElementById('house-num-container');
+        const shopCont = document.getElementById('shop-name-container');
+        if (houseCont) houseCont.style.display = type === 'house' ? 'block' : 'none';
+        if (shopCont) shopCont.style.display = type === 'shop' ? 'block' : 'none';
+    }
+
+    function addMember(name = '', id = '') {
+        const div = document.createElement('div');
+        div.className = 'member-row member-row-input';
+        div.innerHTML = `<input type="text" class="input-field member-name" placeholder="Name" value="${name}" oninput="updatePaper()">
+            <input type="text" class="input-field member-id" placeholder="Aadhaar" value="${id}" oninput="updatePaper()">
+            <button onclick="this.parentElement.remove(); updatePaper();" class="btn-icon"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>`;
+        const membersList = document.getElementById('members-list');
+        if (membersList) {
+            membersList.appendChild(div);
+            lucide.createIcons(); // Refresh for new member icon
+        }
+        updatePaper();
+    }
+
+    function resetApp() {
+        if (confirm('Reset all data?')) {
+            localStorage.removeItem('rent_pro_v5_sync');
+            window.location.reload();
+        }
+    }
+
+    window.onload = function() {
+        initCanvases();
+        const saved = localStorage.getItem('rent_pro_v5_sync');
+        const savedLang = localStorage.getItem('rent_pro_lang') || 'en';
+        if (saved) {
+            const data = JSON.parse(saved);
+            Object.keys(data).forEach(id => { const el = document.getElementById(id); if (el) el.value = data[id]; });
+            if (data.members) data.members.forEach(m => addMember(m.name, m.id));
+            setLanguage(savedLang, false); 
+            updatePaper();
+        } else {
+            const today = new Date().toISOString().split('T')[0];
+            const inAgDate = document.getElementById('in-agreement-date');
+            const inStDate = document.getElementById('in-start-date');
+            if (inAgDate) inAgDate.value = today;
+            if (inStDate) inStDate.value = today;
+            setLanguage('en');
+        }
+        lucide.createIcons();
+    };
+</script>
+</body>
+</html>
