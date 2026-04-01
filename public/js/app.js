@@ -16,6 +16,14 @@ window.onload = async () => {
     registerServiceWorker();
 };
 
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW Registered', reg.scope))
+            .catch(err => console.log('SW Registration failed', err));
+    }
+}
+
 function injectTemplates() {
     document.getElementById('pinOverlay').innerHTML = Templates.authOverlay;
     document.getElementById('modalContainer').innerHTML = Templates.modals;

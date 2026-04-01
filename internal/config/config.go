@@ -95,6 +95,11 @@ func InitConfig() {
 	} else {
 		file, _ := os.ReadFile(ConfigPath)
 		json.Unmarshal(file, &AppConfig)
+		if AppConfig.MasterPinHash == "" {
+			hash, _ := HashPassword("1234")
+			AppConfig.MasterPinHash = hash
+			SaveConfig()
+		}
 		if AppConfig.ServerPort == 0 {
 			AppConfig.ServerPort = 8080
 		}

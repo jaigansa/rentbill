@@ -6,5 +6,5 @@
   "email_pass": "",
   "email_bcc": "",
   "session_secret": "generate-a-random-secret",
-  "upi_accounts": []
+  "receiving_accounts": []
 }
