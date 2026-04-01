@@ -277,15 +277,16 @@ async function loadActivityLogs() {
         resetLogsScroll();
     }
 
-    const actionIcons = { 
-        'TENANT_REGISTERED': 'user-plus', 'TENANT_UPDATED': 'user-cog', 
-        'TENANT_DELETED': 'user-minus', 'BILL_GENERATED': 'file-text', 
-        'PAYMENT_RECORDED': 'check-circle', 'BILL_DELETED': 'file-x', 
-        'UNIT_VACATED': 'home', 'TENANT_RESTORED': 'rotate-ccw', 
+    const actionIcons = {
+        'TENANT_REGISTERED': 'user-plus', 'TENANT_UPDATED': 'user-cog',
+        'TENANT_DELETED': 'user-minus', 'TENANT_REMOVED': 'user-minus',
+        'BILL_GENERATED': 'file-text', 'PAYMENT_RECORDED': 'check-circle',
+        'ARREARS_CARRIED': 'trending-up', 'BILL_DELETED': 'file-x',
+        'UNIT_VACATED': 'home', 'TENANT_RESTORED': 'rotate-ccw',
         'DB_BACKUP': 'database', 'FORGOT_PIN': 'shield-alert',
-        'EXPENSE_RECORDED': 'trending-down', 'EXPENSE_REMOVED': 'trash-2'
+        'EXPENSE_RECORDED': 'trending-down', 'EXPENSE_REMOVED': 'trash-2',
+        'OWNER_PAYOUT': 'banknote', 'OWNER_PAYOUT_DELETED': 'trash-2'
     };
-
     resetLogsScroll = setupInfiniteScroll(
         listDiv,
         async (offset, limit) => {

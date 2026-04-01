@@ -22,13 +22,13 @@ func GetLogs(c *gin.Context) {
 	query := "SELECT id, action, details, username, timestamp FROM activity_logs "
 	switch filter {
 	case "PAYMENTS":
-		query += "WHERE action = 'PAYMENT_RECORDED' "
+		query += "WHERE action IN ('PAYMENT_RECORDED', 'ARREARS_CARRIED') "
 	case "BILLS":
 		query += "WHERE action IN ('BILL_GENERATED', 'BILL_DELETED') "
 	case "TENANTS":
-		query += "WHERE action IN ('TENANT_REGISTERED', 'TENANT_UPDATED', 'TENANT_DELETED', 'UNIT_VACATED', 'TENANT_RESTORED') "
+		query += "WHERE action IN ('TENANT_REGISTERED', 'TENANT_UPDATED', 'TENANT_DELETED', 'UNIT_VACATED', 'TENANT_RESTORED', 'TENANT_REMOVED') "
 	case "MAINTENANCE":
-		query += "WHERE action IN ('EXPENSE_RECORDED', 'EXPENSE_REMOVED') "
+		query += "WHERE action IN ('EXPENSE_RECORDED', 'EXPENSE_REMOVED', 'OWNER_PAYOUT', 'OWNER_PAYOUT_DELETED') "
 	case "SYSTEM":
 		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED') "
 	}
