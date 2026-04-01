@@ -88,12 +88,12 @@ Issued by RentBill
                     <!-- Footer Barcode simulation -->
                     <div style="margin-top: 30px; border-top: 2px solid #000; padding-top: 10px; text-align: center;">
                         <div style="height: 15px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 5px); margin-bottom: 5px;"></div>
-                        <p style="font-size: 10px; margin: 0; letter-spacing: 5px;">CONFIDENTIAL RECORD // RENTBILL SYSTEM</p>
+                        <p style="font-size: 10px; margin: 0; letter-spacing: 5px;">OFFICIAL DOCUMENT // RENTBILL SYSTEM</p>
                     </div>
 
                     <!-- Stamp -->
                     <div style="position: absolute; top: 150px; right: 40px; border: 4px double #000; padding: 5px 10px; transform: rotate(15deg); opacity: 0.8; font-weight: bold; color: #000; font-size: 18px;">
-                        CERTIFIED
+                        VERIFIED
                     </div>
                 </div>
             </div>`;
@@ -300,14 +300,21 @@ async function prepareAndShare(type, id, extraDetails = null) {
                         ${!bill.is_paid ? htmlPaymentInfo : ''}
 
                         <!-- Status Stamp -->
-                        <div style="display: block; margin: 15px auto; width: fit-content; border: 4px double #000; padding: 5px 15px; transform: rotate(-5deg); font-weight: bold; font-size: 18px; text-align: center;">
-                            ${bill.is_paid ? 'PAID' : 'PENDING'}
+                        <div style="display: flex; gap: 10px; justify-content: center; margin: 15px auto;">
+                            <div style="border: 4px double #000; padding: 5px 15px; transform: rotate(-5deg); font-weight: bold; font-size: 18px; text-align: center;">
+                                ${bill.is_paid ? 'PAID' : 'PENDING'}
+                            </div>
+                            ${bill.is_paid ? `
+                            <div style="border: 4px double #000; padding: 5px 15px; transform: rotate(5deg); font-weight: bold; font-size: 18px; text-align: center; color: #000; opacity: 0.8;">
+                                VERIFIED
+                            </div>
+                            ` : ''}
                         </div>
 
                         <!-- Footer -->
                         <div style="margin-top: 20px; border-top: 2px solid #000; padding-top: 10px; text-align: center;">
                             <div style="height: 10px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 5px); margin-bottom: 5px;"></div>
-                            <p style="font-size: 9px; margin: 0; letter-spacing: 3px;">GENERATED: ${formattedGenDate} // RENTBILL SYSTEM</p>
+                            <p style="font-size: 9px; margin: 0; letter-spacing: 3px;">GENERATED: ${formattedGenDate} // OFFICIAL DOCUMENT</p>
                         </div>
                     </div>
                 </div>`;
@@ -390,13 +397,13 @@ async function prepareAndShare(type, id, extraDetails = null) {
 
                         <!-- Status Stamp -->
                         <div style="display: block; margin: 20px auto; width: fit-content; border: 4px double #000; padding: 5px 15px; transform: rotate(-5deg); font-weight: bold; font-size: 18px; text-align: center;">
-                            CLEARED
+                            VERIFIED
                         </div>
 
                         <!-- Footer -->
                         <div style="margin-top: 20px; border-top: 2px solid #000; padding-top: 10px; text-align: center;">
                             <div style="height: 10px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 5px); margin-bottom: 5px;"></div>
-                            <p style="font-size: 9px; margin: 0; letter-spacing: 3px;">GENERATED: ${formattedGenDate} // RENTBILL SYSTEM</p>
+                            <p style="font-size: 9px; margin: 0; letter-spacing: 3px;">GENERATED: ${formattedGenDate} // OFFICIAL DOCUMENT</p>
                         </div>
                     </div>
                 </div>`;
