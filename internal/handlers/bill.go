@@ -201,8 +201,10 @@ func GetFinancialSummary(c *gin.Context) {
 		TotalCount    int     `json:"total_count"`
 		PaidCount     int     `json:"paid_count"`
 	}
-	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
-	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
+	// Use (total_amount - arrears_included) to avoid double counting arrears in historical billing sum
+	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
+	// Total Paid should include discounts and write-offs as they "settle" the billed amount, but exclude new arrears carried forward
+	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount + discount_amount + write_off_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE is_paid = 0").Scan(&summary.TotalDues)
 	database.DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalAdvances)
 	database.DB.QueryRow("SELECT COALESCE(SUM(pending_arrears), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalArrears)
@@ -224,12 +226,12 @@ func GetTenantLedger(c *gin.Context) {
 
 	rows, err := database.DB.Query(`
 		SELECT r.id, r.name, r.room_no, r.advance_amount, r.pending_arrears,
-		COALESCE((SELECT SUM(total_amount) FROM bills WHERE renter_id = r.id), 0) as billed,
-		COALESCE((SELECT SUM(paid_amount) FROM bills WHERE renter_id = r.id AND is_paid = 1), 0) as paid,
+		COALESCE((SELECT SUM(total_amount - arrears_included) FROM bills WHERE renter_id = r.id), 0) as billed,
+		COALESCE((SELECT SUM(paid_amount + discount_amount + write_off_amount) FROM bills WHERE renter_id = r.id AND is_paid = 1), 0) as paid,
 		COALESCE((SELECT SUM(total_amount) FROM bills WHERE renter_id = r.id AND is_paid = 0), 0) as unpaid_bills
 		FROM renters r WHERE r.is_active = 1
 		ORDER BY r.room_no ASC`)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -245,17 +247,18 @@ func GetTenantLedger(c *gin.Context) {
 		e.Balance = unpaidBills + e.PendingArrears
 		ledger = append(ledger, e)
 	}
-	if ledger == nil { ledger = []Entry{} }
+	if ledger == nil {
+		ledger = []Entry{}
+	}
 	c.JSON(http.StatusOK, ledger)
 }
+
 func GetAllPendingBills(c *gin.Context) {
-	// Replacing old GetAllPendingBills with a more comprehensive GetDueCheck logic
-	// but keeping the name or adding a new one. I'll add GetDueCheck.
 	GetDueCheck(c)
 }
 
 func GetDueCheck(c *gin.Context) {
-	rows, err := database.DB.Query("SELECT id, name, room_no, move_in_date FROM renters WHERE is_active = 1")
+	rows, err := database.DB.Query("SELECT id, name, room_no, move_in_date, pending_arrears FROM renters WHERE is_active = 1")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -273,31 +276,36 @@ func GetDueCheck(c *gin.Context) {
 	}
 	var results []Item
 
-	now := time.Now()
+	now := time.Now().UTC()
 	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	prevMonth := currentMonth.AddDate(0, -1, 0)
 
 	for rows.Next() {
 		var r struct {
-			ID         int
-			Name       string
-			RoomNo     string
-			MoveInDate string
+			ID             int
+			Name           string
+			RoomNo         string
+			MoveInDate     string
+			PendingArrears float64
 		}
-		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.MoveInDate)
+		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.MoveInDate, &r.PendingArrears)
 
 		// 1. Get all existing bills for this renter
-		billRows, _ := database.DB.Query("SELECT billing_month, total_amount, is_paid, arrears_included FROM bills WHERE renter_id = ?", r.ID)
-		billsMap := make(map[string]bool)   // month -> is_paid
+		billRows, err := database.DB.Query("SELECT billing_month, total_amount, is_paid, arrears_included FROM bills WHERE renter_id = ?", r.ID)
+		if err != nil {
+			continue
+		}
 		billedAmount := make(map[string]float64)
-		
+
 		for billRows.Next() {
 			var bMonth string
 			var bAmount, bArrears float64
 			var bPaid int
-			billRows.Scan(&bMonth, &bAmount, &bPaid, &bArrears)
-			billsMap[strings.ToUpper(bMonth)] = (bPaid == 1)
-			billedAmount[strings.ToUpper(bMonth)] = bAmount
-			
+			if err := billRows.Scan(&bMonth, &bAmount, &bPaid, &bArrears); err != nil {
+				continue
+			}
+			billedAmount[strings.ToUpper(strings.TrimSpace(bMonth))] = bAmount
+
 			// If bill exists but not paid, add to pending
 			if bPaid == 0 {
 				results = append(results, Item{
@@ -316,32 +324,52 @@ func GetDueCheck(c *gin.Context) {
 		// 2. Check for missing bills since move-in
 		moveIn, err := time.Parse("2006-01-02", r.MoveInDate)
 		if err != nil {
-			// Fallback if date format is different
 			moveIn, _ = time.Parse(time.RFC3339, r.MoveInDate)
 		}
-		
+
+		// Postpaid logic:
 		tempDate := time.Date(moveIn.Year(), moveIn.Month(), 1, 0, 0, 0, 0, time.UTC)
-		for !tempDate.After(currentMonth) {
+
+		for !tempDate.After(prevMonth) {
 			mStr := strings.ToUpper(tempDate.Format("January 2006"))
 			if _, exists := billedAmount[mStr]; !exists {
+				itemType := "MISSING_BILL"
+				// The most recently completed month is the "DRAFT"
+				if tempDate.Equal(prevMonth) {
+					itemType = "DRAFT_BILL"
+				}
 				results = append(results, Item{
-					Type:         "MISSING_BILL",
+					Type:         itemType,
 					RenterID:     r.ID,
 					Name:         r.Name,
 					RoomNo:       r.RoomNo,
 					BillingMonth: tempDate.Format("January 2006"),
 					Amount:       0,
+					Arrears:      r.PendingArrears,
 				})
 			}
 			tempDate = tempDate.AddDate(0, 1, 0)
 		}
 	}
 
+	if results == nil {
+		results = []Item{}
+	}
 	c.JSON(http.StatusOK, results)
 }
 
 func GetMonthlyReport(c *gin.Context) {
-	month := c.Param("month")
+	monthParam := c.Param("month")
+	displayMonth := monthParam
+
+	// Handle YYYY-MM conversion if needed
+	if len(monthParam) == 7 && monthParam[4] == '-' {
+		t, err := time.Parse("2006-01", monthParam)
+		if err == nil {
+			displayMonth = t.Format("January 2006")
+		}
+	}
+
 	type Status struct {
 		RenterID int     `json:"renter_id"`
 		Name     string  `json:"name"`
@@ -351,18 +379,39 @@ func GetMonthlyReport(c *gin.Context) {
 		Total    float64 `json:"total"`
 		Billed   bool    `json:"is_billed"`
 	}
-	rows, err := database.DB.Query(`SELECT r.id, r.name, r.room_no, COALESCE(b.id, 0), COALESCE(b.is_paid, 0), COALESCE(b.total_amount, 0)
+	rows, err := database.DB.Query(`SELECT r.id, r.name, r.room_no, COALESCE(b.id, 0), COALESCE(b.is_paid, 0), COALESCE(b.total_amount, 0), r.move_in_date
 		FROM renters r LEFT JOIN bills b ON r.id = b.renter_id AND b.billing_month = ?
-		WHERE r.is_active = 1`, month)
+		WHERE r.is_active = 1`, displayMonth)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	defer rows.Close()
+
+	// Parse the report month (Stay Period) for comparison
+	reportTime, err := time.Parse("January 2006", displayMonth)
+	if err != nil {
+		reportTime = time.Now().UTC() // Fallback
+	}
+	reportTime = time.Date(reportTime.Year(), reportTime.Month(), 1, 0, 0, 0, 0, time.UTC)
+
 	var report = []Status{}
 	for rows.Next() {
 		var s Status
-		rows.Scan(&s.RenterID, &s.Name, &s.RoomNo, &s.BillID, &s.IsPaid, &s.Total)
+		var moveInStr string
+		rows.Scan(&s.RenterID, &s.Name, &s.RoomNo, &s.BillID, &s.IsPaid, &s.Total, &moveInStr)
+
+		moveIn, err := time.Parse("2006-01-02", moveInStr)
+		if err != nil {
+			moveIn, _ = time.Parse(time.RFC3339, moveInStr)
+		}
+		// Normalize moveIn to the 1st of its month
+		moveInMonth := time.Date(moveIn.Year(), moveIn.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+		if moveInMonth.After(reportTime) {
+			continue
+		}
+
 		s.Billed = s.BillID > 0
 		report = append(report, s)
 	}

@@ -47,8 +47,7 @@ async function verifyPin() {
     try {
         await API.auth.verify(currentPin);
         localStorage.setItem('isLoggedIn', 'true');
-        showOverlay(false);
-        showSection('tenantListContainer');
+        location.reload(); // Hard reload after login to ensure session cookie is sent correctly
     } catch (e) {
         showNotification("Wrong PIN", "error");
     }

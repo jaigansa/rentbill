@@ -18,7 +18,7 @@ const API = {
 
         if (response.status === 401) {
             localStorage.removeItem('isLoggedIn');
-            if (typeof showOverlay === 'function') showOverlay(true);
+            window.location.reload(); // Force full reload to reset all states
             throw new Error('Session expired');
         }
 

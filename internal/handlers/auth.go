@@ -24,7 +24,10 @@ func VerifyPin(c *gin.Context) {
 	if config.CheckPasswordHash(req.Pin, config.AppConfig.MasterPinHash) {
 		session := sessions.Default(c)
 		session.Set("user", config.AppConfig.Username)
-		session.Save()
+		if err := session.Save(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to establish session"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"success": true})
 	} else {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid PIN"})

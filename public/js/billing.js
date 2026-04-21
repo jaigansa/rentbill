@@ -22,7 +22,12 @@ async function loadTenants() {
 function createTenantCard(t) {
     const card = document.createElement('div');
     card.className = 'tenant-row';
-    const currentMonthStr = new Date().toISOString().slice(0, 7); // YYYY-MM
+    
+    // Default to PREVIOUS month for postpaid billing
+    const now = new Date();
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStr = prev.toISOString().slice(0, 7); // YYYY-MM
+    
     card.innerHTML = `
         <div class="tenant-header" onclick="toggleBilling(${t.id})">
             <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
@@ -44,7 +49,7 @@ function createTenantCard(t) {
         </div>
         <div id="billing-${t.id}" class="billing-controls hidden">
             <div class="billing-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="input-group" style="margin:0;"><label>Billing Month</label><input type="month" id="month-${t.id}" value="${currentMonthStr}"></div>
+                <div class="input-group" style="margin:0;"><label>Service/Stay Period (Month)</label><input type="month" id="month-${t.id}" value="${prevMonthStr}"></div>
                 <div class="input-group" style="margin:0;"><label>Extra Charges</label><input type="number" id="others-${t.id}" value="0"></div>
                 <div class="input-group" style="margin:0;"><label>Prev EB Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" style="font-weight: 400;"></div>
                 <div class="input-group" style="margin:0;"><label>Curr EB Reading</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" style="font-weight: 800; color: var(--primary);"></div>

@@ -193,8 +193,8 @@ async function loadMonthlyTracker() {
         if (window.allTenants) {
             window.allTenants.forEach(t => {
                 if (t.pending_arrears > 0) {
-                    // Check if this tenant already has a PENDING_PAYMENT task
-                    const hasTask = tasks.some(tk => tk.renter_id === t.id && (tk.type === 'PENDING_PAYMENT' || tk.type === 'ARREARS_ONLY'));
+                    // Check if this tenant already has a PENDING_PAYMENT, DRAFT_BILL or ARREARS_ONLY task
+                    const hasTask = tasks.some(tk => tk.renter_id === t.id && (tk.type === 'PENDING_PAYMENT' || tk.type === 'ARREARS_ONLY' || tk.type === 'DRAFT_BILL' || tk.type === 'MISSING_BILL'));
                     if (!hasTask) {
                         tasks.push({
                             type: 'ARREARS_ONLY',
@@ -223,30 +223,47 @@ async function loadMonthlyTracker() {
 
         tasks.forEach(s => {
             const isMissing = s.type === 'MISSING_BILL';
+            const isDraft = s.type === 'DRAFT_BILL';
             const isArrears = s.type === 'ARREARS_ONLY';
+            const isPending = s.type === 'PENDING_PAYMENT';
+            
             const item = document.createElement('div');
             item.className = 'card';
             item.style.padding = '1rem';
             item.style.marginBottom = '0.75rem';
-            item.style.border = `2px solid ${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}`;
+            item.style.border = `2px solid ${isMissing ? 'var(--danger)' : (isDraft ? 'var(--border)' : (isArrears ? 'var(--warning)' : 'var(--primary)'))}`;
 
-            const actionBtn = isMissing 
+            const actionBtn = (isMissing || isDraft)
                 ? `<button onclick="draftBillNow(${s.renter_id}, '${s.billing_month}')" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px; border-style: dashed;">Draft Now</button>`
                 : `<button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>`;
 
             const arrearNotice = s.arrears > 0 ? `<div style="font-size: 0.6rem; color: var(--danger); font-weight: 900; margin-top: 2px;">INCLUDES ARREARS: ${currencyFormatter.format(s.arrears)}</div>` : '';
 
+            let statusColor = isMissing ? 'var(--danger)' : (isDraft ? 'var(--text-muted)' : (isArrears ? 'var(--warning)' : 'var(--primary)'));
+            let statusLabel = '';
+            let periodLabel = s.billing_month === 'Previous Balance' ? s.billing_month : `Stay Period: ${s.billing_month}`;
+            
+            if (isMissing) {
+                statusLabel = `&bull; OVERDUE: BILL NOT GENERATED`;
+            } else if (isDraft) {
+                statusLabel = `&bull; POSTPAID BILL DUE: DRAFT NOW`;
+            } else if (isPending) {
+                statusLabel = `&bull; UNPAID: ${currencyFormatter.format(s.amount)}`;
+            } else if (isArrears) {
+                statusLabel = `&bull; BALANCE PENDING: ${currencyFormatter.format(s.amount)}`;
+            }
+
             item.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 8px; font-size: 0.6rem; min-width: 0; background: ${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}; color: var(--bg-card);">UNIT ${s.room_no}</span>
+                        <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 8px; font-size: 0.6rem; min-width: 0; background: ${isMissing ? 'var(--danger)' : (isDraft ? 'transparent' : (isArrears ? 'var(--warning)' : 'var(--primary)'))}; color: ${isDraft ? 'var(--text-main)' : 'var(--bg-card)'}; border: 1px solid var(--border);">UNIT ${s.room_no}</span>
                         ${actionBtn}
                     </div>
                     <div style="font-size: 1rem; font-weight: 900; color: var(--text-main); text-transform: uppercase; margin-top: 2px;">${s.name}</div>
                     <div style="display:flex; flex-direction: column; border-top: 1px dashed var(--border); padding-top: 6px;">
-                        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:800; color:${isMissing ? 'var(--danger)' : (isArrears ? 'var(--warning)' : 'var(--primary)')}; text-transform: uppercase;">
-                            <i data-lucide="${isMissing ? 'file-plus' : (isArrears ? 'alert-circle' : 'calendar')}" style="width:12px; height:12px;"></i> 
-                            ${s.billing_month} ${!isMissing ? `&bull; ${currencyFormatter.format(s.amount)}` : '(Bill Missing)'}
+                        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:800; color:${statusColor}; text-transform: uppercase;">
+                            <i data-lucide="${isMissing ? 'file-plus' : (isDraft ? 'file-text' : (isArrears ? 'alert-circle' : 'calendar'))}" style="width:12px; height:12px;"></i> 
+                            ${periodLabel} <span style="font-size: 0.65rem;">${statusLabel}</span>
                         </div>
                         ${arrearNotice}
                     </div>

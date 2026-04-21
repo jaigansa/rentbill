@@ -137,6 +137,11 @@ async function prepareAndShare(type, id, extraDetails = null) {
             const ebUnits = bill.curr_eb_reading - bill.prev_eb_reading;
             const ebCost = ebUnits * t.eb_unit_price;
 
+            // Calculate Due Date: 5th of the month following the billing month
+            const periodDate = new Date(bill.billing_month + ' 1');
+            const dueDate = new Date(periodDate.getFullYear(), periodDate.getMonth() + 1, 5);
+            const formattedDueDate = dueDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
             // Resolve Payment Details from Owner Name
             let paymentInfo = '';
             let htmlPaymentInfo = '';
@@ -216,10 +221,12 @@ async function prepareAndShare(type, id, extraDetails = null) {
             // Plain text for WhatsApp/Clipboard
             const otherFees = bill.others - bill.arrears_included;
             const amountInWords = numberToWords(Math.round(bill.total_amount));
-            message = `*RENT ${bill.is_paid ? 'RECEIPT' : 'INVOICE'} - ${bill.billing_month.toUpperCase()}*\n` +
+            message = `*RENT ${bill.is_paid ? 'RECEIPT' : 'INVOICE'}*\n` +
                 `--------------------------------------------------\n` +
+                `*STAY PERIOD:* ${bill.billing_month.toUpperCase()}\n` +
                 `*TENANT:* ${t.name} (${t.room_no})\n` +
                 `*STATUS:* ${bill.is_paid ? '✅ PAID' : '⏳ PENDING'}\n` +
+                (!bill.is_paid ? `*DUE DATE:* ${formattedDueDate}\n` : '') +
                 `--------------------------------------------------\n` +
                 `Base Rent      : ${currencyFormatter.format(bill.rent_amount)}\n` +
                 `Water/Maint    : ${currencyFormatter.format(bill.water_amount)}\n` +
@@ -232,6 +239,8 @@ async function prepareAndShare(type, id, extraDetails = null) {
                 `*IN WORDS     : ${amountInWords}*\n` +
                 `--------------------------------------------------\n` +
                 (bill.is_paid ? `*AMOUNT PAID   : ${currencyFormatter.format(bill.paid_amount)}*\n` + adjustmentInfo : paymentInfo) +
+                `--------------------------------------------------\n` +
+                `*Please share a screenshot after payments.*\n` +
                 `--------------------------------------------------\n` +
                 `Generated: ${new Date(bill.date_generated).toLocaleDateString('en-IN')}\n` +
                 `System: RentBill Pro`;
@@ -262,7 +271,9 @@ async function prepareAndShare(type, id, extraDetails = null) {
                         <div style="margin-bottom: 20px; border-bottom: 1px dashed #000; padding-bottom: 15px; text-align: center;">
                             <p style="margin: 2px 0; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Tenant Details</p>
                             <p style="margin: 5px 0; font-size: 18px; font-weight: bold; color: #000;">${t.name}</p>
-                            <div style="display: inline-block; background: #000; color: #fff; padding: 2px 10px; font-size: 12px; font-weight: bold; margin-top: 5px;">UNIT: ${t.room_no} | ${bill.billing_month.toUpperCase()}</div>
+                            <div style="display: inline-block; background: #000; color: #fff; padding: 2px 10px; font-size: 12px; font-weight: bold; margin-top: 5px;">UNIT: ${t.room_no}</div>
+                            <div style="margin-top: 8px; font-size: 13px; font-weight: 900; color: #000;">STAY PERIOD: ${bill.billing_month.toUpperCase()}</div>
+                            ${!bill.is_paid ? `<div style="margin-top: 4px; font-size: 11px; font-weight: bold; color: #d32f2f;">DUE BY: ${formattedDueDate}</div>` : ''}
                         </div>
 
                         <!-- Match-Style Electricity Table -->
@@ -286,6 +297,9 @@ async function prepareAndShare(type, id, extraDetails = null) {
                                 ${otherFees > 0 ? `<tr><td style="padding: 6px 5px; border: 1px solid #000;">EXTRA CHARGES</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(otherFees)}</td></tr>` : ''}
                                 ${bill.arrears_included > 0 ? `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #d32f2f;">PREV. ARREARS</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">${currencyFormatter.format(bill.arrears_included)}</td></tr>` : ''}
                                 <tr style="font-weight: bold; background: #eee;"><td style="padding: 6px 5px; border: 1px solid #000;">TOTAL DUE</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.total_amount)}</td></tr>
+                                ${!bill.is_paid ? `
+                                    <tr style="font-weight: bold; background: #fff1f2;"><td style="padding: 8px 5px; border: 1px solid #000; color: #d32f2f;">DUE DATE</td><td style="padding: 8px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">${formattedDueDate}</td></tr>
+                                ` : ''}
                                 ${bill.is_paid ? `
                                     <tr style="font-weight: bold; background: #fafafa;"><td style="padding: 8px 5px; border: 1px solid #000;">TOTAL PAID</td><td style="padding: 8px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.paid_amount)}</td></tr>
                                     ${htmlAdjustments}

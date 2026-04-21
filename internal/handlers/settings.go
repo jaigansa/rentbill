@@ -228,12 +228,20 @@ func RestoreDatabase(c *gin.Context) {
 
 func GetAuditReport(c *gin.Context) {
 	month := c.Param("month") // Expected format: YYYY-MM
-	
+
+	// Convert YYYY-MM to Long Month YYYY for billing_month matching
+	displayMonth := ""
+	t, err := time.Parse("2006-01", month)
+	if err == nil {
+		displayMonth = t.Format("January 2006")
+	}
+
 	// Activity Logs for the month (Relevant financial actions)
-	logQuery := "SELECT action, details, timestamp FROM activity_logs WHERE (timestamp LIKE ? OR details LIKE ?) AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT', 'TENANT_REGISTERED') ORDER BY timestamp ASC"
-	rows, _ := database.DB.Query(logQuery, month+"%", "%"+month+"%")
+	// Match by timestamp (YYYY-MM-DD) OR by display month in details
+	logQuery := "SELECT action, details, timestamp FROM activity_logs WHERE (timestamp LIKE ? OR details LIKE ? OR details LIKE ?) AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT', 'TENANT_REGISTERED', 'BILL_GENERATED', 'ARREARS_CARRIED') ORDER BY timestamp ASC"
+	rows, _ := database.DB.Query(logQuery, month+"%", "%"+month+"%", "%"+displayMonth+"%")
 	defer rows.Close()
-	
+
 	type AuditLog struct {
 		Action    string `json:"action"`
 		Details   string `json:"details"`
@@ -254,9 +262,11 @@ func GetAuditReport(c *gin.Context) {
 		TotalPayouts  float64 `json:"total_payouts"`
 		TotalAdvances float64 `json:"total_advances"`
 	}
-	
-	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE billing_month LIKE ?", "%"+month+"%").Scan(&summary.TotalBilled)
-	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND payment_date LIKE ?", month+"%").Scan(&summary.TotalPaid)
+
+	// For billed, we match by the billing month string
+	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included), 0) FROM bills WHERE billing_month = ? OR billing_month LIKE ?", displayMonth, "%"+month+"%").Scan(&summary.TotalBilled)
+	// For paid, expenses, and payouts, we match by the transaction date (YYYY-MM-DD)
+	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount + discount_amount + write_off_amount), 0) FROM bills WHERE is_paid = 1 AND payment_date LIKE ?", month+"%").Scan(&summary.TotalPaid)
 	database.DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE date LIKE ?", month+"%").Scan(&summary.TotalExpenses)
 	database.DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE date LIKE ?", month+"%").Scan(&summary.TotalPayouts)
 	database.DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE move_in_date LIKE ?", month+"%").Scan(&summary.TotalAdvances)

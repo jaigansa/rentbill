@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"rentbill/internal/models"
@@ -88,7 +87,7 @@ func InitConfig() {
 			DbPath:        "./rentbill.db",
 			MasterPinHash: hash,
 			Username:      "admin",
-			SessionSecret: fmt.Sprintf("%x", time.Now().UnixNano()),
+			SessionSecret: "rb-pro-secret-key-change-me-for-security-2026",
 			ServerPort:    8080,
 		}
 		SaveConfig()
@@ -107,8 +106,9 @@ func InitConfig() {
 			AppConfig.EmailPass, _ = decrypt(AppConfig.EmailPass, AppConfig.SessionSecret)
 		}
 	}
-	if AppConfig.SessionSecret == "" || AppConfig.SessionSecret == "rent-bill-pro-default-secret-key-123" {
-		AppConfig.SessionSecret = fmt.Sprintf("s-%x", time.Now().UnixNano())
+	// Final check for empty or weak secret
+	if len(AppConfig.SessionSecret) < 16 {
+		AppConfig.SessionSecret = "rentbill-secure-session-fallback-secret-2024"
 		SaveConfig()
 	}
 }

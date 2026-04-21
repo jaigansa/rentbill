@@ -26,8 +26,9 @@ func main() {
         store := cookie.NewStore([]byte(config.AppConfig.SessionSecret))
         store.Options(sessions.Options{
                 Path:     "/",
-                MaxAge:   86400 * 30,
+                MaxAge:   86400 * 30, // 30 days
                 HttpOnly: true,
+                Secure:   false, // Explicitly false for HTTP development
                 SameSite: http.SameSiteLaxMode,
         })
         r.Use(sessions.Sessions("rent_pro_session", store))
