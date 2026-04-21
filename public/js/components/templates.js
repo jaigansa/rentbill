@@ -144,7 +144,7 @@ const Templates = {
                     <div class="card-header">
                         <h3 class="section-title"><i data-lucide="contact-2"></i> Tenant Financial Ledger</h3>
                     </div>
-                    <div id="tenantLedgerList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto; padding-right: 5px;" class="no-scrollbar">
+                    <div id="tenantLedgerList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: max-content; overflow-y: auto; padding-right: 5px;" class="no-scrollbar">
                         <!-- Tenant ledger items will be injected here -->
                     </div>
                 </div>
