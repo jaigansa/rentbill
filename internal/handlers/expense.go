@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,8 +13,7 @@ func GetExpenses(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "20")
 	offset := c.DefaultQuery("offset", "0")
 
-	query := fmt.Sprintf("SELECT id, category, amount, date, notes, COALESCE(owner_name, '') FROM expenses ORDER BY date DESC LIMIT %s OFFSET %s", limit, offset)
-	rows, err := database.DB.Query(query)
+	rows, err := database.DB.Query("SELECT id, category, amount, date, notes, COALESCE(owner_name, '') FROM expenses ORDER BY date DESC LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return

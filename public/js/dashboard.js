@@ -118,9 +118,11 @@ async function loadDashboardStats() {
         // --- Store data for timeline ---
         window.dashboardState = { allPaidBills, withdrawals, expenses };
 
-        // Update Progress Bar
-        const percent = finSummary.total_billed > 0 
-            ? Math.round((finSummary.total_paid / finSummary.total_billed) * 100) 
+        // Update Collection Progress (Logic: What we have vs what we are missing)
+        const totalOutstanding = (finSummary.total_dues || 0) + (finSummary.total_arrears || 0);
+        const totalPotential = totalPaid + totalOutstanding;
+        const percent = totalPotential > 0 
+            ? Math.min(100, Math.round((totalPaid / totalPotential) * 100)) 
             : 0;
 
         const percentEl = document.getElementById('statCollectionPercent');
@@ -131,9 +133,28 @@ async function loadDashboardStats() {
         
         if (percentEl) percentEl.innerText = `${percent}%`;
         if (barEl) barEl.style.width = `${percent}%`;
-        if (detailsEl) detailsEl.innerText = `${finSummary.paid_count || 0} of ${finSummary.total_count || 0} bills settled`;
+        if (detailsEl) detailsEl.innerText = `${finSummary.paid_count || 0} of ${finSummary.total_count || 0} bills processed`;
         if (duesEl) duesEl.innerText = currencyFormatter.format(finSummary.total_dues || 0);
         if (arrearsEl) arrearsEl.innerText = currencyFormatter.format(finSummary.total_arrears || 0);
+
+        // Populate Pending Collections List
+        const pendingList = document.getElementById('pendingCollectionList');
+        if (pendingList && tenantLedger) {
+            const defaulters = tenantLedger.filter(e => e.balance > 0).sort((a, b) => b.balance - a.balance);
+            if (defaulters.length === 0) {
+                pendingList.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--success); font-weight:800; padding:1rem;">ALL DUES COLLECTED! 🎉</p>';
+            } else {
+                pendingList.innerHTML = defaulters.map(e => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:8px 12px; border:1px solid var(--border); border-left:4px solid var(--danger);">
+                        <div style="flex:1;">
+                            <div style="font-size:0.75rem; font-weight:900; color:var(--text-main);">${e.name} <span style="color:var(--text-muted); font-weight:700; font-size:0.6rem;">(${e.room_no})</span></div>
+                            <div style="font-size:0.6rem; color:var(--text-muted); font-weight:700;">TOTAL DUE: ${currencyFormatter.format(e.balance)}</div>
+                        </div>
+                        <button onclick="showSection('history-section'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.6rem; min-height:24px;">View</button>
+                    </div>
+                `).join('');
+            }
+        }
 
         renderTenantLedger(tenantLedger);
         loadMonthlyTracker();
@@ -235,7 +256,13 @@ async function loadMonthlyTracker() {
 
             const actionBtn = (isMissing || isDraft)
                 ? `<button onclick="draftBillNow(${s.renter_id}, '${s.billing_month}')" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px; border-style: dashed;">Draft Now</button>`
-                : `<button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>`;
+                : `
+                <div style="display: flex; gap: 4px;">
+                    <button onclick="sendWhatsAppReminder(${s.renter_id}, '${s.billing_month}', ${s.amount})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.65rem; height: auto; min-height: 32px; color: #25D366; border-color: #25D366;" title="Send Reminder">
+                        <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+                    </button>
+                    <button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>
+                </div>`;
 
             const arrearNotice = s.arrears > 0 ? `<div style="font-size: 0.6rem; color: var(--danger); font-weight: 900; margin-top: 2px;">INCLUDES ARREARS: ${currencyFormatter.format(s.arrears)}</div>` : '';
 

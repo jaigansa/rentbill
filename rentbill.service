@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=jaigansa
 Group=jaigansa
-WorkingDirectory=/home/jaigansa/Projects/accounts/rent
-ExecStart=/home/jaigansa/Projects/accounts/rent/rentbill
+WorkingDirectory=/home/jaigansa/git/rentbill
+ExecStart=/home/jaigansa/git/rentbill/rentbill
 Restart=always
 Environment=GIN_MODE=release
 

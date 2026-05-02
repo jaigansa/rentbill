@@ -16,7 +16,9 @@ import (
 func main() {
         gin.SetMode(gin.ReleaseMode)
         config.InitConfig()
-        database.InitDB()
+        if err := database.InitDB(); err != nil {
+                panic(err)
+        }
         database.StartAutoBackup()
         defer database.DB.Close()
 
@@ -65,6 +67,8 @@ func main() {
 
                         // Renters
                         auth.GET("/renters", handlers.GetRenters)
+                        auth.GET("/renters/export", handlers.ExportRentersCSV)
+                        auth.POST("/renters/import", handlers.ImportRentersCSV)
                         auth.GET("/renter/:id", handlers.GetRenter)
                         auth.POST("/renters", handlers.CreateRenter)
                         auth.PUT("/renters/:id", handlers.UpdateRenter)

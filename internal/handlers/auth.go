@@ -45,10 +45,6 @@ func ForgotPin(c *gin.Context) {
 		return
 	}
 	tempPin := fmt.Sprintf("%04d", (uint32(b[0])<<8|uint32(b[1]))%10000)
-	hash, _ := config.HashPassword(tempPin)
-	config.AppConfig.MasterPinHash = hash
-	database.DB.Exec("UPDATE users SET pin_hash = ? WHERE username = ?", hash, config.AppConfig.Username)
-	config.SaveConfig()
 
 	auth := smtp.PlainAuth("", config.AppConfig.EmailUser, config.AppConfig.EmailPass, "smtp.gmail.com")
 	htmlMsg := fmt.Sprintf("<h1>PIN Recovery</h1><p>Temporary PIN: <b>%s</b></p>", tempPin)
@@ -70,6 +66,12 @@ func ForgotPin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
 	}
+
+	hash, _ := config.HashPassword(tempPin)
+	config.AppConfig.MasterPinHash = hash
+	database.DB.Exec("UPDATE users SET pin_hash = ? WHERE username = ?", hash, config.AppConfig.Username)
+	config.SaveConfig()
+
 	database.LogActivity("FORGOT_PIN", "Reset PIN sent to "+config.AppConfig.EmailUser, config.AppConfig.Username)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

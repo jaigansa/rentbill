@@ -67,18 +67,22 @@ function setupInfiniteScroll(container, fetchData, renderItem, options = {}) {
     let loading = false;
     let hasMore = true;
 
-    // Create or find trigger
-    let trigger = document.getElementById(options.triggerId);
-    if (!trigger) {
-        trigger = document.createElement('div');
-        trigger.id = options.triggerId;
-        trigger.style.height = '40px';
-        trigger.style.display = 'flex';
-        trigger.style.alignItems = 'center';
-        trigger.style.justifyContent = 'center';
-        trigger.innerHTML = '<div class="loading-spinner hidden" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; letter-spacing: 1px;">LOADING MORE RECORDS...</div>';
-        container.after(trigger);
+    // Clean up existing trigger and observer if any
+    const existingTrigger = document.getElementById(options.triggerId);
+    if (existingTrigger && existingTrigger._observer) {
+        existingTrigger._observer.disconnect();
+        existingTrigger.remove();
     }
+
+    // Create new trigger
+    const trigger = document.createElement('div');
+    trigger.id = options.triggerId;
+    trigger.style.height = '40px';
+    trigger.style.display = 'flex';
+    trigger.style.alignItems = 'center';
+    trigger.style.justifyContent = 'center';
+    trigger.innerHTML = '<div class="loading-spinner hidden" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; letter-spacing: 1px;">LOADING MORE RECORDS...</div>';
+    container.after(trigger);
 
     const observer = new IntersectionObserver(async (entries) => {
         if (entries[0].isIntersecting && !loading && hasMore) {
@@ -88,6 +92,13 @@ function setupInfiniteScroll(container, fetchData, renderItem, options = {}) {
             
             try {
                 const data = await fetchData(offset, limit);
+                
+                // CRITICAL: Check if this trigger is still active and in the DOM.
+                // If the user switched units, this trigger would have been removed.
+                if (!trigger.parentElement || !document.contains(trigger)) {
+                    return;
+                }
+
                 if (!data || data.length < limit) {
                     hasMore = false;
                     trigger.classList.add('hidden');
@@ -110,6 +121,7 @@ function setupInfiniteScroll(container, fetchData, renderItem, options = {}) {
     }, { rootMargin: '100px' });
 
     observer.observe(trigger);
+    trigger._observer = observer; // Store observer for cleanup
     
     // Return reset function
     return () => {

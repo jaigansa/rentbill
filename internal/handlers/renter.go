@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"rentbill/internal/config"
@@ -125,4 +128,96 @@ func DeleteRenter(c *gin.Context) {
 	database.DB.Exec("UPDATE renters SET is_active = -1 WHERE id = ?", c.Param("id"))
 	database.LogActivity("TENANT_REMOVED", "Tenant removed (Soft Delete) "+c.Param("id"), config.AppConfig.Username)
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func ExportRentersCSV(c *gin.Context) {
+	rows, err := database.DB.Query("SELECT name, room_no, mobile_number, email, aadhar_no, base_rent, water_maint, advance_amount, move_in_date, occupation, assigned_upi FROM renters WHERE is_active = 1 ORDER BY room_no ASC")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+	defer rows.Close()
+
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=unit_directory.csv")
+
+	fmt.Fprintln(c.Writer, "Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner")
+
+	for rows.Next() {
+		var r struct {
+			Name, Room, Mobile, Email, Aadhar, MoveIn, Job, UPI string
+			Rent, Water, Advance                                float64
+		}
+		rows.Scan(&r.Name, &r.Room, &r.Mobile, &r.Email, &r.Aadhar, &r.Rent, &r.Water, &r.Advance, &r.MoveIn, &r.Job, &r.UPI)
+
+		fmt.Fprintf(c.Writer, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\",\"%s\"\n",
+			r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI)
+	}
+
+	database.LogActivity("DATA_EXPORT", "Exported Unit Directory to CSV", config.AppConfig.Username)
+}
+
+func ImportRentersCSV(c *gin.Context) {
+	file, err := c.FormFile("csv_file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+	// Skip header
+	if _, err := reader.Read(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Empty or invalid CSV"})
+		return
+	}
+
+	count := 0
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue // Skip malformed rows
+		}
+
+		// Expected columns: Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner
+		if len(record) < 11 {
+			continue
+		}
+
+		name := record[0]
+		room := record[1]
+		mobile := record[2]
+		email := record[3]
+		aadhar := record[4]
+		rent, _ := strconv.ParseFloat(record[5], 64)
+		water, _ := strconv.ParseFloat(record[6], 64)
+		advance, _ := strconv.ParseFloat(record[7], 64)
+		moveIn := record[8]
+		job := record[9]
+		upi := record[10]
+
+		if name == "" || room == "" {
+			continue
+		}
+
+		_, err = database.DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears) 
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+			name, room, aadhar, rent, 9.0, water, advance, moveIn, mobile, email, 0, "", "", job, upi, 0)
+		
+		if err == nil {
+			count++
+		}
+	}
+
+	database.LogActivity("DATA_IMPORT", fmt.Sprintf("Imported %d units from CSV", count), config.AppConfig.Username)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": fmt.Sprintf("Successfully imported %d records", count)})
 }

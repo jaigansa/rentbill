@@ -116,6 +116,29 @@ Issued by RentBill
     }
 }
 
+async function sendWhatsAppReminder(renterId, month, amount) {
+    try {
+        const res = await fetch(`/api/renter/${renterId}`);
+        const t = await res.json();
+        const mobile = t.mobile_number.replace(/\D/g, '');
+        
+        const periodLabel = month === 'Previous Balance' ? 'previous balance' : `rent for ${month}`;
+        const message = `*PAYMENT REMINDER*\n` +
+            `--------------------------------------------------\n` +
+            `Hi *${t.name}*,\n\n` +
+            `Hope you are doing well. This is a friendly reminder that the *${periodLabel}* for Unit *${t.room_no}* is pending.\n\n` +
+            `*Total Due: ${currencyFormatter.format(amount)}*\n\n` +
+            `Please ignore if already paid. If not, kindly settle the dues at your earliest convenience and share the screenshot.\n\n` +
+            `Thank you!\n` +
+            `-- RentBill Pro`;
+
+        window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(message)}`, '_blank');
+        showNotification("Opening WhatsApp...", "success");
+    } catch (e) {
+        showNotification("Failed to send reminder", "error");
+    }
+}
+
 async function prepareAndShare(type, id, extraDetails = null) {
     try {
         showNotification("Preparing document...", "info");
@@ -234,6 +257,7 @@ async function prepareAndShare(type, id, extraDetails = null) {
                 `   [Readings: ${bill.prev_eb_reading} - ${bill.curr_eb_reading}]\n` +
                 (otherFees > 0 ? `Extra Charges  : ${currencyFormatter.format(otherFees)}\n` : '') +
                 (bill.arrears_included > 0 ? `Prev. Arrears  : ${currencyFormatter.format(bill.arrears_included)}\n` : '') +
+                (bill.discount_amount > 0 ? `Adjustment/Disc: -${currencyFormatter.format(bill.discount_amount)}\n` : '') +
                 `--------------------------------------------------\n` +
                 `*NET TOTAL    : ${currencyFormatter.format(bill.total_amount)}*\n` +
                 `*IN WORDS     : ${amountInWords}*\n` +
@@ -252,7 +276,9 @@ async function prepareAndShare(type, id, extraDetails = null) {
 
             let htmlAdjustments = '';
             if (bill.is_paid) {
-                if (bill.discount_amount > 0) htmlAdjustments += `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #2e7d32;">DISCOUNT (Waiver)</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #2e7d32;">-${currencyFormatter.format(bill.discount_amount)}</td></tr>`;
+                // We show discount separately if paid, but if it was applied at generation, it's already in bill.discount_amount
+                // Let's avoid double counting or confusing the user.
+                // If paid, discount_amount might include both gen-time and pay-time discounts.
                 if (bill.write_off_amount > 0) htmlAdjustments += `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #d32f2f;">WRITE-OFF (Loss)</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">-${currencyFormatter.format(bill.write_off_amount)}</td></tr>`;
                 if (bill.arrears_amount > 0) htmlAdjustments += `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #f57c00;">CARRY FORWARD</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #f57c00;">${currencyFormatter.format(bill.arrears_amount)}</td></tr>`;
             }
@@ -296,6 +322,7 @@ async function prepareAndShare(type, id, extraDetails = null) {
                                 <tr><td style="padding: 6px 5px; border: 1px solid #000;">ELECTRICITY</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(ebCost)}</td></tr>
                                 ${otherFees > 0 ? `<tr><td style="padding: 6px 5px; border: 1px solid #000;">EXTRA CHARGES</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(otherFees)}</td></tr>` : ''}
                                 ${bill.arrears_included > 0 ? `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #d32f2f;">PREV. ARREARS</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">${currencyFormatter.format(bill.arrears_included)}</td></tr>` : ''}
+                                ${bill.discount_amount > 0 ? `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #2e7d32;">DISCOUNT / ADJ (-)</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #2e7d32;">-${currencyFormatter.format(bill.discount_amount)}</td></tr>` : ''}
                                 <tr style="font-weight: bold; background: #eee;"><td style="padding: 6px 5px; border: 1px solid #000;">TOTAL DUE</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.total_amount)}</td></tr>
                                 ${!bill.is_paid ? `
                                     <tr style="font-weight: bold; background: #fff1f2;"><td style="padding: 8px 5px; border: 1px solid #000; color: #d32f2f;">DUE DATE</td><td style="padding: 8px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">${formattedDueDate}</td></tr>
@@ -459,6 +486,22 @@ async function shareTo(channel) {
         navigator.clipboard.writeText(plainText).then(() => {
             showNotification("Text copied to clipboard", "success");
         });
+    } else if (channel === 'print') {
+        const printArea = document.getElementById('print-area');
+        if (printArea) {
+            // Populate hidden print area with HTML content
+            printArea.innerHTML = shareData.htmlMessage;
+            printArea.classList.remove('hidden');
+            
+            // Trigger native print dialog
+            window.print();
+            
+            // Re-hide after print dialog closes
+            setTimeout(() => {
+                printArea.classList.add('hidden');
+                printArea.innerHTML = '';
+            }, 500);
+        }
     }
     closeShareModal();
 }

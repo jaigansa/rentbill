@@ -15,3 +15,44 @@ svg[data-lucide] {
 
 /* UTILITY: High Priority Hidden */
 .hidden { display: none !important; }
+
+/* PRINT STYLES */
+@media print {
+    /* Hide everything by default */
+    body * {
+        visibility: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Only show the print-ready content */
+    #print-area, #print-area * {
+        visibility: visible;
+    }
+
+    /* Positioning the print area */
+    #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Hide standard UI elements that shouldn't be in a PDF */
+    .btn, .nav, .bnav, .modal-overlay, #notification-container {
+        display: none !important;
+    }
+
+    /* Page settings */
+    @page {
+        margin: 0.5cm;
+        size: auto;
+    }
+    
+    body {
+        background: white !important;
+        color: black !important;
+    }
+}

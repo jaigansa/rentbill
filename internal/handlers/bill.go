@@ -69,7 +69,7 @@ func CreateBill(c *gin.Context) {
 	}
 	
 	ebCost := (b.CurrEBReading - b.PrevEBReading) * r.EBUnitPrice
-	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + r.PendingArrears
+	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + r.PendingArrears - b.DiscountAmount
 	
 	// If there were arrears, we add them to 'others' or just keep them in total but record it
 	// User said: "next bill will be 5,500 (5,000 rent + 500 previous balance)"
@@ -78,8 +78,8 @@ func CreateBill(c *gin.Context) {
 	
 	actualOthers := b.Others + r.PendingArrears
 
-	res, err := database.DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included) VALUES (?,?,?,?,?,?,?,?,?,?,?)`, 
-		b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, actualOthers, total, time.Now().Format(time.RFC3339), b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears)
+	res, err := database.DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, 
+		b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, actualOthers, total, time.Now().Format(time.RFC3339), b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears, b.DiscountAmount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate bill"})
 		return
@@ -107,20 +107,25 @@ func PayBill(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	var amount, total float64
+	var total float64
+	var isPaid int
 	var name, month string
 	var renterID int
-	err := database.DB.QueryRow("SELECT b.total_amount, r.name, b.billing_month, b.renter_id FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.id = ?", c.Param("id")).Scan(&total, &name, &month, &renterID)
+	err := database.DB.QueryRow("SELECT b.total_amount, b.is_paid, r.name, b.billing_month, b.renter_id FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.id = ?", c.Param("id")).Scan(&total, &isPaid, &name, &month, &renterID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
+		return
+	}
+
+	if isPaid == 1 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Bill is already marked as paid"})
 		return
 	}
 
 	// Calculate total accounted for
 	accounted := req.PaidAmount + req.DiscountAmount + req.WriteOffAmount + req.ArrearsAmount
 	if accounted < total {
-		// If not fully accounted, treat remaining as unpaid unless marked as paid
-		// But user wants a "record mechanism", so we'll allow partials if marked as paid
+		// Optional: Warn if not fully accounted, or just proceed as partial
 	}
 
 	_, err = database.DB.Exec("UPDATE bills SET is_paid = 1, payment_method = ?, payment_date = ?, payment_details = ?, paid_amount = ?, discount_amount = ?, write_off_amount = ?, arrears_amount = ? WHERE id = ?", 
@@ -137,8 +142,7 @@ func PayBill(c *gin.Context) {
 		database.LogActivity("ARREARS_CARRIED", fmt.Sprintf("Carried forward %.2f for %s", req.ArrearsAmount, name), config.AppConfig.Username)
 	}
 
-	amount = req.PaidAmount
-	database.LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Received %.2f from %s for %s via %s (Received by: %s)", amount, name, month, req.PaymentMethod, req.PaymentDetails), config.AppConfig.Username)
+	database.LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Received %.2f from %s for %s via %s (Received by: %s)", req.PaidAmount, name, month, req.PaymentMethod, req.PaymentDetails), config.AppConfig.Username)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -146,10 +150,16 @@ func DeleteBill(c *gin.Context) {
 	var bill struct {
 		RenterID        int
 		ArrearsIncluded float64
+		ArrearsAmount   float64
 	}
-	err := database.DB.QueryRow("SELECT renter_id, arrears_included FROM bills WHERE id = ?", c.Param("id")).Scan(&bill.RenterID, &bill.ArrearsIncluded)
-	if err == nil && bill.ArrearsIncluded > 0 {
-		database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", bill.ArrearsIncluded, bill.RenterID)
+	err := database.DB.QueryRow("SELECT renter_id, arrears_included, arrears_amount FROM bills WHERE id = ?", c.Param("id")).Scan(&bill.RenterID, &bill.ArrearsIncluded, &bill.ArrearsAmount)
+	if err == nil {
+		if bill.ArrearsIncluded > 0 {
+			database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", bill.ArrearsIncluded, bill.RenterID)
+		}
+		if bill.ArrearsAmount > 0 {
+			database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears - ? WHERE id = ?", bill.ArrearsAmount, bill.RenterID)
+		}
 	}
 	database.DB.Exec("DELETE FROM bills WHERE id = ?", c.Param("id"))
 	c.JSON(http.StatusOK, gin.H{"success": true})

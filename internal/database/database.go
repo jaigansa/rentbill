@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,11 +14,11 @@ import (
 var DB *sql.DB
 var BackupsDir = "./backups"
 
-func InitDB() {
+func InitDB() error {
 	var err error
 	DB, err = sql.Open("sqlite", config.AppConfig.DbPath)
 	if err != nil {
-		log.Fatal("Failed to open database:", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 	DB.Exec("PRAGMA foreign_keys = ON")
 
@@ -68,7 +67,7 @@ func InitDB() {
 
 	for _, q := range queries {
 		if _, err := DB.Exec(q); err != nil {
-			log.Fatalf("Schema error: %v\nQuery: %s", err, q)
+			return fmt.Errorf("schema error: %w\nQuery: %s", err, q)
 		}
 	}
 
@@ -85,6 +84,7 @@ func InitDB() {
 	if _, err := os.Stat(BackupsDir); os.IsNotExist(err) {
 		os.Mkdir(BackupsDir, 0755)
 	}
+	return nil
 }
 
 func LogActivity(action, details, username string) {
@@ -113,24 +113,38 @@ func RestoreFromPath(newPath string) error {
 	time.Sleep(500 * time.Millisecond)
 
 	fmt.Printf("Restoring from %s to %s\n", newPath, config.AppConfig.DbPath)
-	
-	// Copy new file over the current database path
+
+	// 1. Create a backup of the current database just in case
+	backupOld := config.AppConfig.DbPath + ".bak"
+	os.Rename(config.AppConfig.DbPath, backupOld)
+
+	// 2. Copy new file over the current database path
 	input, err := os.ReadFile(newPath)
 	if err != nil {
 		fmt.Printf("Error reading upload: %v\n", err)
+		os.Rename(backupOld, config.AppConfig.DbPath) // Restore old if read failed
 		return err
 	}
 
 	err = os.WriteFile(config.AppConfig.DbPath, input, 0644)
 	if err != nil {
 		fmt.Printf("Error writing to DB path: %v\n", err)
+		os.Rename(backupOld, config.AppConfig.DbPath) // Restore old if write failed
 		return err
 	}
 
+	// 3. Verify it's a valid SQLite DB before committing
+	if !IsValidSqliteDb(config.AppConfig.DbPath) {
+		fmt.Println("Error: Restored file is not a valid SQLite database")
+		os.Rename(backupOld, config.AppConfig.DbPath)
+		return fmt.Errorf("invalid sqlite database")
+	}
+
+	os.Remove(backupOld) // Success, remove old backup
+
 	// Re-initialize the DB connection
 	fmt.Println("Re-opening DB connection...")
-	InitDB()
-	return nil
+	return InitDB()
 }
 
 func IsValidSqliteDb(path string) bool {

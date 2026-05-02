@@ -63,6 +63,12 @@ async function loadTenantHistory(renterId) {
     if (!renterId) return;
     currentHistoryRenterId = renterId;
     
+    // Sync the select dropdown if it's not already set
+    const select = document.getElementById('historyTenantSelect');
+    if (select && select.value !== renterId.toString()) {
+        select.value = renterId;
+    }
+    
     const resultsDiv = document.getElementById('historyResults');
     const emptyState = document.getElementById('historyEmptyState');
     const historyBody = document.getElementById('historyBody');
@@ -71,13 +77,19 @@ async function loadTenantHistory(renterId) {
     if (resultsDiv) resultsDiv.classList.remove('hidden');
     if (emptyState) emptyState.classList.add('hidden');
     
+    // Clear previous state immediately
+    if (resetHistoryScroll) {
+        resetHistoryScroll();
+        resetHistoryScroll = null;
+    }
+    if (historyBody) historyBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading records...</td></tr>';
+
     try {
         const renter = await API.tenants.getOne(renterId);
         nameLabel.innerText = renter.name;
-
-        if (resetHistoryScroll) {
-            resetHistoryScroll();
-        }
+        
+        // Clear loading state
+        if (historyBody) historyBody.innerHTML = '';
 
         resetHistoryScroll = setupInfiniteScroll(
             historyBody,
@@ -190,4 +202,30 @@ async function deleteBill(id) {
 
 function closePaymentModal() {
     document.getElementById('paymentModal').classList.add('hidden');
+}
+
+function calculateAdjustments() {
+    const total = parseFloat(document.getElementById('payTotalLabel').innerText.replace(/[^\d.]/g, '')) || 0;
+    const paid = parseFloat(document.getElementById('payAmountInput').value) || 0;
+    const balance = total - paid;
+    
+    const adjSection = document.getElementById('adjustmentSection');
+    const balanceLabel = document.getElementById('payBalanceLabel');
+    const adjType = document.getElementById('adjType').value;
+    const adjDesc = document.getElementById('adjDescription');
+
+    if (balance > 0) {
+        adjSection.classList.remove('hidden');
+        balanceLabel.innerText = currencyFormatter.format(balance);
+        
+        if (adjType === 'CARRY') {
+            adjDesc.innerText = "Remaining balance will be added to the next month's bill as arrears.";
+        } else if (adjType === 'DISCOUNT') {
+            adjDesc.innerText = "Balance will be marked as a discount/waiver. Total collected will be less.";
+        } else if (adjType === 'WRITEOFF') {
+            adjDesc.innerText = "Balance will be written off as a loss. Used for rounding off small amounts.";
+        }
+    } else {
+        adjSection.classList.add('hidden');
+    }
 }

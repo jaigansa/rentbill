@@ -108,7 +108,7 @@ const Templates = {
                         <p id="collectionDetails" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">0 of 0 bills settled</p>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; border-top: 1px dashed var(--border); padding-top: 1rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; border-top: 1px dashed var(--border); padding-top: 1rem; margin-bottom: 1rem;">
                         <div style="background: var(--bg-input); padding: 0.75rem; border: 1px solid var(--border);">
                             <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Billed Dues</div>
                             <div id="statTotalDues" style="font-weight: 900; color: var(--danger); font-size: 1rem;">₹0</div>
@@ -117,6 +117,11 @@ const Templates = {
                             <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Potential Arrears</div>
                             <div id="statTotalArrears" style="font-weight: 900; color: var(--warning); font-size: 1rem;">₹0</div>
                         </div>
+                    </div>
+                    
+                    <!-- NEW: Detailed list of pending collections -->
+                    <div id="pendingCollectionList" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto; padding-right: 5px;" class="no-scrollbar">
+                        <!-- Defaulters will be injected here -->
                     </div>
                 </div>
 
@@ -312,7 +317,12 @@ const Templates = {
                 <div class="card">
                     <div class="card-header">
                         <h3 class="section-title"><i data-lucide="users"></i> Unit Directory</h3>
-                        <button onclick="toggleRegForm()" id="regToggleBtn" class="btn btn-primary btn-sm">Register New Unit</button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="file" id="importCsvInput" accept=".csv" class="hidden" onchange="importTenantsCSV(this)">
+                            <button onclick="document.getElementById('importCsvInput').click()" class="btn btn-secondary btn-sm" title="Import CSV"><i data-lucide="upload"></i></button>
+                            <button onclick="exportTenantsCSV()" class="btn btn-secondary btn-sm" title="Download CSV"><i data-lucide="download"></i></button>
+                            <button onclick="toggleRegForm()" id="regToggleBtn" class="btn btn-primary btn-sm">Register New Unit</button>
+                        </div>
                     </div>
                     <div id="entrance-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
                         <h4 id="form-title" style="font-size: 0.9rem; margin-bottom: 1.5rem; color: var(--primary); text-transform: uppercase; font-weight: 900;">New Registration</h4>
@@ -420,9 +430,13 @@ const Templates = {
             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                 <button onclick="shareTo('wa')" class="btn" style="background: #25D366; color: white; width: 100%;"><i data-lucide="message-circle" style="margin-right: 8px;"></i> WhatsApp</button>
                 <button onclick="shareTo('email')" class="btn" style="background: #ea4335; color: white; width: 100%;"><i data-lucide="mail" style="margin-right: 8px;"></i> Email Receipt</button>
+                <button onclick="shareTo('print')" class="btn" style="background: #1e293b; color: white; width: 100%;"><i data-lucide="printer" style="margin-right: 8px;"></i> Print / Save PDF</button>
                 <button onclick="shareTo('copy')" class="btn btn-secondary" style="width: 100%;"><i data-lucide="copy" style="margin-right: 8px;"></i> Copy Text</button>
             </div>
         </div></div>
+
+        <!-- Hidden container for high-quality printing -->
+        <div id="print-area" class="hidden"></div>
 
         <div id="settlementModal" class="modal-overlay hidden"><div class="modal-content" style="max-width: 500px;">
             <div class="card-header"><h3 class="section-title">Final Settlement</h3><button onclick="closeSettlementModal()" class="btn-secondary" style="border: none; background: none; cursor: pointer;"><i data-lucide="x"></i></button></div>

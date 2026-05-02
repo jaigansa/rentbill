@@ -23,10 +23,10 @@ function createTenantCard(t) {
     const card = document.createElement('div');
     card.className = 'tenant-row';
     
-    // Default to PREVIOUS month for postpaid billing
+    // Default to PREVIOUS month for billing (Postpaid style)
     const now = new Date();
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthStr = prev.toISOString().slice(0, 7); // YYYY-MM
+    const defaultMonthStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
     
     card.innerHTML = `
         <div class="tenant-header" onclick="toggleBilling(${t.id})">
@@ -49,18 +49,56 @@ function createTenantCard(t) {
         </div>
         <div id="billing-${t.id}" class="billing-controls hidden">
             <div class="billing-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="input-group" style="margin:0;"><label>Service/Stay Period (Month)</label><input type="month" id="month-${t.id}" value="${prevMonthStr}"></div>
-                <div class="input-group" style="margin:0;"><label>Extra Charges</label><input type="number" id="others-${t.id}" value="0"></div>
-                <div class="input-group" style="margin:0;"><label>Prev EB Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" style="font-weight: 400;"></div>
-                <div class="input-group" style="margin:0;"><label>Curr EB Reading</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" style="font-weight: 800; color: var(--primary);"></div>
-                <div class="input-group" style="grid-column: 1 / -1; margin:0;"><label>Notes / Remarks</label><input type="text" id="notes-${t.id}" placeholder="Optional notes"></div>
+                <div class="input-group" style="margin:0;"><label>Service/Stay Period (Month)</label><input type="month" id="month-${t.id}" value="${defaultMonthStr}"></div>
+                <div class="input-group" style="margin:0;"><label>Extra Charges</label><input type="number" id="others-${t.id}" value="0" oninput="updateLiveTotal(${t.id})"></div>
+                <div class="input-group" style="margin:0;"><label>Prev EB Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" style="font-weight: 400;" oninput="updateLiveTotal(${t.id})"></div>
+                <div class="input-group" style="margin:0;"><label>Curr EB Reading</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" style="font-weight: 800; color: var(--primary);" oninput="updateLiveTotal(${t.id})"></div>
+                <div class="input-group" style="margin:0;"><label>Discount / Adjustment</label><input type="number" id="discount-${t.id}" value="0" style="color: var(--danger); font-weight: 800;" oninput="updateLiveTotal(${t.id})"></div>
+                <div class="input-group" style="margin:0;"><label>Notes / Remarks</label><input type="text" id="notes-${t.id}" placeholder="Optional notes"></div>
             </div>
+
+            <!-- Live Total Preview -->
+            <div id="live-preview-${t.id}" style="margin-top: 1.5rem; padding: 1.25rem; background: var(--bg-input); border: 2px solid var(--border); border-radius: var(--radius-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Estimated Bill Total</span>
+                    <span id="total-val-${t.id}" style="font-size: 1.25rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(t.base_rent + t.water_maint + t.pending_arrears)}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                    <div>Rent: ${currencyFormatter.format(t.base_rent)}</div>
+                    <div>Water: ${currencyFormatter.format(t.water_maint)}</div>
+                    <div>Prev. Balance: <span style="color: var(--danger);">${currencyFormatter.format(t.pending_arrears)}</span></div>
+                    <div id="eb-preview-${t.id}">EB: ₹0.00</div>
+                </div>
+            </div>
+
             <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
                 <button class="btn btn-primary" onclick="generateBill(${t.id})" style="flex: 1; height: 50px;"><i data-lucide="plus-circle" width="18" height="18"></i> Generate Bill</button>
             </div>
         </div>`;
+    
+    // Store tenant data for live calculation
+    card._tenantData = t;
     return card;
 }
+
+function updateLiveTotal(id) {
+    const card = document.querySelector(`.tenant-row:has(#billing-${id})`);
+    if (!card || !card._tenantData) return;
+    const t = card._tenantData;
+
+    const currEB = parseFloat(document.getElementById(`eb-${id}`).value) || 0;
+    const prevEB = parseFloat(document.getElementById(`prev-eb-${id}`).value) || 0;
+    const others = parseFloat(document.getElementById(`others-${id}`).value) || 0;
+    const discount = parseFloat(document.getElementById(`discount-${id}`).value) || 0;
+
+    const ebUnits = Math.max(0, currEB - prevEB);
+    const ebCost = ebUnits * t.eb_unit_price;
+    const total = t.base_rent + t.water_maint + ebCost + others + t.pending_arrears - discount;
+
+    document.getElementById(`total-val-${id}`).innerText = currencyFormatter.format(total);
+    document.getElementById(`eb-preview-${id}`).innerText = `EB: ${currencyFormatter.format(ebCost)} (${ebUnits.toFixed(1)} u)`;
+}
+
 
 function toggleBilling(id) {
     const el = document.getElementById(`billing-${id}`);
@@ -86,6 +124,7 @@ async function generateBill(id) {
     const currEB = parseFloat(document.getElementById(`eb-${id}`).value);
     const prevEB = parseFloat(document.getElementById(`prev-eb-${id}`).value);
     const others = parseFloat(document.getElementById(`others-${id}`).value) || 0;
+    const discount = parseFloat(document.getElementById(`discount-${id}`).value) || 0;
     const notes = document.getElementById(`notes-${id}`).value;
     const monthInput = document.getElementById(`month-${id}`).value;
 
@@ -97,9 +136,9 @@ async function generateBill(id) {
         if (!confirm("Current reading is lower than previous. Proceed anyway?")) return;
     }
 
-    // Format month: 2026-03 -> March 2026
+    // Format month: 2026-03 -> March 2026 (Force en-US locale for backend consistency)
     const date = new Date(monthInput + '-01');
-    const formattedMonth = date.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const formattedMonth = date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
     try {
         const result = await API.bills.create({ 
@@ -107,6 +146,7 @@ async function generateBill(id) {
             curr_eb_reading: currEB, 
             prev_eb_reading: prevEB, 
             others: others, 
+            discount_amount: discount,
             billing_month: formattedMonth,
             notes: notes 
         });

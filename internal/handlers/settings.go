@@ -32,9 +32,9 @@ func GetLogs(c *gin.Context) {
 	case "SYSTEM":
 		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED') "
 	}
-	query += fmt.Sprintf("ORDER BY id DESC LIMIT %s OFFSET %s", limit, offset)
+	query += "ORDER BY id DESC LIMIT ? OFFSET ?"
 	
-	rows, err := database.DB.Query(query)
+	rows, err := database.DB.Query(query, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -214,13 +214,24 @@ func RestoreDatabase(c *gin.Context) {
 		
 		time.Sleep(1 * time.Second)
 
-		// 2. Swap files
-		os.Remove(config.AppConfig.DbPath)
+		// 2. Swap files safely
+		backupOld := config.AppConfig.DbPath + ".bak"
+		os.Rename(config.AppConfig.DbPath, backupOld)
+		
 		if err := os.Rename(restorePath, config.AppConfig.DbPath); err != nil {
 			fmt.Printf("RESTORE FAILED AT SWAP: %v\n", err)
+			os.Rename(backupOld, config.AppConfig.DbPath) // Try to restore old
+			return
+		}
+
+		// 3. Verify it's a valid SQLite DB
+		if !database.IsValidSqliteDb(config.AppConfig.DbPath) {
+			fmt.Println("RESTORE FAILED: Invalid database file")
+			os.Rename(backupOld, config.AppConfig.DbPath)
 			return
 		}
 		
+		os.Remove(backupOld)
 		fmt.Println("RESTORE SUCCESSFUL. EXITING FOR RESTART.")
 		os.Exit(0)
 	}()

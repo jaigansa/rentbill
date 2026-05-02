@@ -164,6 +164,61 @@ async function testSMTPSettings() {
     } catch (e) { showNotification(e.message, "error"); }
 }
 
+async function importTenantsCSV(input) {
+    if (!input.files[0]) return;
+    
+    if (!confirm("This will add all units from the CSV to your current directory. Proceed?")) {
+        input.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('csv_file', input.files[0]);
+
+    showNotification("Importing records...", "info");
+    try {
+        const response = await fetch('/api/renters/import', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            showNotification(result.message, "success");
+            if (typeof loadManageTenants === 'function') loadManageTenants();
+        } else {
+            showNotification(result.error || "Import failed", "error");
+        }
+    } catch (e) {
+        showNotification("Network error during import", "error");
+        console.error(e);
+    } finally {
+        input.value = '';
+    }
+}
+
+async function exportTenantsCSV() {
+    showNotification("Exporting directory...", "info");
+    try {
+        const response = await fetch('/api/renters/export');
+        if (!response.ok) throw new Error("Export failed");
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `unit_directory_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        showNotification("Directory exported successfully", "success");
+    } catch (e) {
+        showNotification("Failed to export directory", "error");
+        console.error(e);
+    }
+}
+
 async function backupDatabase() {
     const filenameInput = document.getElementById('backupFilename');
     const filename = filenameInput ? filenameInput.value.trim() : "rent_backup";
