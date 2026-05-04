@@ -1,4 +1,10 @@
 async function loadDashboardStats() {
+    const refreshBtn = document.querySelector('button[onclick="loadDashboardStats()"]');
+    const statValues = document.querySelectorAll('.stat-value');
+    
+    if (refreshBtn) refreshBtn.classList.add('loading-spin');
+    statValues.forEach(v => v.style.opacity = '0.4');
+
     try {
         const [tenants, expenses, finSummary, withdrawals, tenantLedger] = await Promise.all([ 
             API.tenants.getAll(), 
@@ -41,6 +47,13 @@ async function loadDashboardStats() {
         if (statTotalIncome) statTotalIncome.innerText = currencyFormatter.format(totalPaid);
         if (statTotalExpenses) statTotalExpenses.innerText = currencyFormatter.format(combinedExpenses);
         if (statTotalBalance) statTotalBalance.innerText = currencyFormatter.format(totalBalance);
+        
+        // Reset styles
+        statValues.forEach(v => {
+            v.style.opacity = '1';
+            v.style.transition = 'opacity 0.3s ease';
+        });
+        if (refreshBtn) refreshBtn.classList.remove('loading-spin');
         
         // --- Owner Settlements Calculation ---
         const allPaidBills = await API.bills.getAllPaidBills(); 
@@ -118,24 +131,73 @@ async function loadDashboardStats() {
         // --- Store data for timeline ---
         window.dashboardState = { allPaidBills, withdrawals, expenses };
 
-        // Update Collection Progress (Logic: What we have vs what we are missing)
-        const totalOutstanding = (finSummary.total_dues || 0) + (finSummary.total_arrears || 0);
-        const totalPotential = totalPaid + totalOutstanding;
-        const percent = totalPotential > 0 
-            ? Math.min(100, Math.round((totalPaid / totalPotential) * 100)) 
+        // Update Collection Progress (Logic: Active units only)
+        const activePaid = finSummary.active_paid || 0;
+        const activeOutstanding = (finSummary.active_dues || 0) + (finSummary.total_arrears || 0); // Arrears are already filtered by active=1 in backend
+        const totalPotential = activePaid + activeOutstanding;
+        const percent = totalPotential > 0
+            ? Math.min(100, Math.round((activePaid / totalPotential) * 100))
             : 0;
 
         const percentEl = document.getElementById('statCollectionPercent');
         const barEl = document.getElementById('collectionProgressBar');
+        const textEl = document.getElementById('collectionProgressText');
         const detailsEl = document.getElementById('collectionDetails');
         const duesEl = document.getElementById('statTotalDues');
         const arrearsEl = document.getElementById('statTotalArrears');
-        
+
         if (percentEl) percentEl.innerText = `${percent}%`;
         if (barEl) barEl.style.width = `${percent}%`;
-        if (detailsEl) detailsEl.innerText = `${finSummary.paid_count || 0} of ${finSummary.total_count || 0} bills processed`;
-        if (duesEl) duesEl.innerText = currencyFormatter.format(finSummary.total_dues || 0);
+        if (textEl) textEl.innerText = `${percent}% COLLECTED`;
+        if (detailsEl) detailsEl.innerText = `${finSummary.active_paid_count || 0} of ${finSummary.active_total_count || 0} bills settled (Active Units)`;
+        if (duesEl) duesEl.innerText = currencyFormatter.format(finSummary.active_dues || 0);
         if (arrearsEl) arrearsEl.innerText = currencyFormatter.format(finSummary.total_arrears || 0);
+
+        // --- NEW: Bill Generation Progress ---
+        const pendingTasks = await API.bills.getPendingBills();
+        const unbilledUnits = pendingTasks.filter(t => t.type === 'MISSING_BILL' || t.type === 'DRAFT_BILL').length;
+        const totalActiveUnits = tenants.length;
+        const billedUnits = Math.max(0, totalActiveUnits - unbilledUnits);
+        const billingPercent = totalActiveUnits > 0 ? Math.round((billedUnits / totalActiveUnits) * 100) : 0;
+
+        const bPercentEl = document.getElementById('statBillingPercent');
+        const bBarEl = document.getElementById('billingProgressBar');
+        const bTextEl = document.getElementById('billingProgressText');
+        const bDetailsEl = document.getElementById('billingDetails');
+
+        if (bPercentEl) bPercentEl.innerText = `${billingPercent}%`;
+        if (bBarEl) bBarEl.style.width = `${billingPercent}%`;
+        if (bTextEl) bTextEl.innerText = `${billingPercent}% GENERATED`;
+        if (bDetailsEl) bDetailsEl.innerText = `${billedUnits} of ${totalActiveUnits} active units billed`;
+
+        // --- NEW: Payout Progress ---
+        const payoutPercent = totalPaid > 0 ? Math.min(100, Math.round((payoutsTotal / totalPaid) * 100)) : 0;
+        
+        const pPercentEl = document.getElementById('statPayoutPercent');
+        const pBarEl = document.getElementById('payoutProgressBar');
+        const pTextEl = document.getElementById('payoutProgressText');
+        const pDetailsEl = document.getElementById('payoutDetails');
+
+        if (pPercentEl) pPercentEl.innerText = `${payoutPercent}%`;
+        if (pBarEl) pBarEl.style.width = `${payoutPercent}%`;
+        if (pTextEl) pTextEl.innerText = `${payoutPercent}% TRANSFERRED`;
+        if (pDetailsEl) pDetailsEl.innerText = `${currencyFormatter.format(payoutsTotal)} of ${currencyFormatter.format(totalPaid)} income paid out`;
+        // --- Onboarding Checklist Logic ---
+        const hasAccounts = appSettings.receiving_accounts && appSettings.receiving_accounts.length > 0;
+        const hasTenants = tenants.length > 0;
+        const hasBills = finSummary.total_count > 0;
+        const checklistCard = document.getElementById('setupChecklist');
+        
+        if (checklistCard) {
+            if (!hasAccounts || !hasTenants || !hasBills) {
+                checklistCard.classList.remove('hidden');
+                updateChecklist('check-step-1', hasAccounts);
+                updateChecklist('check-step-2', hasTenants);
+                updateChecklist('check-step-3', hasBills);
+            } else {
+                checklistCard.classList.add('hidden');
+            }
+        }
 
         // Populate Pending Collections List
         const pendingList = document.getElementById('pendingCollectionList');
@@ -177,19 +239,23 @@ function renderTenantLedger(ledger) {
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                            <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 6px; font-size: 0.6rem;">${e.room_no}</span>
+                            <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 6px; font-size: 0.6rem;">UNIT ${e.room_no}</span>
                             <div style="font-weight: 900; font-size: 0.9rem; text-transform: uppercase;">${e.name}</div>
                         </div>
-                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                            Billed: ${currencyFormatter.format(e.total_billed)} | Paid: ${currencyFormatter.format(e.total_paid)}
-                        </div>
-                        <div style="font-size: 0.6rem; color: var(--text-muted); margin-top: 2px;">
-                            SECURITY DEPOSIT: ${currencyFormatter.format(e.advance)}
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            <div class="math-row" style="width: 250px; justify-content: flex-start; gap: 1rem;">
+                                <span style="width: 100px;">Billed:</span>
+                                <span>${currencyFormatter.format(e.total_billed)}</span>
+                            </div>
+                            <div class="math-row" style="width: 250px; justify-content: flex-start; gap: 1rem;">
+                                <span style="width: 100px;">Paid:</span>
+                                <span style="color: var(--success);">${currencyFormatter.format(e.total_paid)}</span>
+                            </div>
                         </div>
                     </div>
                     <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
                         <div>
-                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted);">BALANCE DUE</div>
+                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Current Balance</div>
                             <div style="font-weight: 900; font-size: 1.1rem; color: ${hasDues ? 'var(--danger)' : 'var(--success)'};">
                                 ${currencyFormatter.format(e.balance)}
                             </div>
@@ -261,7 +327,7 @@ async function loadMonthlyTracker() {
                     <button onclick="sendWhatsAppReminder(${s.renter_id}, '${s.billing_month}', ${s.amount})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.65rem; height: auto; min-height: 32px; color: #25D366; border-color: #25D366;" title="Send Reminder">
                         <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
                     </button>
-                    <button onclick="showSection('history-section'); loadTenantHistory(${s.renter_id})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>
+                    <button onclick="quickPay(${s.renter_id}, ${s.bill_id || 'null'}, ${s.amount})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>
                 </div>`;
 
             const arrearNotice = s.arrears > 0 ? `<div style="font-size: 0.6rem; color: var(--danger); font-weight: 900; margin-top: 2px;">INCLUDES ARREARS: ${currencyFormatter.format(s.arrears)}</div>` : '';
@@ -306,6 +372,66 @@ function draftBillNow(renterId, monthName) {
     if (typeof loadSpecificBilling === 'function') {
         loadSpecificBilling(renterId, monthName);
     }
+}
+
+function searchDashboard() {
+    const term = document.getElementById('dashboardSearch').value.toLowerCase();
+    
+    // Helper to toggle visibility and handle empty states
+    const filterList = (containerId, itemSelector, emptyMsg) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const items = container.querySelectorAll(itemSelector);
+        let visibleCount = 0;
+        items.forEach(item => {
+            const matches = item.innerText.toLowerCase().includes(term);
+            item.style.display = matches ? '' : 'none';
+            if (matches) visibleCount++;
+        });
+
+        let emptyEl = container.querySelector('.search-no-results');
+        if (visibleCount === 0 && term !== "") {
+            if (!emptyEl) {
+                emptyEl = document.createElement('div');
+                emptyEl.className = 'search-no-results';
+                emptyEl.style.cssText = 'text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.8rem; font-weight:700; border: 2px dashed var(--border); border-radius:var(--radius-md); margin-top:0.5rem;';
+                emptyEl.innerText = emptyMsg;
+                container.appendChild(emptyEl);
+            }
+        } else if (emptyEl) {
+            emptyEl.remove();
+        }
+    };
+
+    filterList('monthlyChecklist', '.card', 'No matching pending tasks');
+    filterList('ownerSettlementList', '.tenant-row', 'No matching owner accounts');
+    filterList('tenantLedgerList', '.tenant-row', 'No matching tenant records');
+}
+
+function showHelp(topic) {
+    const helpData = {
+        'potential': 'Sum of base rent for all active units. This is the total you SHOULD collect every month.',
+        'arrears': 'Unpaid balance from previous months that has been carried forward. These are automatically added to the next bill.'
+    };
+    showNotification(helpData[topic] || "No help available", "info");
+}
+
+function updateChecklist(id, isComplete) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const icon = el.querySelector('.check-icon');
+    const btn = el.querySelector('button');
+    
+    if (isComplete) {
+        el.classList.add('complete');
+        if (icon) icon.setAttribute('data-lucide', 'check-circle-2');
+        if (btn) btn.classList.add('hidden');
+    } else {
+        el.classList.remove('complete');
+        if (icon) icon.setAttribute('data-lucide', 'circle');
+        if (btn) btn.classList.remove('hidden');
+    }
+    lucide.createIcons();
 }
 
 let resetLogsScroll = null;
@@ -377,54 +503,77 @@ function showOwnerTimeline(ownerName) {
     // Combine and sort by date descending
     const timeline = [...income, ...payouts, ...maintenance].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    // Calculate Summary
+    const totalIn = income.reduce((sum, i) => sum + i.amount, 0);
+    const totalOut = payouts.reduce((sum, p) => sum + p.amount, 0) + maintenance.reduce((sum, e) => sum + e.amount, 0);
+    const netBalance = totalIn - totalOut;
+
     if (timeline.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">No transactions found.</p>';
     } else {
-        container.innerHTML = timeline.map(item => {
+        let html = `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 2px dashed var(--border);">
+                <div style="background: var(--bg-success-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase;">Total In</div>
+                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--success);">${currencyFormatter.format(totalIn)}</div>
+                </div>
+                <div style="background: var(--bg-danger-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Total Out</div>
+                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--danger);">${currencyFormatter.format(totalOut)}</div>
+                </div>
+                <div style="background: var(--primary-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--secondary); text-transform: uppercase;">Balance</div>
+                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--primary);">${currencyFormatter.format(netBalance)}</div>
+                </div>
+            </div>
+            <div class="timeline-list">
+        `;
+
+        html += timeline.map(item => {
             const isOut = item.type === 'PAYOUT' || item.type === 'EXPENSE';
             return `
-                <div class="tenant-row" style="padding: 0.75rem; border-left: 4px solid ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-bottom: 0.5rem;">
+                <div class="tenant-row" style="padding: 0.75rem; border-left: 4px solid ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-bottom: 0.5rem; break-inside: avoid;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date} &bull; ${item.type}</div>
-                            <div style="font-size: 0.8rem; font-weight: 700; margin: 2px 0;">${item.details}</div>
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date}</span>
+                                <span class="badge ${isOut ? 'badge-danger' : 'badge-success'}" style="font-size: 0.5rem; padding: 1px 4px;">${item.type}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 700; margin-top: 2px; color: var(--text-main);">${item.details}</div>
                         </div>
-                        <div style="font-weight: 900; font-size: 1rem; color: ${isOut ? 'var(--danger)' : 'var(--success)'};">
+                        <div style="font-weight: 900; font-size: 1rem; color: ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-left: 1rem;">
                             ${isOut ? '-' : '+'}${currencyFormatter.format(item.amount)}
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
+
+        html += `</div>`;
+        container.innerHTML = html;
     }
 
     document.getElementById('ownerTimelineModal').classList.remove('hidden');
+    document.body.classList.add('modal-open');
     lucide.createIcons();
 }
 
+function closeOwnerTimeline() {
+    document.getElementById('ownerTimelineModal').classList.add('hidden');
+    document.body.classList.remove('modal-open');
+}
+
 function printOwnerTimeline() {
-    const ownerName = document.getElementById('timelineOwnerName').innerText;
-    const content = document.getElementById('ownerTimelineContent').innerHTML;
+    // Populate branding for print
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
     
-    const win = window.open('', '_blank');
-    win.document.write(`
-        <html>
-            <head>
-                <title>Timeline - ${ownerName}</title>
-                <style>
-                    body { font-family: 'Courier New', Courier, monospace; padding: 40px; color: #000; }
-                    .tenant-row { border: 1px solid #000; padding: 10px; margin-bottom: 10px; display: block; }
-                    @media print { body { padding: 0; } }
-                </style>
-            </head>
-            <body>
-                <h1>ACCOUNT TIMELINE: ${ownerName}</h1>
-                <p>Generated on: ${new Date().toLocaleString('en-IN')}</p>
-                <hr>
-                ${content}
-            </body>
-        </html>
-    `);
-    win.document.close();
-    win.onload = () => { win.print(); win.close(); };
+    const propNameEl = document.getElementById('printPropName');
+    const propAddrEl = document.getElementById('printPropAddr');
+    
+    if (propNameEl) propNameEl.innerText = propName;
+    if (propAddrEl) propAddrEl.innerText = propAddr;
+
+    // Trigger native print
+    window.print();
 }

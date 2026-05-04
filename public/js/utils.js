@@ -35,21 +35,34 @@ function showNotification(msg, type) {
     const note = document.createElement('div');
     note.className = `notification ${type}`;
     
+    // Modern Glass styling for notification
+    note.style.backdropFilter = 'blur(12px)';
+    note.style.webkitBackdropFilter = 'blur(12px)';
+    note.style.background = 'var(--glass-bg)';
+    note.style.border = '1px solid var(--border)';
+    note.style.boxShadow = 'var(--shadow-lg)';
+    note.style.padding = '12px 20px';
+    note.style.borderRadius = '12px';
+    note.style.display = 'flex';
+    note.style.alignItems = 'center';
+    note.style.marginBottom = '10px';
+    note.style.animation = 'noteSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    
     let icon = 'info';
-    if (type === 'success') icon = 'check-circle';
-    if (type === 'error') icon = 'alert-circle';
-    if (type === 'warning') icon = 'alert-triangle';
+    let iconColor = 'var(--info)';
+    if (type === 'success') { icon = 'check-circle'; iconColor = 'var(--success)'; }
+    if (type === 'error') { icon = 'alert-circle'; iconColor = 'var(--danger)'; }
+    if (type === 'warning') { icon = 'alert-triangle'; iconColor = 'var(--warning)'; }
 
     note.innerHTML = `
-        <i data-lucide="${icon}" style="width: 18px; height: 18px; margin-right: 12px;"></i>
-        <span>${msg}</span>
+        <i data-lucide="${icon}" style="width: 20px; height: 20px; margin-right: 12px; color: ${iconColor};"></i>
+        <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${msg}</span>
     `;
     container.appendChild(note);
     lucide.createIcons();
+    
     setTimeout(() => {
-        note.style.opacity = '0';
-        note.style.transform = 'translateX(20px)';
-        note.style.transition = 'all 0.4s ease';
+        note.style.animation = 'noteSlideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
         setTimeout(() => note.remove(), 400);
     }, 3000);
 }
@@ -81,7 +94,7 @@ function setupInfiniteScroll(container, fetchData, renderItem, options = {}) {
     trigger.style.display = 'flex';
     trigger.style.alignItems = 'center';
     trigger.style.justifyContent = 'center';
-    trigger.innerHTML = '<div class="loading-spinner hidden" style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; letter-spacing: 1px;">LOADING MORE RECORDS...</div>';
+    trigger.innerHTML = '<div class="loading-spinner hidden" style="width: 100%; text-align: center; padding: 1rem; color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">Loading...</div>';
     container.after(trigger);
 
     const observer = new IntersectionObserver(async (entries) => {

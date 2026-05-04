@@ -139,33 +139,37 @@ func CreateBackup(c *gin.Context) {
 		Filename string `json:"filename"`
 	}
 	c.ShouldBindJSON(&req)
-	if req.Filename == "" {
-		req.Filename = "rent_pro_backup"
+	
+	// Sanitize filename to prevent SQL injection and path traversal
+	cleanName := ""
+	if req.Filename != "" {
+		for _, r := range req.Filename {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+				cleanName += string(r)
+			}
+		}
 	}
 	
-	// Ensure backups dir exists
-	importOs := "os"
-	_ = importOs
-	// Actually we should use the package
-	// But I will just use the path
+	if cleanName == "" {
+		cleanName = "manual_backup"
+	}
 	
-	cleanName := filepath.Base(req.Filename)
 	backupName := fmt.Sprintf("%s_%s.db", time.Now().Format("2006-01-02"), cleanName)
 	backupPath := filepath.Join(database.BackupsDir, backupName)
 	
 	// Remove if exists (VACUUM INTO fails if file exists)
 	os.Remove(backupPath)
 	
-	// Create the physical backup using VACUUM INTO
+	// Use a prepared-statement-like approach for the path is not possible with VACUUM INTO,
+	// so we MUST ensure backupPath is safe. Since we sanitized cleanName and BackupsDir is constant, it is safe.
 	_, err := database.DB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create backup file: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create backup: " + err.Error()})
 		return
 	}
 	
-	database.LogActivity("DB_BACKUP", "Created manual download: "+backupName, config.AppConfig.Username)
+	database.LogActivity("DB_BACKUP", "Created manual backup: "+backupName, config.AppConfig.Username)
 	
-	// Serve the file directly to the browser
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", backupName))
@@ -249,7 +253,7 @@ func GetAuditReport(c *gin.Context) {
 
 	// Activity Logs for the month (Relevant financial actions)
 	// Match by timestamp (YYYY-MM-DD) OR by display month in details
-	logQuery := "SELECT action, details, timestamp FROM activity_logs WHERE (timestamp LIKE ? OR details LIKE ? OR details LIKE ?) AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT', 'TENANT_REGISTERED', 'BILL_GENERATED', 'ARREARS_CARRIED') ORDER BY timestamp ASC"
+	logQuery := "SELECT action, details, timestamp FROM activity_logs WHERE (timestamp LIKE ? OR details LIKE ? OR details LIKE ?) AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT', 'TENANT_REGISTERED', 'BILL_GENERATED', 'ARREARS_CARRIED', 'UNIT_VACATED', 'BILL_DELETED') ORDER BY timestamp ASC"
 	rows, _ := database.DB.Query(logQuery, month+"%", "%"+month+"%", "%"+displayMonth+"%")
 	defer rows.Close()
 

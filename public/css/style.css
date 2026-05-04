@@ -15,44 +15,257 @@ svg[data-lucide] {
 
 /* UTILITY: High Priority Hidden */
 .hidden { display: none !important; }
+.print-only { display: none !important; }
 
 /* PRINT STYLES */
 @media print {
-    /* Hide everything by default */
-    body * {
-        visibility: hidden;
-        margin: 0;
-        padding: 0;
+    /* 1. Force Theme Colors to B/W and Grayscale */
+    :root, body, body.dark-mode {
+        --bg-main: #ffffff !important;
+        --bg-card: #ffffff !important;
+        --bg-input: #ffffff !important;
+        --text-main: #000000 !important;
+        --text-muted: #333333 !important;
+        --border: #000000 !important;
+        --primary: #000000 !important;
+        --primary-light: #f0f0f0 !important;
+        --success: #000000 !important;
+        --danger: #000000 !important;
+        --warning: #000000 !important;
+        --info: #000000 !important;
+        --shadow-sm: none !important;
+        --shadow: none !important;
+        --shadow-lg: none !important;
+        --shadow-xl: none !important;
+        --bg-success-light: #f0f0f0 !important;
+        --bg-danger-light: #f0f0f0 !important;
+        --bg-warning-light: #f0f0f0 !important;
+        --bg-info-light: #f0f0f0 !important;
     }
 
-    /* Only show the print-ready content */
-    #print-area, #print-area * {
-        visibility: visible;
+    /* Global Font Standardization for Print */
+    * {
+        font-family: var(--font-main) !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        color: #000 !important; /* Force all text to black by default */
     }
 
-    /* Positioning the print area */
-    #print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        padding: 0;
-        margin: 0;
+    /* Exceptions for elements that MUST have white text (e.g. black badges/headers) */
+    .badge-success, .badge-danger, .badge-warning, .bg-primary, .btn-primary,
+    [style*="background: #000"], [style*="background:#000"],
+    [style*="background-color: #000"], [style*="background-color:#000"] {
+        color: #fff !important;
     }
 
-    /* Hide standard UI elements that shouldn't be in a PDF */
-    .btn, .nav, .bnav, .modal-overlay, #notification-container {
+    .print-only { display: block !important; }
+    
+    /* 2. Hide standard UI elements & Reset Layout */
+    .btn, .nav, .bnav, .modal-overlay, #notification-container, .sidebar, .sidebar-header, .sidebar-footer, .card-header, .help-trigger, #logFilter, #btnHistoryTenants, #btnHistoryOwners, .no-print, #pinOverlay {
         display: none !important;
     }
 
-    /* Page settings */
-    @page {
-        margin: 0.5cm;
-        size: auto;
+    /* Hide everything at root level except the main containers */
+    body > *:not(#mainApp):not(#modalContainer) {
+        display: none !important;
     }
-    
-    body {
+
+    /* 3. Reset Body for Print */
+    html, body {
+        height: auto !important;
+        min-height: 0 !important;
         background: white !important;
         color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        visibility: visible !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    @page {
+        margin: 10mm;
+        size: A4;
+    }
+
+    /* 4. Layout Resets */
+    #mainApp, .content, #modalContainer {
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: none !important;
+        visibility: visible !important;
+        overflow: visible !important;
+        border: none !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+
+    /* 5. Show only specific print targets */
+    #mainApp > *:not(.content),
+    .content > .app-section.hidden,
+    #modalContainer > div.hidden {
+        display: none !important;
+    }
+
+    /* If a modal is visible, hide the main app content to prevent overlap in print */
+    body.modal-open #mainApp {
+        display: none !important;
+    }
+
+    /* Surgical display of active printed content */
+    #mainApp, .content, 
+    .app-section:not(.hidden), 
+    .app-section:not(.hidden) > .content,
+    .app-section:not(.hidden) > .content > *,
+    #modalContainer > div:not(.hidden),
+    #modalContainer > div:not(.hidden) > .modal-content,
+    #modalContainer > #print-area:not(.hidden) {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        position: static !important;
+        visibility: visible !important;
+    }
+
+    #history-section:not(.hidden) #historyResults:not(.hidden),
+    #history-section:not(.hidden) #historyOwnersContent:not(.hidden),
+    #print-area, 
+    #printableAudit,
+    #auditModal:not(.hidden) #auditContent, 
+    #ownerTimelineModal:not(.hidden) .modal-content,
+    #ownerTimelineModal:not(.hidden) #ownerTimelineContent {
+        display: block !important;
+        background: #ffffff !important;
+        position: static !important;
+        visibility: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        max-height: none !important;
+    }
+        overflow: visible !important;
+        height: auto !important;
+        transform: none !important;
+    }
+
+    /* Surgical page break control */
+    .page-break {
+        page-break-before: always !important;
+        break-before: always !important;
+        display: block !important;
+        height: 0 !important;
+        visibility: hidden !important;
+    }
+
+
+
+
+    #auditModal .modal-content, #ownerTimelineModal .modal-content {
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        animation: none !important;
+    }
+
+    /* Re-enable visibility for data elements */
+    #print-area *, #historyResults *, #auditModal *, #ownerTimelineModal *, .print-only * {
+        visibility: visible !important;
+        border-color: black !important;
+        box-shadow: none !important;
+        background-color: transparent !important;
+    }
+#print-area, #print-area > div {
+    background-color: #ffffff !important;
+}
+
+/* Account Timeline Print Tweaks */
+#ownerTimelineModal .tenant-row {
+    border-width: 0 0 1px 2px !important;
+    margin-bottom: 0 !important;
+    padding: 0.65rem 0.5rem !important;
+    page-break-inside: avoid;
+    border-color: #eee !important;
+    border-left-color: black !important;
+}
+#ownerTimelineModal .timeline-list {
+    border-top: 1px solid black;
+}
+#ownerTimelineModal [style*="background: var(--bg-success-light)"],
+#ownerTimelineModal [style*="background: var(--bg-danger-light)"],
+#ownerTimelineModal [style*="background: var(--primary-light)"] {
+    border: 1px solid #000 !important;
+    background-color: #f9f9f9 !important;
+    -webkit-print-color-adjust: exact !important;
+}
+
+/* History & Records Print Tweaks */
+#historySelectedName {
+    border-left: 5px solid black;
+    padding-left: 10px;
+    margin-bottom: 1rem !important;
+}
+
+@media (max-width: 600px) {
+    #historyResults .styled-table td {
+        padding: 0.75rem !important;
+    }
+    #historyResults .btn-icon-sm {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+        border: none !important;
+    }
+
+    #print-area div {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    /* Keep table borders but ensure they are clean */
+    #print-area table, #print-area td, #print-area th {
+        border: 1px solid #000 !important;
+    }
+
+    /* Ensure white text on elements that have black backgrounds in print */
+    [style*="background: #000"], 
+    [style*="background:#000"],
+    [style*="background-color: #000"],
+    [style*="background-color:#000"],
+    th[style*="background: #000"],
+    div[style*="background: #000"] {
+        color: white !important;
+    }
+    
+    /* Also handle elements that use the --primary variable which is black in print */
+    .bg-primary, .btn-primary {
+        background: black !important;
+        color: white !important;
+    }
+
+    /* Table styling for print */
+    table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 8px !important;
+        color: black !important;
+    }
+
+    th {
+        background-color: #f0f0f0 !important;
+        font-weight: bold !important;
     }
 }

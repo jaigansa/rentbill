@@ -1,7 +1,7 @@
 async function loadManageTenants() {
     const listDiv = document.getElementById('manageTenantList');
     if (!listDiv) return;
-    listDiv.innerHTML = '<p style="text-align:center; padding:1rem;">Syncing...</p>';
+    listDiv.innerHTML = '';
     try {
         const tenants = await API.tenants.getAll();
         if (!tenants || tenants.length === 0) {
@@ -20,6 +20,33 @@ async function loadManageTenants() {
 }
 
 async function addTenant() {
+    const fields = [
+        { id: 'tName', label: 'Tenant Name' },
+        { id: 'tMobile', label: 'Mobile Number' },
+        { id: 'tRoom', label: 'Unit / Room No' },
+        { id: 'tAssignedUpi', label: 'Receiving Account' }
+    ];
+
+    let missing = [];
+    fields.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (!el || !el.value.trim()) {
+            missing.push(f.label);
+            if (el) el.style.borderColor = 'var(--danger)';
+        } else if (el) {
+            el.style.borderColor = ''; // Reset
+        }
+    });
+
+    if (missing.length > 0) {
+        showNotification(`Missing: ${missing.join(', ')}`, "error");
+        // Scroll to the first missing field
+        const firstMissing = document.getElementById(fields.find(f => !document.getElementById(f.id).value.trim()).id);
+        firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstMissing.focus();
+        return;
+    }
+
     const data = {
         name: document.getElementById('tName').value, mobile_number: document.getElementById('tMobile').value,
         email: document.getElementById('tEmail').value, room_no: document.getElementById('tRoom').value,
@@ -30,11 +57,10 @@ async function addTenant() {
         emergency_contact: document.getElementById('tEmerg').value, occupation: document.getElementById('tJob').value,
         assigned_upi: document.getElementById('tAssignedUpi').value
     };
-    if (!data.name || !data.room_no || !data.assigned_upi || !data.mobile_number) return showNotification("Fill required fields", "error");
     try {
         const result = editMode ? await API.tenants.update(editId, data) : await API.tenants.create(data);
         showNotification("Success", "success");
-        if (!editMode && confirm("Registration successful. Send Agreement?")) sendProfessionalAgreement(result.id);
+        if (!editMode && confirm("Registration successful. Print Agreement?")) printProfessionalAgreement(result.id);
         resetForm(); showSection('billing-module');
     } catch (e) { showNotification("Save failed", "error"); }
 }
@@ -48,7 +74,7 @@ async function editTenant(id) {
         document.getElementById('formDeleteBtn').classList.remove('hidden');
         document.getElementById('formDeleteBtn').onclick = () => deleteTenant(id);
         document.getElementById('formAgreementBtn').classList.remove('hidden');
-        document.getElementById('formAgreementBtn').onclick = () => sendProfessionalAgreement(id);
+        document.getElementById('formAgreementBtn').onclick = () => printProfessionalAgreement(id);
         showSection('settings-section');
         if (document.getElementById('entrance-form').classList.contains('hidden')) toggleRegForm();
         const mapping = { 'tName': 'name', 'tMobile': 'mobile_number', 'tEmail': 'email', 'tRoom': 'room_no', 'tAadhar': 'aadhar_no', 'tRent': 'base_rent', 'tEbRate': 'eb_unit_price', 'tInitialEb': 'initial_eb', 'tWater': 'water_maint', 'tAdvance': 'advance_amount', 'tMoveIn': 'move_in_date', 'tPermAddr': 'perm_address', 'tEmerg': 'emergency_contact', 'tJob': 'occupation', 'tAssignedUpi': 'assigned_upi' };
@@ -78,9 +104,32 @@ function toggleRegForm() {
 }
 
 function searchTenants() {
-    const input = document.getElementById('searchBar').value.toLowerCase();
+    const input = document.getElementById('searchBar').value.trim().toLowerCase();
     const rows = document.querySelectorAll('#tenantList .tenant-row');
-    rows.forEach(row => { const text = row.innerText.toLowerCase(); row.style.display = text.includes(input) ? '' : 'none'; });
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const tenantName = row.querySelector('.tenant-header > div > div > div')?.innerText.toLowerCase() || "";
+        const unitNo = row.querySelector('.room-badge')?.innerText.toLowerCase() || "";
+        const matches = tenantName.includes(input) || unitNo.includes(input);
+        row.style.display = matches ? '' : 'none';
+        if (matches) visibleCount++;
+    });
+
+    // Handle Empty State for Search
+    let emptyMsg = document.getElementById('search-empty-msg');
+    if (visibleCount === 0 && input !== "") {
+        if (!emptyMsg) {
+            emptyMsg = document.createElement('div');
+            emptyMsg.id = 'search-empty-msg';
+            emptyMsg.className = 'empty-state';
+            emptyMsg.innerHTML = '<i data-lucide="search-x"></i><p>No units match your search</p>';
+            document.getElementById('tenantList').appendChild(emptyMsg);
+            lucide.createIcons();
+        }
+    } else if (emptyMsg) {
+        emptyMsg.remove();
+    }
 }
 
 async function loadArchivedTenants() {
@@ -126,19 +175,43 @@ async function deleteTenant(id) {
 
 // --- Settlement & Vacant ---
 let pendingVacantId = null;
+let lastEBReading = 0;
+let tenantEBUnitPrice = 0;
+
 async function markAsVacant(id) {
     pendingVacantId = id;
     try {
         const t = await API.tenants.getOne(id);
+        const ebData = await API.bills.getLastEB(id);
+        
+        lastEBReading = ebData.last_eb || 0;
+        tenantEBUnitPrice = t.eb_unit_price || 0;
+
         document.getElementById('sAdvance').value = t.advance_amount;
+        document.getElementById('sRentDue').value = t.pending_arrears || 0;
+        document.getElementById('sEbDue').value = 0;
+        document.getElementById('sEbReading').value = '';
+        document.getElementById('sEbReading').placeholder = `Last: ${lastEBReading}`;
+        
         calcSettlement();
         document.getElementById('settlementModal').classList.remove('hidden');
     } catch (e) { showNotification("Failed to load details", "error"); }
 }
 
-function calcSettlement() {
+function calcSettlement(triggeredBy) {
     const adv = parseFloat(document.getElementById('sAdvance').value) || 0;
     const rent = parseFloat(document.getElementById('sRentDue').value) || 0;
+    
+    if (triggeredBy === 'reading') {
+        const finalReading = parseFloat(document.getElementById('sEbReading').value) || lastEBReading;
+        if (finalReading > lastEBReading) {
+            const units = finalReading - lastEBReading;
+            document.getElementById('sEbDue').value = (units * tenantEBUnitPrice).toFixed(2);
+        } else {
+            document.getElementById('sEbDue').value = 0;
+        }
+    }
+
     const eb = parseFloat(document.getElementById('sEbDue').value) || 0;
     const rep = parseFloat(document.getElementById('sRepairs').value) || 0;
     const bal = adv - (rent + eb + rep);
@@ -155,18 +228,33 @@ function closeSettlementModal() {
 
 async function processSettlementAndVacant() {
     if (!confirm("Confirm final settlement?")) return;
+
+    const adv = parseFloat(document.getElementById('sAdvance').value) || 0;
+    const rent = parseFloat(document.getElementById('sRentDue').value) || 0;
+    const eb = parseFloat(document.getElementById('sEbDue').value) || 0;
+    const rep = parseFloat(document.getElementById('sRepairs').value) || 0;
+    const numericBalance = adv - (rent + eb + rep);
+
     const details = {
-        advance: parseFloat(document.getElementById('sAdvance').value) || 0,
+        advance: adv,
         ebReading: document.getElementById('sEbReading').value || 'N/A',
-        rentDue: parseFloat(document.getElementById('sRentDue').value) || 0,
-        ebDue: parseFloat(document.getElementById('sEbDue').value) || 0,
-        repairs: parseFloat(document.getElementById('sRepairs').value) || 0,
+        rentDue: rent,
+        ebDue: eb,
+        repairs: rep,
         reason: document.getElementById('sReason').value || 'None',
         totalRefund: document.getElementById('settlementTotal').innerText,
-        refundLabel: document.getElementById('settlementLabel').innerText
+        refundLabel: document.getElementById('settlementLabel').innerText,
+        balance: numericBalance
     };
     try {
-        await API.tenants.markVacant(pendingVacantId);
+        await API.tenants.markVacant({
+            id: pendingVacantId,
+            refund_amount: details.totalRefund,
+            dues_deducted: details.rentDue + details.ebDue,
+            repairs_deducted: details.repairs,
+            refund_label: details.refundLabel,
+            final_balance: numericBalance
+        });
         showNotification("Unit is now vacant", "success");
         document.getElementById('settlementModal').classList.add('hidden');
         prepareAndShare('clearance', pendingVacantId, details);

@@ -32,3 +32,59 @@ function showSection(sectionId) {
     }
     lucide.createIcons();
 }
+
+function quickRegisterTenant() {
+    showSection('settings-section');
+    const form = document.getElementById('entrance-form');
+    if (form && form.classList.contains('hidden')) {
+        toggleRegForm();
+    }
+    document.getElementById('entrance-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function quickRecordPayout() {
+    showSection('history-section');
+    if (typeof toggleHistoryMode === 'function') {
+        toggleHistoryMode('owners');
+    }
+    const form = document.getElementById('withdrawal-form');
+    if (form && form.classList.contains('hidden')) {
+        toggleWithdrawalForm();
+    }
+    document.getElementById('withdrawal-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function quickAddExpense() {
+    showSection('settings-section');
+    const form = document.getElementById('expense-form');
+    if (form && form.classList.contains('hidden')) {
+        toggleExpenseForm();
+    }
+    document.getElementById('expense-form').scrollIntoView({ behavior: 'smooth' });
+}
+
+function quickGenerateAudit() {
+    showSection('settings-section');
+    const auditCard = document.querySelector('#auditMonth').closest('.card');
+    if (auditCard) {
+        auditCard.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function quickPay(renterId, billId, amount) {
+    if (billId) {
+        // If it's a specific bill, open payment modal
+        if (typeof openHistoryPaymentModal === 'function') {
+            // We need to ensure history section is initialized or at least appSettings is loaded
+            showSection('history-section');
+            loadTenantHistory(renterId);
+            setTimeout(() => {
+                openHistoryPaymentModal(billId, amount);
+            }, 300);
+        }
+    } else {
+        // Just go to history
+        showSection('history-section');
+        loadTenantHistory(renterId);
+    }
+}

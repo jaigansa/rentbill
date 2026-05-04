@@ -13,8 +13,18 @@ import (
 func GetOwnerWithdrawals(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "20")
 	offset := c.DefaultQuery("offset", "0")
+	owner := c.Query("owner")
 
-	rows, err := database.DB.Query("SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals ORDER BY date DESC LIMIT ? OFFSET ?", limit, offset)
+	query := "SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals"
+	var args []interface{}
+	if owner != "" {
+		query += " WHERE owner_name = ?"
+		args = append(args, owner)
+	}
+	query += " ORDER BY date DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return

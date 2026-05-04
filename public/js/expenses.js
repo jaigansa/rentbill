@@ -7,6 +7,8 @@ async function loadExpenses() {
     if (resetExpensesScroll) {
         resetExpensesScroll();
     }
+    
+    listDiv.innerHTML = '';
 
     resetExpensesScroll = setupInfiniteScroll(
         listDiv,

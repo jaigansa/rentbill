@@ -4,9 +4,14 @@ async function loadSettings() {
     try {
         const data = await API.system.getSettings();
         appSettings = data;
+        const propName = document.getElementById('prop_name');
+        const propAddr = document.getElementById('prop_addr');
         const emailUser = document.getElementById('email_user');
         const emailBcc = document.getElementById('email_bcc');
         const srvPort = document.getElementById('server_port');
+        
+        if (propName) propName.value = data.property_name || '';
+        if (propAddr) propAddr.value = data.property_address || '';
         if (emailUser) emailUser.value = data.email_user || '';
         if (emailBcc) emailBcc.value = data.email_bcc || '';
         if (srvPort) srvPort.value = data.server_port || 8080;
@@ -134,6 +139,8 @@ async function loadSystemSettings() { await loadSettings(); }
 
 async function saveSystemSettings() {
     const data = {
+        property_name: document.getElementById('prop_name').value,
+        property_address: document.getElementById('prop_addr').value,
         email_user: document.getElementById('email_user').value,
         email_bcc: document.getElementById('email_bcc').value,
         email_pass: document.getElementById('email_pass').value,
@@ -152,6 +159,9 @@ async function saveSystemSettings() {
             showNotification("Settings updated", "success");
             const pinInput = document.getElementById('new_master_pin');
             if (pinInput) pinInput.value = '';
+            // Update global appSettings so branding shows up immediately
+            appSettings.property_name = data.property_name;
+            appSettings.property_address = data.property_address;
         }
     } catch (e) { showNotification("Failed to update settings", "error"); }
 }
@@ -294,8 +304,12 @@ async function viewAuditReport() {
         const auditContent = document.getElementById('auditContent');
         if (!auditContent) return;
 
-        let logsHtml = data.logs && data.logs.length > 0 
-            ? data.logs.map(l => `
+        const filteredLogs = (data.logs || []).filter(l => 
+            l.action === 'PAYMENT_RECORDED' || l.action === 'EXPENSE_ADDED'
+        );
+
+        let logsHtml = filteredLogs.length > 0 
+            ? filteredLogs.map(l => `
                 <div style="border-bottom: 1px dashed var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
                         <div style="font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: var(--text-main);">${l.action.replace('_', ' ')}</div>
@@ -303,58 +317,41 @@ async function viewAuditReport() {
                     </div>
                     <div style="font-size: 0.65rem; color: var(--text-muted); font-family: monospace;">${l.timestamp.slice(11, 16)}</div>
                 </div>`).join('')
-            : '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No financial activities found for this period.</p>';
-
-        const netProfit = (data.summary.total_paid + data.summary.total_advances) - (data.summary.total_expenses + data.summary.total_payouts);
+            : '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No income or expense records found for this period.</p>';
 
         auditContent.innerHTML = `
-            <div id="printableAudit">
-                <div style="text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
-                    <h1 style="margin: 0; font-size: 1.5rem; letter-spacing: 2px; color: var(--text-main);">MONTHLY BUSINESS AUDIT</h1>
-                    <p style="margin: 5px 0; font-weight: bold; text-transform: uppercase; background: var(--text-main); color: var(--bg-card); display: inline-block; padding: 2px 15px;">PERIOD: ${new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
+            <div id="printableAudit" style="font-family: var(--font-main), sans-serif; color: #000;">
+                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem;">
+                    <h1 style="margin: 0; font-size: 1.8rem; font-weight: 900; letter-spacing: 1px; color: #000; text-transform: uppercase;">Financial Audit Report</h1>
+                    <p style="margin: 10px 0; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; text-transform: uppercase; border-radius: 4px; letter-spacing: 1px;">PERIOD: ${new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
                 </div>
 
                 <!-- Primary Metrics -->
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem;">
-                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--bg-card);">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted);">TOTAL INCOME</div>
-                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_paid)}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
+                    <div style="border: 2px solid #000; border-radius: 8px; padding: 15px; text-align: center; background: #fff;">
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px;">TOTAL INCOME</div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #000; margin-top: 5px;">${currencyFormatter.format(data.summary.total_paid)}</div>
                     </div>
-                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--bg-card);">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-muted);">NEW ADVANCES</div>
-                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_advances)}</div>
-                    </div>
-                    <div style="border: 2px solid var(--border); padding: 10px; text-align: center; background: var(--primary-light);">
-                        <div style="font-size: 0.6rem; font-weight: bold; color: var(--text-main);">NET CASH FLOW</div>
-                        <div style="font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(netProfit)}</div>
-                    </div>
-                </div>
-
-                <!-- Secondary Metrics -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 2rem;">
-                    <div style="border: 1px solid var(--border); padding: 8px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
-                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted);">MAINTENANCE EXPENSES</span>
-                        <span style="font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_expenses)}</span>
-                    </div>
-                    <div style="border: 1px solid var(--border); padding: 8px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
-                        <span style="font-size: 0.7rem; font-weight: bold; color: var(--text-muted);">OWNER PAYOUTS</span>
-                        <span style="font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_payouts)}</span>
+                    <div style="border: 2px solid #000; border-radius: 8px; padding: 15px; text-align: center; background: #fff;">
+                        <div style="font-size: 0.8rem; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px;">TOTAL EXPENSES</div>
+                        <div style="font-size: 1.5rem; font-weight: 900; color: #000; margin-top: 5px;">${currencyFormatter.format(data.summary.total_expenses)}</div>
                     </div>
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 0.85rem; border-left: 5px solid var(--border); padding-left: 10px; margin-bottom: 10px; text-transform: uppercase; color: var(--text-main);">Transaction History</h3>
-                    <div style="border: 1px solid var(--border); padding: 0 10px; background: var(--bg-input);">
+                    <h3 style="font-size: 0.95rem; font-weight: 900; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px; text-transform: uppercase; color: #000; letter-spacing: 1px;">Income & Expense Details</h3>
+                    <div style="border: 1.5px solid #000; border-radius: 8px; padding: 5px 15px; background: #fff;">
                         ${logsHtml}
                     </div>
                 </div>
 
-                <div style="margin-top: 3rem; border-top: 1px solid var(--border); padding-top: 10px; text-align: center; font-size: 0.6rem; color: var(--text-muted); font-style: italic;">
-                    This document is a system-generated financial summary for RentBill Pro.
-                    <br>Generated on: ${new Date().toLocaleString('en-IN')}
+                <div style="margin-top: 3rem; border-top: 1px solid #000; padding-top: 10px; text-align: center; font-size: 0.7rem; color: #555; font-weight: bold;">
+                    THIS DOCUMENT IS A SYSTEM-GENERATED FINANCIAL SUMMARY // RENTBILL PRO
+                    <br>GENERATED ON: ${new Date().toLocaleString('en-IN')}
                 </div>
             </div>
         `;
+
 
         document.getElementById('auditModal')?.classList.remove('hidden');
         lucide.createIcons();
@@ -369,29 +366,12 @@ function closeAuditModal() {
 }
 
 function printAudit() {
-    const content = document.getElementById('printableAudit');
-    if (!content) return;
+    // Populate branding for print
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
     
-    const win = window.open('', '_blank');
-    win.document.write(`
-        <html>
-            <head>
-                <title>RentBill Audit - ${document.getElementById('auditMonth')?.value}</title>
-                <style>
-                    body { font-family: 'Courier New', Courier, monospace; padding: 40px; color: #000; }
-                    @media print {
-                        body { padding: 0; }
-                        .no-print { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${content.innerHTML}
-                <script>
-                    window.onload = () => { window.print(); window.close(); };
-                </script>
-            </body>
-        </html>
-    `);
-    win.document.close();
+    document.querySelectorAll('.auditPrintPropName').forEach(el => el.innerText = propName);
+    document.querySelectorAll('.auditPrintPropAddr').forEach(el => el.innerText = propAddr);
+
+    window.print();
 }

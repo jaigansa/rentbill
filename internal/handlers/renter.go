@@ -63,11 +63,19 @@ func CreateRenter(c *gin.Context) {
 
 func UpdateRenter(c *gin.Context) {
 	var r models.Renter
+	err := database.DB.QueryRow("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears FROM renters WHERE id = ?", c.Param("id")).Scan(&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Renter not found"})
+		return
+	}
+
 	if err := c.ShouldBindJSON(&r); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	_, err := database.DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=?, pending_arrears=? WHERE id=?`, r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears, c.Param("id"))
+
+	_, err = database.DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=? WHERE id=?`, 
+		r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -77,15 +85,37 @@ func UpdateRenter(c *gin.Context) {
 }
 
 func MarkVacant(c *gin.Context) {
-	var body struct {
-		ID int `json:"id"`
+	var req struct {
+		ID           int     `json:"id"`
+		Refund       string  `json:"refund_amount"`
+		Dues         float64 `json:"dues_deducted"`
+		Repairs      float64 `json:"repairs_deducted"`
+		RefundLabel  string  `json:"refund_label"`
+		FinalBalance float64 `json:"final_balance"`
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	database.DB.Exec("UPDATE renters SET is_active = 0 WHERE id = ?", body.ID)
-	database.LogActivity("UNIT_VACATED", "Unit vacated", config.AppConfig.Username)
+
+	var name string
+	database.DB.QueryRow("SELECT name FROM renters WHERE id = ?", req.ID).Scan(&name)
+
+	// Calculate new arrears from balance (if balance is negative, tenant owes us)
+	newArrears := 0.0
+	if req.FinalBalance < 0 {
+		newArrears = -req.FinalBalance
+	}
+
+	_, err := database.DB.Exec("UPDATE renters SET is_active = 0, pending_arrears = ? WHERE id = ?", newArrears, req.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark vacant"})
+		return
+	}
+
+	details := fmt.Sprintf("Tenant %s vacated. %s: %s (Deducted: Dues %.2f, Repairs %.2f). New Arrears: %.2f", name, req.RefundLabel, req.Refund, req.Dues, req.Repairs, newArrears)
+	database.LogActivity("UNIT_VACATED", details, config.AppConfig.Username)
+	
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -131,7 +161,7 @@ func DeleteRenter(c *gin.Context) {
 }
 
 func ExportRentersCSV(c *gin.Context) {
-	rows, err := database.DB.Query("SELECT name, room_no, mobile_number, email, aadhar_no, base_rent, water_maint, advance_amount, move_in_date, occupation, assigned_upi FROM renters WHERE is_active = 1 ORDER BY room_no ASC")
+	rows, err := database.DB.Query("SELECT name, room_no, mobile_number, email, aadhar_no, base_rent, water_maint, advance_amount, move_in_date, occupation, assigned_upi, eb_unit_price, initial_eb, pending_arrears FROM renters WHERE is_active = 1 ORDER BY room_no ASC")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -141,17 +171,19 @@ func ExportRentersCSV(c *gin.Context) {
 	c.Header("Content-Type", "text/csv")
 	c.Header("Content-Disposition", "attachment; filename=unit_directory.csv")
 
-	fmt.Fprintln(c.Writer, "Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner")
+	fmt.Fprintln(c.Writer, "Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner,EB Rate,Initial EB,Arrears")
 
 	for rows.Next() {
 		var r struct {
 			Name, Room, Mobile, Email, Aadhar, MoveIn, Job, UPI string
-			Rent, Water, Advance                                float64
+			Rent, Water, Advance, EBRate, InitialEB, Arrears    float64
 		}
-		rows.Scan(&r.Name, &r.Room, &r.Mobile, &r.Email, &r.Aadhar, &r.Rent, &r.Water, &r.Advance, &r.MoveIn, &r.Job, &r.UPI)
+		if err := rows.Scan(&r.Name, &r.Room, &r.Mobile, &r.Email, &r.Aadhar, &r.Rent, &r.Water, &r.Advance, &r.MoveIn, &r.Job, &r.UPI, &r.EBRate, &r.InitialEB, &r.Arrears); err != nil {
+			continue
+		}
 
-		fmt.Fprintf(c.Writer, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\",\"%s\"\n",
-			r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI)
+		fmt.Fprintf(c.Writer, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f\n",
+			r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI, r.EBRate, r.InitialEB, r.Arrears)
 	}
 
 	database.LogActivity("DATA_EXPORT", "Exported Unit Directory to CSV", config.AppConfig.Username)
@@ -188,7 +220,7 @@ func ImportRentersCSV(c *gin.Context) {
 			continue // Skip malformed rows
 		}
 
-		// Expected columns: Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner
+		// Expected columns: Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner,EB Rate,Initial EB,Arrears
 		if len(record) < 11 {
 			continue
 		}
@@ -204,6 +236,23 @@ func ImportRentersCSV(c *gin.Context) {
 		moveIn := record[8]
 		job := record[9]
 		upi := record[10]
+		
+		ebRate := 9.0
+		if len(record) > 11 {
+			if val, err := strconv.ParseFloat(record[11], 64); err == nil && val > 0 {
+				ebRate = val
+			}
+		}
+		
+		initialEB := 0.0
+		if len(record) > 12 {
+			initialEB, _ = strconv.ParseFloat(record[12], 64)
+		}
+		
+		arrears := 0.0
+		if len(record) > 13 {
+			arrears, _ = strconv.ParseFloat(record[13], 64)
+		}
 
 		if name == "" || room == "" {
 			continue
@@ -211,7 +260,7 @@ func ImportRentersCSV(c *gin.Context) {
 
 		_, err = database.DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears) 
 			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
-			name, room, aadhar, rent, 9.0, water, advance, moveIn, mobile, email, 0, "", "", job, upi, 0)
+			name, room, aadhar, rent, ebRate, water, advance, moveIn, mobile, email, initialEB, "", "", job, upi, arrears)
 		
 		if err == nil {
 			count++

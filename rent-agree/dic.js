@@ -58,7 +58,7 @@ const LEXICON = {
     "lbl-inventory": { en: "Inventory List (Fans, Bulbs, Remote, etc)", tn: "பொருட்கள் பட்டியல்" },
     "lbl-btn-reset": { en: "Reset", tn: "மீட்டமை" },
     "lbl-btn-update": { en: "Update", tn: "புதுப்பி" },
-    "lbl-btn-print": { en: "Print", tn: "அச்சிடுக" },
+    "lbl-btn-print": { en: "Print Agreement", tn: "ஒப்பந்தத்தை அச்சிடுக" },
     "out-rec-title": { en: "ADVANCE PAYMENT RECEIPT", tn: "முன்பண ரசீது" },
     "out-rec-sig": { en: "Landlord Signature", tn: "உரிமையாளர் கையொப்பம்" },
     "out-lbl-start-date": { en: "START DATE", tn: "தொடங்கும் தேதி" },

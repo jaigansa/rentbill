@@ -78,3 +78,20 @@ function closeDeleteModal() {
     if (typeof pendingDeleteId !== 'undefined') pendingDeleteId = null;
     if (typeof pendingDeleteBillId !== 'undefined') pendingDeleteBillId = null;
 }
+
+// --- UX Enhancements: Global Keyboard Listeners ---
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        // Close any visible modal overlays
+        document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(modal => {
+            // Don't close pinOverlay if it's the mandatory one (optional logic)
+            if (modal.id === 'pinOverlay' && !localStorage.getItem('isLoggedIn')) return;
+            modal.classList.add('hidden');
+        });
+        
+        // Cleanup specific modal states if needed
+        if (typeof closeSettlementModal === 'function') closeSettlementModal();
+        if (typeof closePaymentModal === 'function') closePaymentModal();
+        if (typeof closeShareModal === 'function') closeShareModal();
+    }
+});

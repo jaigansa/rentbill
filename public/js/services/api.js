@@ -41,7 +41,7 @@ const API = {
         create: (data) => API.request('/renters', { method: 'POST', body: JSON.stringify(data) }),
         update: (id, data) => API.request(`/renters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/renters/${id}`, { method: 'DELETE' }),
-        markVacant: (id) => API.request('/vacant', { method: 'POST', body: JSON.stringify({ id }) }),
+        markVacant: (data) => API.request('/vacant', { method: 'POST', body: JSON.stringify(data) }),
         restore: (id) => API.request('/restore', { method: 'POST', body: JSON.stringify({ id }) })
     },
 
@@ -67,7 +67,11 @@ const API = {
     },
 
     withdrawals: {
-        getAll: (limit = 20, offset = 0) => API.request(`/withdrawals?limit=${limit}&offset=${offset}`),
+        getAll: (limit = 20, offset = 0, owner = '') => {
+            let url = `/withdrawals?limit=${limit}&offset=${offset}`;
+            if (owner) url += `&owner=${encodeURIComponent(owner)}`;
+            return API.request(url);
+        },
         create: (data) => API.request('/withdrawals', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/withdrawals/${id}`, { method: 'DELETE' })
     },

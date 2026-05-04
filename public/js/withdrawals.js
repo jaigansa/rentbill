@@ -1,17 +1,22 @@
 let resetWithdrawalsScroll = null;
+let currentWithdrawalOwnerFilter = '';
 
-async function loadWithdrawals() {
+async function loadWithdrawals(owner = '') {
     const listDiv = document.getElementById('withdrawalList');
     if (!listDiv) return;
+
+    currentWithdrawalOwnerFilter = owner;
 
     if (resetWithdrawalsScroll) {
         resetWithdrawalsScroll();
     }
+    
+    listDiv.innerHTML = '';
 
     resetWithdrawalsScroll = setupInfiniteScroll(
         listDiv,
         async (offset, limit) => {
-            const data = await API.withdrawals.getAll(limit, offset);
+            const data = await API.withdrawals.getAll(limit, offset, currentWithdrawalOwnerFilter);
             return data;
         },
         (w) => UI.renderWithdrawalItem(w, deleteWithdrawal),
@@ -20,8 +25,24 @@ async function loadWithdrawals() {
 }
 
 function loadMoreWithdrawals() {
-    // This is now handled by infinite scroll, but we keep the name for compatibility
-    // with any other calls that might exist.
+    // Handled by infinite scroll
+}
+
+function populateWithdrawalFilters() {
+    const filterSelect = document.getElementById('payoutOwnerFilter');
+    if (!filterSelect || !appSettings.receiving_accounts) return;
+
+    const currentFilter = filterSelect.value;
+    filterSelect.innerHTML = '<option value="">All Owners</option>';
+    
+    const uniqueOwners = [...new Set(appSettings.receiving_accounts.map(acc => acc.owner_name))];
+    uniqueOwners.forEach(owner => {
+        const opt = document.createElement('option');
+        opt.value = owner;
+        opt.innerText = owner.toUpperCase();
+        filterSelect.appendChild(opt);
+    });
+    filterSelect.value = currentFilter;
 }
 
 function toggleWithdrawalForm() {
@@ -39,7 +60,7 @@ function populateWithdrawalOwnerDropdown() {
     const select = document.getElementById('wOwnerName');
     if (!select || !appSettings.receiving_accounts) return;
     const currentVal = select.value;
-    
+
     select.innerHTML = '<option value="">-- Select Owner --</option>';
     appSettings.receiving_accounts.forEach(acc => {
         const opt = document.createElement('option');
@@ -64,7 +85,7 @@ async function addWithdrawal() {
         document.getElementById('wAmount').value = '';
         document.getElementById('wNotes').value = '';
         toggleWithdrawalForm();
-        loadWithdrawals();
+        loadWithdrawals(currentWithdrawalOwnerFilter);
         loadDashboardStats();
     } catch (e) { showNotification("Failed to save", "error"); }
 }
@@ -74,7 +95,44 @@ async function deleteWithdrawal(id) {
     try {
         await API.withdrawals.delete(id);
         showNotification("Deleted", "success");
-        loadWithdrawals();
+        loadWithdrawals(currentWithdrawalOwnerFilter);
         loadDashboardStats();
     } catch (e) { showNotification("Delete failed", "error"); }
+}
+
+async function printPayoutHistory() {
+    // Populate branding for print
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
+    
+    const listDiv = document.getElementById('historyOwnersContent');
+    const existingBranding = listDiv.querySelector('.print-branding');
+    if (existingBranding) existingBranding.remove();
+
+    const brandingHtml = `
+        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif;">
+            <h2 style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;">${propName}</h2>
+            <p style="margin: 4px 0; font-size: 0.9rem; color: #333;">${propAddr}</p>
+            <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">OWNER PAYOUT STATEMENT</div>
+            <p style="margin: 12px 0 0 0; font-size: 0.85rem; font-weight: 900; color: #000; text-transform: uppercase;">STATEMENT FOR: ${currentWithdrawalOwnerFilter ? currentWithdrawalOwnerFilter.toUpperCase() : 'ALL OWNERS'}</p>
+            <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #555;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        </div>
+    `;
+
+    listDiv.insertAdjacentHTML('afterbegin', brandingHtml);
+
+    // Hide actions column/buttons
+    const style = document.createElement('style');
+    style.id = 'print-hide-payout-actions';
+    style.innerHTML = '@media print { .withdrawal-actions, #witToggleBtn, .no-print { display: none !important; } .card { border: none !important; box-shadow: none !important; } }';
+    document.head.appendChild(style);
+
+    window.print();
+
+    setTimeout(() => {
+        const branding = listDiv.querySelector('.print-branding');
+        if (branding) branding.remove();
+        const styleEl = document.getElementById('print-hide-payout-actions');
+        if (styleEl) styleEl.remove();
+    }, 500);
 }

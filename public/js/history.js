@@ -55,6 +55,7 @@ function toggleHistoryMode(mode) {
         ownersContent?.classList.remove('hidden');
         btnTenants?.classList.remove('active');
         btnOwners?.classList.add('active');
+        populateWithdrawalFilters();
         loadWithdrawals();
     }
 }
@@ -82,12 +83,18 @@ async function loadTenantHistory(renterId) {
         resetHistoryScroll();
         resetHistoryScroll = null;
     }
-    if (historyBody) historyBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">Loading records...</td></tr>';
+    if (historyBody) historyBody.innerHTML = '';
 
     try {
         const renter = await API.tenants.getOne(renterId);
         nameLabel.innerText = renter.name;
         
+        // Populate Summary
+        const balEl = document.getElementById('histStatBalance');
+        const advEl = document.getElementById('histStatAdvance');
+        if (balEl) balEl.innerText = currencyFormatter.format(renter.balance || 0);
+        if (advEl) advEl.innerText = currencyFormatter.format(renter.advance_amount || 0);
+
         // Clear loading state
         if (historyBody) historyBody.innerHTML = '';
 
@@ -98,28 +105,30 @@ async function loadTenantHistory(renterId) {
                 return data;
             },
             (b) => `
-                <tr id="row-${b.id}">
-                    <td>
-                        <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-main);">${b.billing_month.toUpperCase()}</div>
-                        <div style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase;">Generated: ${new Date(b.date_generated).toLocaleDateString('en-IN')}</div>
-                    </td>
-                    <td>
-                        <div style="font-weight: 900; color: var(--primary); font-size: 1rem;">${currencyFormatter.format(b.total_amount)}</div>
-                        ${b.is_paid ? `<div style="font-size: 0.6rem; color: var(--success); font-weight: 800;">PAID: ${currencyFormatter.format(b.paid_amount)}</div>` : ''}
-                    </td>
-                    <td>
-                        <span class="badge" style="font-size: 0.6rem; padding: 4px 8px; background: ${b.is_paid ? 'var(--bg-success-light)' : 'var(--bg-danger-light)'}; color: ${b.is_paid ? 'var(--success)' : 'var(--danger)'}; border-color: ${b.is_paid ? 'var(--success)' : 'var(--danger)'};">
-                            ${b.is_paid ? 'SETTLED' : 'PENDING'}
-                        </span>
-                    </td>
-                    <td class="history-actions-mobile">
-                        <div style="display: flex; gap: 0.25rem;">
-                            <button class="btn btn-secondary btn-icon-sm" onclick="prepareAndShare('bill', ${b.id})" title="Share"><i data-lucide="share-2" width="14" height="14"></i></button>
-                            ${!b.is_paid ? `<button class="btn btn-primary btn-icon-sm" onclick="openHistoryPaymentModal(${b.id}, ${b.total_amount})" title="Pay"><i data-lucide="credit-card" width="14" height="14"></i></button>` : ''}
-                            <button class="btn btn-secondary btn-icon-sm" onclick="deleteBill(${b.id})" title="Delete" style="color: var(--danger);"><i data-lucide="trash-2" width="14" height="14"></i></button>
+                <div class="history-card" id="row-${b.id}">
+                    <div class="history-card-main">
+                        <div class="history-card-info">
+                            <div class="history-month">${b.billing_month.toUpperCase()}</div>
+                            <div class="history-date">
+                                <i data-lucide="clock"></i> ${new Date(b.date_generated).toLocaleDateString('en-IN', {day:'2-digit', month:'short'})}
+                            </div>
                         </div>
-                    </td>
-                </tr>
+                        <div class="history-card-amount">
+                            <div class="amount">${currencyFormatter.format(b.total_amount)}</div>
+                            <span class="badge ${b.is_paid ? 'badge-success' : 'badge-danger'}" style="font-size: 0.6rem; padding: 2px 8px;">
+                                ${b.is_paid ? 'SETTLED' : 'DUE'}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="history-card-footer">
+                        ${b.is_paid ? `<div class="payment-method">Paid via ${b.payment_method || 'CASH'}</div>` : '<div></div>'}
+                        <div class="history-actions no-print">
+                            <button class="btn-icon" onclick="prepareAndShare('bill', ${b.id})" title="Share Statement"><i data-lucide="share-2"></i></button>
+                            ${!b.is_paid ? `<button class="btn-icon btn-primary" onclick="openHistoryPaymentModal(${b.id}, ${b.total_amount})" title="Record Payment"><i data-lucide="credit-card"></i></button>` : ''}
+                            <button class="btn-icon btn-danger" onclick="deleteBill(${b.id})" title="Delete Record"><i data-lucide="trash-2"></i></button>
+                        </div>
+                    </div>
+                </div>
             `,
             { limit: 10, triggerId: 'history-scroll-trigger' }
         );
@@ -129,6 +138,51 @@ async function loadTenantHistory(renterId) {
 
 function loadMoreTenantHistory() {
     // Handled by infinite scroll
+}
+
+async function printTenantStatement() {
+    if (!currentHistoryRenterId) return;
+    
+    // Populate branding for print
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
+    
+    // We'll use the shareData mechanism or inject a temporary branding div
+    const resultsDiv = document.getElementById('historyResults');
+    const existingBranding = resultsDiv.querySelector('.print-branding');
+    if (existingBranding) existingBranding.remove();
+
+    const tenantName = document.getElementById('historySelectedName')?.innerText || 'All Tenants';
+
+    const brandingHtml = `
+        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif;">
+            <h2 style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;">${propName}</h2>
+            <p style="margin: 4px 0; font-size: 0.9rem; color: #333;">${propAddr}</p>
+            <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">TENANT STATEMENT OF ACCOUNT</div>
+            <p style="margin: 12px 0 0 0; font-size: 0.85rem; font-weight: 900; color: #000; text-transform: uppercase;">STATEMENT FOR: ${tenantName}</p>
+            <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #555;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        </div>
+    `;
+
+    
+    resultsDiv.insertAdjacentHTML('afterbegin', brandingHtml);
+
+    // Hide the "Action" column for printing
+    const style = document.createElement('style');
+    style.id = 'print-hide-actions';
+    style.innerHTML = '@media print { .history-actions, .no-print { display: none !important; } .history-card { border: 1px solid #000 !important; margin-bottom: 10px; } }';
+    document.head.appendChild(style);
+
+    // Trigger native print
+    window.print();
+
+    // Cleanup after printing
+    setTimeout(() => {
+        const branding = resultsDiv.querySelector('.print-branding');
+        if (branding) branding.remove();
+        const styleEl = document.getElementById('print-hide-actions');
+        if (styleEl) styleEl.remove();
+    }, 500);
 }
 
 let pendingHistoryPaymentId = null;
@@ -176,7 +230,7 @@ async function confirmHistoryPaymentRecord() {
     try {
         await API.bills.pay(pendingHistoryPaymentId, {
             payment_method: method,
-            payment_details: `Received by ${receiver}`,
+            payment_details: receiver,
             payment_date: date,
             paid_amount: paid,
             discount_amount: disc,

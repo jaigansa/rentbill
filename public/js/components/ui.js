@@ -119,11 +119,13 @@ const UI = {
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <div class="stat-icon icon-warning" style="width: 36px; height: 36px;"><i data-lucide="banknote" style="width: 18px;"></i></div>
                 <div>
-                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--text-main);">${currencyFormatter.format(w.amount)}</div>
-                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${w.owner_name} • ${w.date}</div>
+                    <div style="font-weight: 900; font-size: 1rem; color: var(--text-main);">${currencyFormatter.format(w.amount)}</div>
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-main); text-transform: uppercase; margin-top: 2px;">
+                        ${w.owner_name} <span style="color: var(--text-muted); font-weight: 700;">• ${w.date}</span>
+                    </div>
                 </div>
             </div>
-            <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm" style="border:none; background:none;"><i data-lucide="trash-2" width="14" height="14" color="var(--danger)"></i></button>
+            <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm withdrawal-actions" style="border:none; background:none;"><i data-lucide="trash-2" width="14" height="14" color="var(--danger)"></i></button>
         </div>
     `,
 

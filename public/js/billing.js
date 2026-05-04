@@ -1,82 +1,128 @@
+let allBillingTenants = [];
+let currentBillingFilter = 'all';
+
 async function loadTenants() {
     const listDiv = document.getElementById('tenantList');
     if (!listDiv) return;
-    listDiv.innerHTML = '<p style="text-align:center; padding:2rem;">Syncing tenants...</p>';
+    listDiv.innerHTML = '';
     try {
-        const tenants = await API.tenants.getAll();
-        if (!tenants || tenants.length === 0) {
-            listDiv.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="info"></i>
-                    <p>No active units available for billing</p>
-                </div>`;
-            lucide.createIcons();
-            return;
-        }
-        listDiv.innerHTML = '';
-        tenants.forEach(t => listDiv.appendChild(createTenantCard(t)));
-        lucide.createIcons();
+        allBillingTenants = await API.tenants.getAll();
+        await renderBillingList();
     } catch (err) { showNotification("Failed to load list", "error"); }
+}
+
+async function filterBilling(mode) {
+    currentBillingFilter = mode;
+    document.getElementById('filterBillAll').classList.toggle('active', mode === 'all');
+    document.getElementById('filterBillPending').classList.toggle('active', mode === 'pending');
+    await renderBillingList();
+}
+
+async function renderBillingList() {
+    const listDiv = document.getElementById('tenantList');
+    if (!listDiv) return;
+
+    let filtered = allBillingTenants;
+    if (currentBillingFilter === 'pending') {
+        listDiv.innerHTML = '';
+        try {
+            const tasks = await API.bills.getPendingBills();
+            const pendingIds = new Set(tasks.map(t => t.renter_id));
+            filtered = allBillingTenants.filter(t => t.pending_arrears > 0 || pendingIds.has(t.id));
+        } catch (e) {
+            console.error("Failed to fetch pending tasks for filter", e);
+            filtered = allBillingTenants.filter(t => t.pending_arrears > 0);
+        }
+    }
+
+    if (filtered.length === 0) {
+        listDiv.innerHTML = `
+            <div class="empty-state">
+                <i data-lucide="check-circle"></i>
+                <p>${currentBillingFilter === 'all' ? 'No active units found' : 'No units with pending actions'}</p>
+            </div>`;
+        lucide.createIcons();
+        return;
+    }
+
+    listDiv.innerHTML = '';
+    filtered.forEach(t => listDiv.appendChild(createTenantCard(t)));
+    lucide.createIcons();
 }
 
 function createTenantCard(t) {
     const card = document.createElement('div');
     card.className = 'tenant-row';
     
-    // Default to PREVIOUS month for billing (Postpaid style)
     const now = new Date();
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const defaultMonthStr = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
     
     card.innerHTML = `
-        <div class="tenant-header" onclick="toggleBilling(${t.id})">
-            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
-                <div style="font-weight: 900; font-size: 1.1rem; color: var(--text-main); letter-spacing: -0.01em;">${t.name}</div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">${currencyFormatter.format(t.base_rent)}</span>
-                    <span style="width: 4px; height: 4px; background: var(--border);"></span>
-                    <span style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Standard Unit</span>
-                    ${t.pending_arrears > 0 ? `
-                        <span style="width: 4px; height: 4px; background: var(--border);"></span>
-                        <span style="font-size: 0.7rem; font-weight: 900; color: var(--danger); text-transform: uppercase; background: var(--bg-danger-light); padding: 2px 6px; border: 1px solid var(--border);">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>
-                    ` : ''}
+        <div class="tenant-header" onclick="toggleBilling(${t.id})" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 200px;">
+                <div class="room-badge">${t.room_no}</div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main); line-height: 1.2;">${t.name}</div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span class="badge badge-info" style="font-size: 0.65rem;">Rent: ${currencyFormatter.format(t.base_rent)}</span>
+                        ${t.pending_arrears > 0 ? `
+                            <span class="badge badge-danger" style="font-size: 0.65rem;">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 1.25rem;">
-                <div class="room-badge">${t.room_no}</div>
-                <div class="action-icon" id="icon-${t.id}" style="color: var(--secondary); opacity: 0.4;"><i data-lucide="chevron-down" width="24" height="24"></i></div>
+            <div class="action-icon" id="icon-${t.id}" style="color: var(--secondary); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin-left: auto;">
+                <i data-lucide="chevron-down"></i>
             </div>
         </div>
-        <div id="billing-${t.id}" class="billing-controls hidden">
-            <div class="billing-inputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="input-group" style="margin:0;"><label>Service/Stay Period (Month)</label><input type="month" id="month-${t.id}" value="${defaultMonthStr}"></div>
-                <div class="input-group" style="margin:0;"><label>Extra Charges</label><input type="number" id="others-${t.id}" value="0" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group" style="margin:0;"><label>Prev EB Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" style="font-weight: 400;" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group" style="margin:0;"><label>Curr EB Reading</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" style="font-weight: 800; color: var(--primary);" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group" style="margin:0;"><label>Discount / Adjustment</label><input type="number" id="discount-${t.id}" value="0" style="color: var(--danger); font-weight: 800;" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group" style="margin:0;"><label>Notes / Remarks</label><input type="text" id="notes-${t.id}" placeholder="Optional notes"></div>
-            </div>
-
-            <!-- Live Total Preview -->
-            <div id="live-preview-${t.id}" style="margin-top: 1.5rem; padding: 1.25rem; background: var(--bg-input); border: 2px solid var(--border); border-radius: var(--radius-md);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                    <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Estimated Bill Total</span>
-                    <span id="total-val-${t.id}" style="font-size: 1.25rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(t.base_rent + t.water_maint + t.pending_arrears)}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-                    <div>Rent: ${currencyFormatter.format(t.base_rent)}</div>
-                    <div>Water: ${currencyFormatter.format(t.water_maint)}</div>
-                    <div>Prev. Balance: <span style="color: var(--danger);">${currencyFormatter.format(t.pending_arrears)}</span></div>
-                    <div id="eb-preview-${t.id}">EB: ₹0.00</div>
+        
+        <div id="billing-${t.id}" class="billing-controls hidden" style="padding: 1.5rem; border-top: 1px solid var(--border); background: var(--bg-main);">
+            <div style="margin-bottom: 2rem;">
+                <h4 style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--secondary); margin-bottom: 1.5rem; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="calculator" style="width: 14px;"></i> Billing Computation
+                </h4>
+                <div class="billing-inputs" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                    <div class="input-group"><label>Service Month</label><input type="month" id="month-${t.id}" value="${defaultMonthStr}"></div>
+                    <div class="input-group"><label>Prev Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" oninput="updateLiveTotal(${t.id})"></div>
+                    <div class="input-group"><label>Curr Reading</label><input type="number" id="eb-${t.id}" placeholder="Enter reading" step="0.01" oninput="updateLiveTotal(${t.id})"></div>
+                    <div class="input-group"><label>Extra Charges</label><input type="number" id="others-${t.id}" value="0" oninput="updateLiveTotal(${t.id})"></div>
+                    <div class="input-group"><label>Waiver / Disc</label><input type="number" id="discount-${t.id}" value="0" oninput="updateLiveTotal(${t.id})"></div>
+                    <div class="input-group"><label>Internal Note</label><input type="text" id="notes-${t.id}" placeholder="Not visible to tenant"></div>
                 </div>
             </div>
 
-            <div style="display: flex; gap: 0.75rem; margin-top: 1.25rem;">
-                <button class="btn btn-primary" onclick="generateBill(${t.id})" style="flex: 1; height: 50px;"><i data-lucide="plus-circle" width="18" height="18"></i> Generate Bill</button>
+            <div class="grid-layout" style="align-items: start; gap: 1.5rem;">
+                <!-- Live Total Preview -->
+                <div id="live-preview-${t.id}" class="card" style="padding: 1.5rem; background: var(--bg-card); border-color: var(--primary); box-shadow: var(--shadow-lg);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px dashed var(--border); padding-bottom: 0.75rem;">
+                        <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 6px; height: 6px; background: var(--primary); border-radius: 50%; display: inline-block;"></span> Draft Total
+                        </span>
+                        <span id="total-val-${t.id}" style="font-size: 1.75rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(t.base_rent + t.water_maint + t.pending_arrears)}</span>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div class="math-row"><span>Monthly Rent</span><span>${currencyFormatter.format(t.base_rent)}</span></div>
+                        <div class="math-row"><span>Water/Maint</span><span>${currencyFormatter.format(t.water_maint)}</span></div>
+                        <div class="math-row" id="eb-preview-${t.id}"><span>Electricity</span><span>₹0.00</span></div>
+                        ${t.pending_arrears > 0 ? `<div class="math-row" style="color: var(--danger);"><span>Arrears</span><span>${currencyFormatter.format(t.pending_arrears)}</span></div>` : ''}
+                        <div class="math-row hidden" id="others-preview-row-${t.id}"><span>Additional</span><span id="others-val-${t.id}">₹0.00</span></div>
+                        <div class="math-row hidden" id="discount-preview-row-${t.id}" style="color: var(--success);"><span>Discount</span><span id="discount-val-${t.id}">- ₹0.00</span></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem; height: 100%; justify-content: center;">
+                    <button class="btn btn-primary" onclick="generateBill(${t.id})" style="width: 100%; height: 56px; font-size: 1rem;">
+                        <i data-lucide="plus-circle"></i> Confirm & Generate Bill
+                    </button>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; font-weight: 500;">
+                        The bill will be saved and available for sharing instantly.
+                    </p>
+                </div>
             </div>
         </div>`;
     
-    // Store tenant data for live calculation
     card._tenantData = t;
     return card;
 }
@@ -96,7 +142,23 @@ function updateLiveTotal(id) {
     const total = t.base_rent + t.water_maint + ebCost + others + t.pending_arrears - discount;
 
     document.getElementById(`total-val-${id}`).innerText = currencyFormatter.format(total);
-    document.getElementById(`eb-preview-${id}`).innerText = `EB: ${currencyFormatter.format(ebCost)} (${ebUnits.toFixed(1)} u)`;
+    
+    // Update EB details
+    const ebEl = document.getElementById(`eb-preview-${id}`);
+    ebEl.innerHTML = `<span>Electricity (${ebUnits.toFixed(1)} u x ${t.eb_unit_price})</span> <span>${currencyFormatter.format(ebCost)}</span>`;
+    
+    // Toggle dynamic rows
+    const othersRow = document.getElementById(`others-preview-row-${id}`);
+    if (othersRow) {
+        othersRow.classList.toggle('hidden', others === 0);
+        document.getElementById(`others-val-${id}`).innerText = currencyFormatter.format(others);
+    }
+    
+    const discRow = document.getElementById(`discount-preview-row-${id}`);
+    if (discRow) {
+        discRow.classList.toggle('hidden', discount === 0);
+        document.getElementById(`discount-val-${id}`).innerText = `- ${currencyFormatter.format(discount)}`;
+    }
 }
 
 

@@ -61,32 +61,39 @@ func CreateBill(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "A bill already exists for this tenant and month"})
 		return
 	}
+	
+	tx, err := database.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed"})
+		return
+	}
+	defer tx.Rollback()
+
 	var r models.Renter
-	err := database.DB.QueryRow("SELECT name, room_no, base_rent, water_maint, eb_unit_price, pending_arrears FROM renters WHERE id = ?", b.RenterID).Scan(&r.Name, &r.RoomNo, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.PendingArrears)
+	err = tx.QueryRow("SELECT name, room_no, base_rent, water_maint, eb_unit_price, pending_arrears FROM renters WHERE id = ?", b.RenterID).Scan(&r.Name, &r.RoomNo, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.PendingArrears)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Renter not found"})
 		return
 	}
 	
 	ebCost := (b.CurrEBReading - b.PrevEBReading) * r.EBUnitPrice
+	// Total amount represents the NET amount payable by the tenant
 	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + r.PendingArrears - b.DiscountAmount
 	
-	// If there were arrears, we add them to 'others' or just keep them in total but record it
-	// User said: "next bill will be 5,500 (5,000 rent + 500 previous balance)"
-	// We'll store the arrears component in the 'others' field or a new column. 
-	// Let's use the existing 'others' for simplicity in display, but we'll modify it.
-	
-	actualOthers := b.Others + r.PendingArrears
-
-	res, err := database.DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, 
-		b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, actualOthers, total, time.Now().Format(time.RFC3339), b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears, b.DiscountAmount)
+	res, err := tx.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, 
+		b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, time.Now().Format(time.RFC3339), b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears, b.DiscountAmount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate bill"})
 		return
 	}
 	
 	// Reset pending arrears after they are billed
-	database.DB.Exec("UPDATE renters SET pending_arrears = 0 WHERE id = ?", b.RenterID)
+	tx.Exec("UPDATE renters SET pending_arrears = 0 WHERE id = ?", b.RenterID)
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Commit failed"})
+		return
+	}
 
 	id, _ := res.LastInsertId()
 	database.LogActivity("BILL_GENERATED", fmt.Sprintf("Generated %s bill for %s (included %.2f arrears)", b.BillingMonth, r.Name, r.PendingArrears), config.AppConfig.Username)
@@ -107,11 +114,19 @@ func PayBill(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
+
+	tx, err := database.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed"})
+		return
+	}
+	defer tx.Rollback()
+
 	var total float64
 	var isPaid int
 	var name, month string
 	var renterID int
-	err := database.DB.QueryRow("SELECT b.total_amount, b.is_paid, r.name, b.billing_month, b.renter_id FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.id = ?", c.Param("id")).Scan(&total, &isPaid, &name, &month, &renterID)
+	err = tx.QueryRow("SELECT b.total_amount, b.is_paid, r.name, b.billing_month, b.renter_id FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.id = ?", c.Param("id")).Scan(&total, &isPaid, &name, &month, &renterID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
 		return
@@ -122,14 +137,13 @@ func PayBill(c *gin.Context) {
 		return
 	}
 
-	// Calculate total accounted for
-	accounted := req.PaidAmount + req.DiscountAmount + req.WriteOffAmount + req.ArrearsAmount
-	if accounted < total {
-		// Optional: Warn if not fully accounted, or just proceed as partial
-	}
+	// Adjust total if new discount/write-off/arrears are applied at payment time
+	// total_amount in DB is the NET amount at billing time.
+	// If additional adjustments are made now, we update the bill record to reflect them.
+	newTotal := total - req.DiscountAmount - req.WriteOffAmount - req.ArrearsAmount
 
-	_, err = database.DB.Exec("UPDATE bills SET is_paid = 1, payment_method = ?, payment_date = ?, payment_details = ?, paid_amount = ?, discount_amount = ?, write_off_amount = ?, arrears_amount = ? WHERE id = ?", 
-		req.PaymentMethod, req.PaymentDate, req.PaymentDetails, req.PaidAmount, req.DiscountAmount, req.WriteOffAmount, req.ArrearsAmount, c.Param("id"))
+	_, err = tx.Exec("UPDATE bills SET is_paid = 1, payment_method = ?, payment_date = ?, payment_details = ?, paid_amount = ?, discount_amount = discount_amount + ?, write_off_amount = write_off_amount + ?, arrears_amount = ?, total_amount = ? WHERE id = ?", 
+		req.PaymentMethod, req.PaymentDate, req.PaymentDetails, req.PaidAmount, req.DiscountAmount, req.WriteOffAmount, req.ArrearsAmount, newTotal, c.Param("id"))
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
@@ -138,8 +152,13 @@ func PayBill(c *gin.Context) {
 
 	// Handle Carry Forward (Arrears)
 	if req.ArrearsAmount > 0 {
-		database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", req.ArrearsAmount, renterID)
+		tx.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", req.ArrearsAmount, renterID)
 		database.LogActivity("ARREARS_CARRIED", fmt.Sprintf("Carried forward %.2f for %s", req.ArrearsAmount, name), config.AppConfig.Username)
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Commit failed"})
+		return
 	}
 
 	database.LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Received %.2f from %s for %s via %s (Received by: %s)", req.PaidAmount, name, month, req.PaymentMethod, req.PaymentDetails), config.AppConfig.Username)
@@ -147,21 +166,33 @@ func PayBill(c *gin.Context) {
 }
 
 func DeleteBill(c *gin.Context) {
+	tx, err := database.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed"})
+		return
+	}
+	defer tx.Rollback()
+
 	var bill struct {
 		RenterID        int
 		ArrearsIncluded float64
 		ArrearsAmount   float64
 	}
-	err := database.DB.QueryRow("SELECT renter_id, arrears_included, arrears_amount FROM bills WHERE id = ?", c.Param("id")).Scan(&bill.RenterID, &bill.ArrearsIncluded, &bill.ArrearsAmount)
+	err = tx.QueryRow("SELECT renter_id, arrears_included, arrears_amount FROM bills WHERE id = ?", c.Param("id")).Scan(&bill.RenterID, &bill.ArrearsIncluded, &bill.ArrearsAmount)
 	if err == nil {
 		if bill.ArrearsIncluded > 0 {
-			database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", bill.ArrearsIncluded, bill.RenterID)
+			tx.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", bill.ArrearsIncluded, bill.RenterID)
 		}
 		if bill.ArrearsAmount > 0 {
-			database.DB.Exec("UPDATE renters SET pending_arrears = pending_arrears - ? WHERE id = ?", bill.ArrearsAmount, bill.RenterID)
+			tx.Exec("UPDATE renters SET pending_arrears = MAX(0, pending_arrears - ?) WHERE id = ?", bill.ArrearsAmount, bill.RenterID)
 		}
 	}
-	database.DB.Exec("DELETE FROM bills WHERE id = ?", c.Param("id"))
+	tx.Exec("DELETE FROM bills WHERE id = ?", c.Param("id"))
+	
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -203,24 +234,47 @@ func SendBillEmail(c *gin.Context) {
 
 func GetFinancialSummary(c *gin.Context) {
 	var summary struct {
-		TotalBilled   float64 `json:"total_billed"`
-		TotalPaid     float64 `json:"total_paid"`
-		TotalDues     float64 `json:"total_dues"`
-		TotalArrears  float64 `json:"total_arrears"`
-		TotalAdvances float64 `json:"total_advances"`
-		TotalCount    int     `json:"total_count"`
-		PaidCount     int     `json:"paid_count"`
+		TotalBilled    float64 `json:"total_billed"`
+		TotalPaid      float64 `json:"total_paid"`
+		TotalDues      float64 `json:"total_dues"`
+		TotalArrears   float64 `json:"total_arrears"`
+		TotalAdvances  float64 `json:"total_advances"`
+		TotalCount     int     `json:"total_count"`
+		PaidCount      int     `json:"paid_count"`
+		ActiveBilled   float64 `json:"active_billed"`
+		ActivePaid     float64 `json:"active_paid"`
+		ActiveDues     float64 `json:"active_dues"`
+		ActiveTotalCnt int     `json:"active_total_count"`
+		ActivePaidCnt  int     `json:"active_paid_count"`
 	}
-	// Use (total_amount - arrears_included) to avoid double counting arrears in historical billing sum
-	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
-	// Total Paid should include discounts and write-offs as they "settle" the billed amount, but exclude new arrears carried forward
-	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount + discount_amount + write_off_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
+
+	// 1. Global Totals (All time, all tenants)
+	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included + discount_amount + write_off_amount + arrears_amount), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
+	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE is_paid = 0").Scan(&summary.TotalDues)
+	
+	// 2. Active-Only Totals (For Collection Check progress)
+	database.DB.QueryRow(`
+		SELECT COALESCE(SUM(b.total_amount - b.arrears_included + b.discount_amount + b.write_off_amount + b.arrears_amount), 0), COUNT(b.id) 
+		FROM bills b JOIN renters r ON b.renter_id = r.id 
+		WHERE r.is_active = 1`).Scan(&summary.ActiveBilled, &summary.ActiveTotalCnt)
+	
+	database.DB.QueryRow(`
+		SELECT COALESCE(SUM(b.paid_amount), 0), COUNT(b.id) 
+		FROM bills b JOIN renters r ON b.renter_id = r.id 
+		WHERE b.is_paid = 1 AND r.is_active = 1`).Scan(&summary.ActivePaid, &summary.ActivePaidCnt)
+	
+	database.DB.QueryRow(`
+		SELECT COALESCE(SUM(b.total_amount), 0) 
+		FROM bills b JOIN renters r ON b.renter_id = r.id 
+		WHERE b.is_paid = 0 AND r.is_active = 1`).Scan(&summary.ActiveDues)
+
 	database.DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalAdvances)
 	database.DB.QueryRow("SELECT COALESCE(SUM(pending_arrears), 0) FROM renters WHERE is_active = 1").Scan(&summary.TotalArrears)
 
 	c.JSON(http.StatusOK, summary)
 }
+
 
 func GetTenantLedger(c *gin.Context) {
 	type Entry struct {
@@ -236,8 +290,8 @@ func GetTenantLedger(c *gin.Context) {
 
 	rows, err := database.DB.Query(`
 		SELECT r.id, r.name, r.room_no, r.advance_amount, r.pending_arrears,
-		COALESCE((SELECT SUM(total_amount - arrears_included) FROM bills WHERE renter_id = r.id), 0) as billed,
-		COALESCE((SELECT SUM(paid_amount + discount_amount + write_off_amount) FROM bills WHERE renter_id = r.id AND is_paid = 1), 0) as paid,
+		COALESCE((SELECT SUM(total_amount - arrears_included + discount_amount + write_off_amount + arrears_amount) FROM bills WHERE renter_id = r.id), 0) as billed,
+		COALESCE((SELECT SUM(paid_amount) FROM bills WHERE renter_id = r.id AND is_paid = 1), 0) as paid,
 		COALESCE((SELECT SUM(total_amount) FROM bills WHERE renter_id = r.id AND is_paid = 0), 0) as unpaid_bills
 		FROM renters r WHERE r.is_active = 1
 		ORDER BY r.room_no ASC`)
@@ -278,6 +332,7 @@ func GetDueCheck(c *gin.Context) {
 	type Item struct {
 		Type         string  `json:"type"` // "MISSING_BILL" or "PENDING_PAYMENT"
 		RenterID     int     `json:"renter_id"`
+		BillID       int     `json:"bill_id,omitempty"`
 		Name         string  `json:"name"`
 		RoomNo       string  `json:"room_no"`
 		BillingMonth string  `json:"billing_month"`
@@ -301,17 +356,18 @@ func GetDueCheck(c *gin.Context) {
 		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.MoveInDate, &r.PendingArrears)
 
 		// 1. Get all existing bills for this renter
-		billRows, err := database.DB.Query("SELECT billing_month, total_amount, is_paid, arrears_included FROM bills WHERE renter_id = ?", r.ID)
+		billRows, err := database.DB.Query("SELECT id, billing_month, total_amount, is_paid, arrears_included FROM bills WHERE renter_id = ?", r.ID)
 		if err != nil {
 			continue
 		}
 		billedAmount := make(map[string]float64)
 
 		for billRows.Next() {
+			var bID int
 			var bMonth string
 			var bAmount, bArrears float64
 			var bPaid int
-			if err := billRows.Scan(&bMonth, &bAmount, &bPaid, &bArrears); err != nil {
+			if err := billRows.Scan(&bID, &bMonth, &bAmount, &bPaid, &bArrears); err != nil {
 				continue
 			}
 			billedAmount[strings.ToUpper(strings.TrimSpace(bMonth))] = bAmount
@@ -321,6 +377,7 @@ func GetDueCheck(c *gin.Context) {
 				results = append(results, Item{
 					Type:         "PENDING_PAYMENT",
 					RenterID:     r.ID,
+					BillID:       bID,
 					Name:         r.Name,
 					RoomNo:       r.RoomNo,
 					BillingMonth: bMonth,
