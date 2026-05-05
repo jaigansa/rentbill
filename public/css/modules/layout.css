@@ -11,8 +11,6 @@
     margin-left: 260px; /* Wider professional sidebar */
     transition: margin-left 0.3s ease;
     padding: 2.5rem; /* Spacious outer gap */
-    max-width: 1600px;
-    width: 100%;
 }
 
 @media (max-width: 1440px) {
