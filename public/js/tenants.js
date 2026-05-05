@@ -61,7 +61,9 @@ async function addTenant() {
         const result = editMode ? await API.tenants.update(editId, data) : await API.tenants.create(data);
         showNotification("Success", "success");
         if (!editMode && confirm("Registration successful. Print Agreement?")) printProfessionalAgreement(result.id);
-        resetForm(); showSection('billing-module');
+        resetForm(); 
+        showSection('tenants-section');
+        switchSubSection('tenants-section', 'tenants-billing');
     } catch (e) { showNotification("Save failed", "error"); }
 }
 
@@ -75,7 +77,8 @@ async function editTenant(id) {
         document.getElementById('formDeleteBtn').onclick = () => deleteTenant(id);
         document.getElementById('formAgreementBtn').classList.remove('hidden');
         document.getElementById('formAgreementBtn').onclick = () => printProfessionalAgreement(id);
-        showSection('settings-section');
+        showSection('tenants-section');
+        switchSubSection('tenants-section', 'tenants-directory');
         if (document.getElementById('entrance-form').classList.contains('hidden')) toggleRegForm();
         const mapping = { 'tName': 'name', 'tMobile': 'mobile_number', 'tEmail': 'email', 'tRoom': 'room_no', 'tAadhar': 'aadhar_no', 'tRent': 'base_rent', 'tEbRate': 'eb_unit_price', 'tInitialEb': 'initial_eb', 'tWater': 'water_maint', 'tAdvance': 'advance_amount', 'tMoveIn': 'move_in_date', 'tPermAddr': 'perm_address', 'tEmerg': 'emergency_contact', 'tJob': 'occupation', 'tAssignedUpi': 'assigned_upi' };
         Object.keys(mapping).forEach(f => {
@@ -161,7 +164,14 @@ async function restoreTenant(id) {
     catch (e) { showNotification(e.message, "error"); }
 }
 
-function toggleHistory() { if (!document.getElementById('vacantList').classList.toggle('hidden')) loadArchivedTenants(); }
+function toggleHistory(forceShow = false) { 
+    if (forceShow) {
+        loadArchivedTenants();
+        return;
+    }
+    // This is now primarily handled by switchSubSection, but we keep this for legacy logic if needed
+    loadArchivedTenants(); 
+}
 
 let pendingDeleteId = null;
 async function deleteTenant(id) {

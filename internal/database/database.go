@@ -63,6 +63,22 @@ func InitDB() error {
 			owner_name TEXT, amount REAL, date DATE, notes TEXT,
 			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS maintenance_tasks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			renter_id INTEGER, title TEXT, description TEXT, 
+			category TEXT, priority TEXT, status TEXT DEFAULT 'Pending',
+			owner_name TEXT, estimated_cost REAL DEFAULT 0, actual_cost REAL DEFAULT 0,
+			date_reported DATE, date_resolved DATE,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(renter_id) REFERENCES renters(id) ON DELETE SET NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS documents (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			renter_id INTEGER, file_name TEXT, file_path TEXT, 
+			file_type TEXT, upload_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expiry_date DATE, notes TEXT,
+			FOREIGN KEY(renter_id) REFERENCES renters(id) ON DELETE CASCADE
+		)`,
 	}
 
 	for _, q := range queries {
@@ -83,6 +99,9 @@ func InitDB() error {
 
 	if _, err := os.Stat(BackupsDir); os.IsNotExist(err) {
 		os.Mkdir(BackupsDir, 0755)
+	}
+	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
+		os.Mkdir("./uploads", 0755)
 	}
 	return nil
 }

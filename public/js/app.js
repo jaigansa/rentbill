@@ -32,8 +32,8 @@ function injectTemplates() {
         ${Templates.navigation}
         <main class="content">
             ${Templates.dashboard}
-            ${Templates.billing}
-            ${Templates.history}
+            ${Templates.tenants}
+            ${Templates.owners}
             ${Templates.settings}
         </main>
     `;
@@ -54,12 +54,17 @@ async function confirmActionWithPin() {
             await API.tenants.delete(pendingDeleteId);
             showNotification("Removed", "success");
             if (typeof resetForm === 'function') resetForm();
-            showSection('billing-module');
+            showSection('tenants-section');
+            switchSubSection('tenants-section', 'tenants-billing');
             pendingDeleteId = null;
         } else if (typeof pendingDeleteBillId !== 'undefined' && pendingDeleteBillId) {
             await API.bills.delete(pendingDeleteBillId);
             showNotification("Deleted", "success");
-            if (typeof viewHistory === 'function') viewHistory(pendingDeleteBillRenterId);
+            if (typeof loadTenantHistory === 'function') {
+                showSection('tenants-section');
+                switchSubSection('tenants-section', 'tenants-statements');
+                loadTenantHistory(pendingDeleteBillRenterId);
+            }
             pendingDeleteBillId = null;
         }
         
@@ -74,6 +79,7 @@ async function confirmActionWithPin() {
 function closeDeleteModal() {
     const modal = document.getElementById('deletePinModal');
     if (modal) modal.classList.add('hidden');
+    document.body.classList.remove('modal-open');
     // Clean up globals from other modules if they exist
     if (typeof pendingDeleteId !== 'undefined') pendingDeleteId = null;
     if (typeof pendingDeleteBillId !== 'undefined') pendingDeleteBillId = null;
@@ -93,5 +99,8 @@ document.addEventListener('keydown', (e) => {
         if (typeof closeSettlementModal === 'function') closeSettlementModal();
         if (typeof closePaymentModal === 'function') closePaymentModal();
         if (typeof closeShareModal === 'function') closeShareModal();
+        if (typeof closeTaskModal === 'function') closeTaskModal();
+        if (typeof toggleTaskForm === 'function' && !document.getElementById('createTaskModal').classList.contains('hidden')) toggleTaskForm();
+        if (typeof toggleUploadForm === 'function' && !document.getElementById('uploadModal').classList.contains('hidden')) toggleUploadForm();
     }
 });

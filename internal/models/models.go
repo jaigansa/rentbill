@@ -93,3 +93,32 @@ type OwnerWithdrawal struct {
 	Notes     string  `json:"notes"`
 	Timestamp string  `json:"timestamp"`
 }
+
+type MaintenanceTask struct {
+	ID            int      `json:"id"`
+	RenterID      *int     `json:"renter_id"` // Optional link to unit
+	UnitRoom      string   `json:"unit_room,omitempty"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Category      string   `json:"category"`
+	Priority      string   `json:"priority"`
+	Status        string   `json:"status"` // Pending, In Progress, Resolved
+	OwnerName     string   `json:"owner_name"`
+	EstimatedCost float64  `json:"estimated_cost"`
+	ActualCost    float64  `json:"actual_cost"`
+	DateReported  string   `json:"date_reported"`
+	DateResolved  *string  `json:"date_resolved"`
+	Timestamp     string   `json:"timestamp"`
+}
+
+type Document struct {
+	ID         int    `json:"id"`
+	RenterID   *int   `json:"renter_id"`
+	UnitRoom   string `json:"unit_room,omitempty"`
+	FileName   string `json:"file_name"`
+	FilePath   string `json:"file_path"`
+	FileType   string `json:"file_type"` // ID Proof, Lease, Other
+	UploadDate string `json:"upload_date"`
+	ExpiryDate string `json:"expiry_date,omitempty"`
+	Notes      string `json:"notes"`
+}

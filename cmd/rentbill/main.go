@@ -44,6 +44,7 @@ func main() {
         r.Static("/js", "./public/js")
         r.Static("/css", "./public/css")
         r.Static("/public", "./public")
+        r.Static("/uploads", "./uploads")
 
         api := r.Group("/api")
         {
@@ -100,6 +101,18 @@ func main() {
                         auth.GET("/withdrawals", handlers.GetOwnerWithdrawals)
                         auth.POST("/withdrawals", handlers.CreateOwnerWithdrawal)
                         auth.DELETE("/withdrawals/:id", handlers.DeleteOwnerWithdrawal)
+
+                        // Maintenance
+                        auth.GET("/maintenance", handlers.GetMaintenanceTasks)
+                        auth.POST("/maintenance", handlers.CreateMaintenanceTask)
+                        auth.PUT("/maintenance/:id", handlers.UpdateMaintenanceTask)
+                        auth.DELETE("/maintenance/:id", handlers.DeleteMaintenanceTask)
+                        auth.POST("/maintenance/:id/convert", handlers.ConvertTaskToExpense)
+
+                        // Documents
+                        auth.GET("/documents", handlers.GetDocuments)
+                        auth.POST("/documents/upload", handlers.UploadDocument)
+                        auth.DELETE("/documents/:id", handlers.DeleteDocument)
                 }
         }
 

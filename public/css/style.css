@@ -134,13 +134,15 @@ svg[data-lucide] {
         visibility: visible !important;
     }
 
-    #history-section:not(.hidden) #historyResults:not(.hidden),
-    #history-section:not(.hidden) #historyOwnersContent:not(.hidden),
-    #print-area, 
+    #tenants-section:not(.hidden) #historyResults:not(.hidden),
+    #owners-section:not(.hidden) #owners-payouts:not(.hidden),
+    #print-area,
     #printableAudit,
-    #auditModal:not(.hidden) #auditContent, 
+    #auditModal:not(.hidden) .modal-content,
+    #auditModal:not(.hidden) #auditContent,
     #ownerTimelineModal:not(.hidden) .modal-content,
     #ownerTimelineModal:not(.hidden) #ownerTimelineContent {
+
         display: block !important;
         background: #ffffff !important;
         position: static !important;

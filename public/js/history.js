@@ -41,7 +41,7 @@ async function initHistorySection(reset = false) {
 
 function toggleHistoryMode(mode) {
     const tenantsContent = document.getElementById('historyTenantsContent');
-    const ownersContent = document.getElementById('historyOwnersContent');
+    const ownersContent = document.getElementById('owners-payouts');
     const btnTenants = document.getElementById('btnHistoryTenants');
     const btnOwners = document.getElementById('btnHistoryOwners');
 

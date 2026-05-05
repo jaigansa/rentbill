@@ -8,11 +8,11 @@ async function checkAuth() {
     } else {
         showOverlay(false);
         const hash = window.location.hash.replace('#', '');
-        const validSections = ['tenantListContainer', 'billing-module', 'history-section', 'settings-section'];
+        const validSections = ['dashboard-section', 'tenants-section', 'owners-section', 'settings-section'];
         if (hash && validSections.includes(hash)) {
             showSection(hash);
         } else {
-            showSection('tenantListContainer');
+            showSection('dashboard-section');
         }
         return true;
     }

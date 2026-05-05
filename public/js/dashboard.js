@@ -212,7 +212,7 @@ async function loadDashboardStats() {
                             <div style="font-size:0.75rem; font-weight:900; color:var(--text-main);">${e.name} <span style="color:var(--text-muted); font-weight:700; font-size:0.6rem;">(${e.room_no})</span></div>
                             <div style="font-size:0.6rem; color:var(--text-muted); font-weight:700;">TOTAL DUE: ${currencyFormatter.format(e.balance)}</div>
                         </div>
-                        <button onclick="showSection('history-section'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.6rem; min-height:24px;">View</button>
+                        <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-statements'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.6rem; min-height:24px;">View</button>
                     </div>
                 `).join('');
             }
@@ -260,7 +260,7 @@ function renderTenantLedger(ledger) {
                                 ${currencyFormatter.format(e.balance)}
                             </div>
                         </div>
-                        <button onclick="showSection('history-section'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
+                        <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-statements'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
                     </div>
                 </div>
             </div>
@@ -368,7 +368,8 @@ async function loadMonthlyTracker() {
 }
 
 function draftBillNow(renterId, monthName) {
-    showSection('billing-module');
+    showSection('tenants-section');
+    switchSubSection('tenants-section', 'tenants-billing');
     if (typeof loadSpecificBilling === 'function') {
         loadSpecificBilling(renterId, monthName);
     }

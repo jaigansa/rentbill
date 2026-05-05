@@ -105,7 +105,9 @@ async function printPayoutHistory() {
     const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
     const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
     
-    const listDiv = document.getElementById('historyOwnersContent');
+    const listDiv = document.getElementById('owners-payouts');
+    if (!listDiv) return;
+    
     const existingBranding = listDiv.querySelector('.print-branding');
     if (existingBranding) existingBranding.remove();
 
