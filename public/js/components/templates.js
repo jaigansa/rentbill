@@ -668,36 +668,50 @@ const Templates = {
                 </div>
             </div>
 
-            <div id="settings-audit" class="sub-section hidden">
+            <div id="settings-audit" class="sub-section hidden no-print">
                 <!-- Audit & Reports -->
-                <div class="card">
+                <div class="card no-print">
                     <div class="card-header">
-                        <h3 class="section-title"><i data-lucide="file-check"></i> Audit & Analysis</h3>
+                        <h3 class="section-title"><i data-lucide="file-check"></i> Financial Audit</h3>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Generate financial statements for custom ranges like the Financial Year (Apr-Mar).</p>
-                        
-                        <div class="grid-inputs">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+                        <!-- Quick Select Shortcuts -->
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;" class="no-print">
+                            <p style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Quick Period Selection</p>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                                <button onclick="setAuditPeriod('current')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">This Month</button>
+                                <button onclick="setAuditPeriod('last')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">Last Month</button>
+                                <button onclick="setAuditPeriod('fy')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">This FY (Apr-Mar)</button>
+                            </div>
+                        </div>
+
+                        <!-- Manual Date Inputs -->
+                        <div class="grid-inputs no-print">
                             <div class="input-group"><label>From Date</label><input type="date" id="auditFromDate"></div>
                             <div class="input-group"><label>To Date</label><input type="date" id="auditToDate"></div>
                         </div>
 
-                        <div style="padding: 1.25rem; border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg-input); margin-top: 0.5rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-                                <div>
-                                    <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-main);">Indian Tax Projection</div>
-                                    <div style="font-size: 0.65rem; color: var(--text-muted);">Calculate Section 24a Deductions</div>
-                                </div>
-                                <input type="checkbox" id="auditIncludeTax" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                        <!-- Advanced Tax Options (Collapsed by default) -->
+                        <div style="border-top: 1px dashed var(--border); padding-top: 1rem;" class="no-print">
+                            <div style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" onclick="document.getElementById('advancedTaxOptions').classList.toggle('hidden')">
+                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">Professional Tax Options</div>
+                                <i data-lucide="chevron-down" style="width: 14px; color: var(--primary);"></i>
                             </div>
-                            <div class="input-group" style="margin-top: 0;">
-                                <label>Municipal Taxes Paid (Deductible)</label>
-                                <input type="number" id="auditMunicipalTax" value="0" placeholder="0.00">
+                            
+                            <div id="advancedTaxOptions" class="hidden no-print" style="margin-top: 1rem; background: var(--bg-main); padding: 1rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700;">Show Indian Tax Projection (Sec 24a)</span>
+                                    <input type="checkbox" id="auditIncludeTax" style="width: 18px; height: 18px; accent-color: var(--primary);">
+                                </div>
+                                <div class="input-group" style="margin-top: 0;">
+                                    <label>Municipal Taxes Paid</label>
+                                    <input type="number" id="auditMunicipalTax" value="0">
+                                </div>
                             </div>
                         </div>
 
-                        <button onclick="viewAuditReport()" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; height: 48px; font-weight: 900; letter-spacing: 0.5px;">
-                            Generate Financial Audit <i data-lucide="arrow-right"></i>
+                        <button onclick="viewAuditReport()" class="btn btn-primary" style="width: 100%; height: 50px; font-weight: 900; font-size: 1rem;">
+                            Generate Financial Audit <i data-lucide="sparkles" style="margin-left: 8px;"></i>
                         </button>
                     </div>
                 </div>

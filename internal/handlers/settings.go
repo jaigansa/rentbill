@@ -278,7 +278,7 @@ func GetAuditReport(c *gin.Context) {
 
 	// Calculate metrics within the date range
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included), 0) FROM bills WHERE DATE(date_generated) >= ? AND DATE(date_generated) <= ?", fromDate, toDate).Scan(&summary.TotalBilled)
-	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount + discount_amount + write_off_amount), 0) FROM bills WHERE is_paid = 1 AND DATE(payment_date) >= ? AND DATE(payment_date) <= ?", fromDate, toDate).Scan(&summary.TotalPaid)
+	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND DATE(payment_date) >= ? AND DATE(payment_date) <= ?", fromDate, toDate).Scan(&summary.TotalPaid)
 	database.DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE date >= ? AND date <= ?", fromDate, toDate).Scan(&summary.TotalExpenses)
 	database.DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE date >= ? AND date <= ?", fromDate, toDate).Scan(&summary.TotalPayouts)
 	database.DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE move_in_date >= ? AND move_in_date <= ?", fromDate, toDate).Scan(&summary.TotalAdvances)

@@ -64,7 +64,7 @@ func main() {
                         auth.POST("/db/backup", handlers.CreateBackup)
                         auth.POST("/db/restore", handlers.RestoreDatabase)
                         auth.POST("/auth/check-pin", handlers.CheckPin)
-                        auth.GET("/reports/audit/:month", handlers.GetAuditReport)
+                        auth.GET("/reports/audit", handlers.GetAuditReport)
 
                         // Renters
                         auth.GET("/renters", handlers.GetRenters)

@@ -20,9 +20,7 @@ async function loadSettings() {
         const fromInput = document.getElementById('auditFromDate');
         const toInput = document.getElementById('auditToDate');
         if (fromInput && toInput && !fromInput.value) {
-            const now = new Date();
-            fromInput.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-            toInput.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+            setAuditPeriod('current');
         }
         
         renderUnifiedAccounts(data.receiving_accounts || []);
@@ -30,16 +28,24 @@ async function loadSettings() {
     } catch (e) { console.error(e); }
 }
 
-function populateOwnerDropdown(accounts) {
-    const selects = ['eOwnerName', 'wOwnerName', 'tTaskOwner'];
-    selects.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const currentVal = el.value;
-        el.innerHTML = '<option value="">-- Select --</option>' + 
-            accounts.map(a => `<option value="${a.owner_name}">${a.owner_name}</option>`).join('');
-        el.value = currentVal;
-    });
+function setAuditPeriod(type) {
+    const fromInput = document.getElementById('auditFromDate');
+    const toInput = document.getElementById('auditToDate');
+    if (!fromInput || !toInput) return;
+
+    const now = new Date();
+    if (type === 'current') {
+        fromInput.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+        toInput.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    } else if (type === 'last') {
+        fromInput.value = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+        toInput.value = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+    } else if (type === 'fy') {
+        let startYear = now.getFullYear();
+        if (now.getMonth() < 3) startYear--;
+        fromInput.value = `${startYear}-04-01`;
+        toInput.value = `${startYear + 1}-03-31`;
+    }
 }
 
 async function saveReceivingAccount() {
@@ -99,6 +105,18 @@ function renderUnifiedAccounts(accounts) {
         </div>
     `).join('');
     lucide.createIcons();
+}
+
+function populateOwnerDropdown(accounts) {
+    const selects = ['eOwnerName', 'wOwnerName', 'tTaskOwner'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const currentVal = el.value;
+        el.innerHTML = '<option value="">-- Select --</option>' + 
+            accounts.map(a => `<option value="${a.owner_name}">${a.owner_name}</option>`).join('');
+        el.value = currentVal;
+    });
 }
 
 function editAccount(index) {
@@ -223,15 +241,21 @@ async function viewAuditReport() {
     const includeTax = document.getElementById('auditIncludeTax')?.checked;
     const municipalTax = parseFloat(document.getElementById('auditMunicipalTax')?.value || 0);
     
-    if (!fromDate || !toDate) return showNotification("Please select Start and End dates", "error");
+    if (!fromDate || !toDate) return showNotification("Please select both Start and End dates", "error");
     
-    showNotification("Generating audit...", "info");
+    showNotification("Compiling financial data...", "info");
     try {
         const data = await API.system.getAuditReport(fromDate, toDate);
         const auditContent = document.getElementById('auditContent');
         if (!auditContent) return;
 
-        // Strictly financial cash-flow filter (Income, Expenses, Payouts)
+        // SEPARATION: Income vs. Advances
+        const totalRentIncome = data.summary.total_paid;
+        const totalCashOut = data.summary.total_expenses + data.summary.total_payouts;
+        const netOperatingProfit = totalRentIncome - totalCashOut;
+        const totalAdvances = data.summary.total_advances;
+
+        // Transaction Ledger
         const filteredLogs = (data.logs || []).filter(l => 
             ['PAYMENT_RECORDED', 'EXPENSE_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT'].includes(l.action)
         );
@@ -241,9 +265,9 @@ async function viewAuditReport() {
             <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--border);">
-                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">DATE</th>
-                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">ACTIVITY</th>
-                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">DETAILS</th>
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">DATE</th>
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">ACTIVITY</th>
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">DETAILS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -252,9 +276,7 @@ async function viewAuditReport() {
                         if (l.action.includes('PAYMENT')) color = 'var(--success)';
                         if (l.action.includes('EXPENSE')) color = 'var(--danger)';
                         if (l.action.includes('PAYOUT')) color = 'var(--warning)';
-
                         const logDate = new Date(l.timestamp).toLocaleDateString('en-IN', {day:'2-digit', month:'short'});
-
                         return `
                         <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 10px; font-weight: 700; color: var(--text-muted); width: 60px;">${logDate}</td>
@@ -266,97 +288,86 @@ async function viewAuditReport() {
                     }).join('')}
                 </tbody>
             </table>`
-            : '<p style="text-align: center; color: var(--text-muted); padding: 3rem; font-weight: 800;">No financial activities recorded for this period.</p>';
+            : '<p style="text-align: center; color: var(--text-muted); padding: 3rem; font-weight: 800;">No financial transactions found for this period.</p>';
 
-        // Indian Tax Estimator (Section 24)
+        // Optional Tax Section
         let taxHtml = '';
         if (includeTax) {
-            const grossIncome = data.summary.total_paid;
-            const netAnnualValue = Math.max(0, grossIncome - municipalTax);
+            const netAnnualValue = Math.max(0, totalRentIncome - municipalTax);
             const standardDeduction = netAnnualValue * 0.30;
             const netTaxableIncome = netAnnualValue - standardDeduction;
 
             taxHtml = `
-                <!-- TAX ESTIMATOR (SECTION 24) -->
-                <div style="margin-bottom: 2.5rem; background: #fff; border: 2px solid var(--primary); border-radius: 14px; padding: 20px; break-inside: avoid;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 12px; margin-bottom: 15px;">
-                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Income Tax Projection (India)</h3>
-                        <span style="font-size: 0.6rem; font-weight: 800; background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 4px;">SEC 24a • ESTIMATE</span>
+                <div style="margin-top: 2rem; background: var(--bg-main); border: 1px solid var(--border); border-radius: 12px; padding: 20px; break-inside: avoid;">
+                    <div style="font-size: 1rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1.5px solid var(--border); padding-bottom: 8px;">Section 24a Tax Projection</div>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 10px; font-size: 0.85rem;">
+                        <span style="color: var(--text-muted);">Collected Rent (GAV):</span> <span style="font-weight: 800;">${currencyFormatter.format(totalRentIncome)}</span>
+                        <span style="color: var(--text-muted);">Municipal Taxes:</span> <span style="font-weight: 800;">-${currencyFormatter.format(municipalTax)}</span>
+                        <span style="color: var(--text-main); font-weight: 900; padding-top: 5px; border-top: 1px dashed var(--border);">NET ANNUAL VALUE (NAV):</span> <span style="font-weight: 900; padding-top: 5px; border-top: 1px dashed var(--border);">${currencyFormatter.format(netAnnualValue)}</span>
+                        <span style="color: var(--danger);">Standard Deduction (30%):</span> <span style="font-weight: 800; color: var(--danger);">${currencyFormatter.format(standardDeduction)}</span>
+                        <span style="color: var(--primary); font-weight: 900; font-size: 1rem; padding-top: 10px; border-top: 1.5px solid var(--primary);">EST. TAXABLE INCOME:</span> <span style="font-weight: 900; font-size: 1rem; padding-top: 10px; border-top: 1.5px solid var(--primary); color: var(--primary);">${currencyFormatter.format(netTaxableIncome)}</span>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-                        <tr>
-                            <td style="padding: 8px 0; color: var(--text-muted); font-weight: 700;">Gross Annual Value (Collected Rent)</td>
-                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--text-main);">${currencyFormatter.format(grossIncome)}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: var(--danger); font-weight: 700;">Less: Municipal Taxes Paid</td>
-                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--danger);">${currencyFormatter.format(municipalTax)}</td>
-                        </tr>
-                        <tr style="border-top: 1px solid var(--border);">
-                            <td style="padding: 8px 0; color: var(--text-main); font-weight: 800;">Net Annual Value (NAV)</td>
-                            <td style="padding: 8px 0; font-weight: 900; text-align: right; color: var(--text-main);">${currencyFormatter.format(netAnnualValue)}</td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 8px 0; color: var(--danger); font-weight: 700;">Less: Standard Deduction u/s 24a @ 30%</td>
-                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--danger);">${currencyFormatter.format(standardDeduction)}</td>
-                        </tr>
-                        <tr style="border-top: 1.5px dashed var(--border); font-size: 1rem;">
-                            <td style="padding: 12px 0; color: var(--primary); font-weight: 900;">EST. TAXABLE INCOME (HOUSE PROPERTY)</td>
-                            <td style="padding: 12px 0; font-weight: 900; text-align: right; color: var(--primary);">${currencyFormatter.format(netTaxableIncome)}</td>
-                        </tr>
-                    </table>
-                    <p style="margin-top: 10px; font-size: 0.65rem; color: var(--text-muted); font-style: italic; line-height: 1.4;">
-                        * This is an automated estimate based on Section 24 of the IT Act. Interest on home loans (Sec 24b) is not included.
-                    </p>
                 </div>
             `;
         }
 
         auditContent.innerHTML = `
             <div id="printableAudit" style="font-family: var(--font-main), sans-serif; color: var(--text-main); background: white; padding: 25px;">
-                <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2.5rem;">
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 1px; color: var(--primary); text-transform: uppercase;">Financial Audit Report</h1>
-                    <p style="margin: 12px 0; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 8px 25px; text-transform: uppercase; border-radius: 8px; letter-spacing: 2px; font-size: 1.1rem;">
-                        PERIOD: ${new Date(fromDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})} - ${new Date(toDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}
+                <!-- Modern Branding Header -->
+                <div style="text-align: center; border-bottom: 3px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2.5rem;">
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Period Financial Audit</h1>
+                    <p style="margin: 10px 0 0 0; font-weight: 800; color: var(--text-muted); font-size: 1rem;">
+                        ${new Date(fromDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase()} 
+                        — 
+                        ${new Date(toDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase()}
                     </p>
                 </div>
 
-                <!-- Financial Performance Grid -->
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2.5rem;">
-                    <div style="background: var(--bg-main); border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; text-align: center;">
-                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Total Billed</div>
-                        <div style="font-size: 1.4rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_billed)}</div>
-                    </div>
-                    <div style="background: var(--primary-light); border: 1.5px solid var(--primary); border-radius: 14px; padding: 15px; text-align: center;">
-                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Advance Collected</div>
-                        <div style="font-size: 1.4rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(data.summary.total_advances)}</div>
-                    </div>
-                </div>
-
-                <!-- Primary Cashflow Metrics -->
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2.5rem;">
-                    <div style="border: 1.5px solid var(--success); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-success-light);">
-                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Income</div>
-                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--success);">${currencyFormatter.format(data.summary.total_paid)}</div>
-                    </div>
-                    <div style="border: 1.5px solid var(--danger); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-danger-light);">
-                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Expenses</div>
-                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--danger);">${currencyFormatter.format(data.summary.total_expenses)}</div>
-                    </div>
-                    <div style="border: 1.5px solid var(--warning); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-warning-light);">
-                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--warning); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Owner Payouts</div>
-                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--warning);">${currencyFormatter.format(data.summary.total_payouts)}</div>
+                <!-- Main Profitability Summary (Excluding Advances) -->
+                <div style="margin-bottom: 3rem; background: var(--primary-light); border: 2px solid var(--primary); border-radius: 16px; padding: 25px; text-align: center;">
+                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">Net Operating Profit for Period</div>
+                    <div style="font-size: 2.8rem; font-weight: 900; color: var(--text-main); margin-bottom: 15px;">${currencyFormatter.format(netOperatingProfit)}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1.5px dashed var(--primary); padding-top: 20px;">
+                        <div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--success); text-transform: uppercase;">Collected Rent</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalRentIncome)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Total Expenses</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalCashOut)}</div>
+                        </div>
                     </div>
                 </div>
 
-                ${taxHtml}
+                <!-- Secondary Financial Metrics -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 3rem;">
+                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; background: var(--bg-main);">
+                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Security Deposits</div>
+                        <div style="font-size: 1rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(totalAdvances)}</div>
+                    </div>
+                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Billed</div>
+                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_billed)}</div>
+                    </div>
+                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Maintenance</div>
+                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_expenses)}</div>
+                    </div>
+                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Withdrawals</div>
+                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_payouts)}</div>
+                    </div>
+                </div>
 
-                <div style="margin-bottom: 1.5rem; break-inside: avoid;">
-                    <h3 style="font-size: 1rem; font-weight: 900; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; color: var(--text-main); letter-spacing: 1.5px;">Transaction Activity Ledger</h3>
+                <!-- Activity Ledger -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="font-size: 1.1rem; font-weight: 900; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; color: var(--text-main); letter-spacing: 1px;">Transaction Activity Ledger</h3>
                     <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
                         ${logsHtml}
                     </div>
                 </div>
+
+                ${taxHtml}
 
                 <div style="margin-top: 4rem; border-top: 1.5px solid var(--border); padding-top: 20px; text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
                     THIS DOCUMENT IS AN OFFICIAL SYSTEM-GENERATED FINANCIAL SUMMARY
@@ -368,7 +379,7 @@ async function viewAuditReport() {
         document.getElementById('auditModal')?.classList.remove('hidden');
         lucide.createIcons();
     } catch (e) {
-        showNotification("Failed to load audit data", "error");
+        showNotification("Failed to compile audit data", "error");
         console.error(e);
     }
 }

@@ -82,6 +82,6 @@ const API = {
         updateSettings: (data) => API.request('/settings', { method: 'POST', body: JSON.stringify(data) }),
         testEmail: () => API.request('/settings/test-email', { method: 'POST' }),
         backup: (filename) => API.request('/db/backup', { method: 'POST', body: JSON.stringify({ filename }) }),
-        getAuditReport: (month) => API.request(`/reports/audit/${month}`)
+        getAuditReport: (from, to) => API.request(`/reports/audit?from=${from}&to=${to}`)
     }
 };
