@@ -19,45 +19,14 @@ svg[data-lucide] {
 
 /* PRINT STYLES */
 @media print {
-    /* 1. Force Theme Colors to B/W and Grayscale */
-    :root, body, body.dark-mode {
-        --bg-main: #ffffff !important;
-        --bg-card: #ffffff !important;
-        --bg-input: #ffffff !important;
-        --text-main: #000000 !important;
-        --text-muted: #333333 !important;
-        --border: #000000 !important;
-        --primary: #000000 !important;
-        --primary-light: #f0f0f0 !important;
-        --success: #000000 !important;
-        --danger: #000000 !important;
-        --warning: #000000 !important;
-        --info: #000000 !important;
-        --shadow-sm: none !important;
-        --shadow: none !important;
-        --shadow-lg: none !important;
-        --shadow-xl: none !important;
-        --bg-success-light: #f0f0f0 !important;
-        --bg-danger-light: #f0f0f0 !important;
-        --bg-warning-light: #f0f0f0 !important;
-        --bg-info-light: #f0f0f0 !important;
-    }
-
-    /* Global Font Standardization for Print */
+    /* Global Reset for professional A4 output */
     * {
         font-family: var(--font-main) !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-        border-radius: 0 !important;
         box-shadow: none !important;
-        color: #000 !important; /* Force all text to black by default */
-    }
-
-    /* Exceptions for elements that MUST have white text (e.g. black badges/headers) */
-    .badge-success, .badge-danger, .badge-warning, .bg-primary, .btn-primary,
-    [style*="background: #000"], [style*="background:#000"],
-    [style*="background-color: #000"], [style*="background-color:#000"] {
-        color: #fff !important;
+        border-radius: 0 !important; /* Force sharp corners to avoid print glitches */
+        text-shadow: none !important;
     }
 
     .print-only { display: block !important; }
@@ -118,20 +87,50 @@ svg[data-lucide] {
         display: none !important;
     }
 
+    /* Force hide background content when a specific print target is active */
+    body.printing-bill #mainApp,
+    body.printing-bill #modalContainer > div:not(#print-area),
+    #print-area:not(.hidden) ~ #mainApp,
+    #modalContainer:has(#print-area:not(.hidden)) ~ #mainApp,
+    #modalContainer:has(#printableAudit:not(.hidden)) ~ #mainApp {
+        display: none !important;
+    }
+
+    /* Utility: Rigid No-Print */
+    .no-print, .no-print * {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     /* Surgical display of active printed content */
-    #mainApp, .content, 
+    #mainApp:not(.hidden), .content, 
     .app-section:not(.hidden), 
     .app-section:not(.hidden) > .content,
     .app-section:not(.hidden) > .content > *,
     #modalContainer > div:not(.hidden),
     #modalContainer > div:not(.hidden) > .modal-content,
-    #modalContainer > #print-area:not(.hidden) {
+    #modalContainer > #print-area:not(.hidden),
+    #modalContainer > #printableAudit:not(.hidden) {
         display: block !important;
         margin: 0 !important;
         padding: 0 !important;
         border: none !important;
         position: static !important;
         visibility: visible !important;
+    }
+
+    /* Hide the Share Modal UI when printing the Invoice */
+    body.modal-open #modalContainer > .modal-overlay:not(#print-area):not(#auditModal):not(#ownerTimelineModal) {
+        display: none !important;
+    }
+    #shareModal .modal-content {
+        display: none !important;
+    }
+    #print-area:not(.hidden) ~ .modal-content {
+        display: none !important;
     }
 
     #tenants-section:not(.hidden) #historyResults:not(.hidden),
@@ -142,7 +141,6 @@ svg[data-lucide] {
     #auditModal:not(.hidden) #auditContent,
     #ownerTimelineModal:not(.hidden) .modal-content,
     #ownerTimelineModal:not(.hidden) #ownerTimelineContent {
-
         display: block !important;
         background: #ffffff !important;
         position: static !important;
@@ -152,106 +150,35 @@ svg[data-lucide] {
         width: 100% !important;
         max-width: none !important;
         max-height: none !important;
-    }
         overflow: visible !important;
         height: auto !important;
         transform: none !important;
     }
 
-    /* Surgical page break control */
-    .page-break {
-        page-break-before: always !important;
-        break-before: always !important;
-        display: block !important;
-        height: 0 !important;
-        visibility: hidden !important;
+    /* Professional Invoice Print Tweaks */
+    .print-no-break {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
     }
 
-
-
-
-    #auditModal .modal-content, #ownerTimelineModal .modal-content {
-        display: block !important;
+    #print-area, 
+    #printableAudit, 
+    #auditModal .modal-content, 
+    #ownerTimelineModal .modal-content {
+        background: white !important;
+        max-width: 210mm !important;
+        margin: 0 auto !important;
         border: none !important;
         box-shadow: none !important;
-        animation: none !important;
+        padding: 0 !important;
     }
 
-    /* Re-enable visibility for data elements */
-    #print-area *, #historyResults *, #auditModal *, #ownerTimelineModal *, .print-only * {
-        visibility: visible !important;
-        border-color: black !important;
-        box-shadow: none !important;
-        background-color: transparent !important;
-    }
-#print-area, #print-area > div {
-    background-color: #ffffff !important;
-}
-
-/* Account Timeline Print Tweaks */
-#ownerTimelineModal .tenant-row {
-    border-width: 0 0 1px 2px !important;
-    margin-bottom: 0 !important;
-    padding: 0.65rem 0.5rem !important;
-    page-break-inside: avoid;
-    border-color: #eee !important;
-    border-left-color: black !important;
-}
-#ownerTimelineModal .timeline-list {
-    border-top: 1px solid black;
-}
-#ownerTimelineModal [style*="background: var(--bg-success-light)"],
-#ownerTimelineModal [style*="background: var(--bg-danger-light)"],
-#ownerTimelineModal [style*="background: var(--primary-light)"] {
-    border: 1px solid #000 !important;
-    background-color: #f9f9f9 !important;
-    -webkit-print-color-adjust: exact !important;
-}
-
-/* History & Records Print Tweaks */
-#historySelectedName {
-    border-left: 5px solid black;
-    padding-left: 10px;
-    margin-bottom: 1rem !important;
-}
-
-@media (max-width: 600px) {
-    #historyResults .styled-table td {
-        padding: 0.75rem !important;
-    }
-    #historyResults .btn-icon-sm {
-        width: 32px;
-        height: 32px;
-    }
-}
-
+    #print-area > div, 
+    #printableAudit {
+        background-color: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
         border: none !important;
-    }
-
-    #print-area div {
-        box-shadow: none !important;
-        border-radius: 0 !important;
-    }
-
-    /* Keep table borders but ensure they are clean */
-    #print-area table, #print-area td, #print-area th {
-        border: 1px solid #000 !important;
-    }
-
-    /* Ensure white text on elements that have black backgrounds in print */
-    [style*="background: #000"], 
-    [style*="background:#000"],
-    [style*="background-color: #000"],
-    [style*="background-color:#000"],
-    th[style*="background: #000"],
-    div[style*="background: #000"] {
-        color: white !important;
-    }
-    
-    /* Also handle elements that use the --primary variable which is black in print */
-    .bg-primary, .btn-primary {
-        background: black !important;
-        color: white !important;
     }
 
     /* Table styling for print */
@@ -261,13 +188,31 @@ svg[data-lucide] {
     }
 
     th, td {
-        border: 1px solid #000 !important;
+        border: 1px solid var(--border) !important;
         padding: 8px !important;
-        color: black !important;
     }
 
     th {
-        background-color: #f0f0f0 !important;
-        font-weight: bold !important;
+        background-color: var(--bg-main) !important;
+        color: var(--primary) !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important;
+    }
+
+    /* Utility: Page Break control */
+    .page-break {
+        page-break-before: always !important;
+        break-before: always !important;
+        display: block !important;
+    }
+
+    /* Account Timeline Print Tweaks */
+    #ownerTimelineModal .tenant-row {
+        border-width: 0 0 1px 2px !important;
+        margin-bottom: 0 !important;
+        padding: 0.65rem 0.5rem !important;
+        page-break-inside: avoid;
+        border-color: var(--border) !important;
+        border-left-color: var(--primary) !important;
     }
 }

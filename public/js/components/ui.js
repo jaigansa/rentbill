@@ -115,17 +115,27 @@ const UI = {
     },
 
     renderWithdrawalItem: (w, onDelete) => `
-        <div class="tenant-row" style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div class="stat-icon icon-warning" style="width: 36px; height: 36px;"><i data-lucide="banknote" style="width: 18px;"></i></div>
-                <div>
-                    <div style="font-weight: 900; font-size: 1rem; color: var(--text-main);">${currencyFormatter.format(w.amount)}</div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-main); text-transform: uppercase; margin-top: 2px;">
-                        ${w.owner_name} <span style="color: var(--text-muted); font-weight: 700;">• ${w.date}</span>
+        <div class="tenant-row" style="padding: 0.6rem 1rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-color: var(--border);">
+            <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
+                <!-- Styled Icon Box -->
+                <div style="width: 38px; height: 38px; background: var(--bg-warning-light); color: var(--warning); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--bg-warning-light);">
+                    <i data-lucide="banknote" style="width: 18px; height: 18px;"></i>
+                </div>
+                
+                <div style="min-width: 0;">
+                    <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                        ${currencyFormatter.format(w.amount)}
+                        <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">• Payout</span>
+                    </div>
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">
+                        <span style="color: var(--primary);">${w.owner_name}</span> • ${new Date(w.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}
                     </div>
                 </div>
             </div>
-            <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm withdrawal-actions" style="border:none; background:none;"><i data-lucide="trash-2" width="14" height="14" color="var(--danger)"></i></button>
+
+            <div class="withdrawal-actions no-print">
+                <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm" style="width: 32px; height: 32px; border: none; background: transparent; color: var(--danger);"><i data-lucide="trash-2" width="14" height="14"></i></button>
+            </div>
         </div>
     `,
 

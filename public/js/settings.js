@@ -15,10 +15,31 @@ async function loadSettings() {
         if (emailUser) emailUser.value = data.email_user || '';
         if (emailBcc) emailBcc.value = data.email_bcc || '';
         if (srvPort) srvPort.value = data.server_port || 8080;
+
+        // Default to current month range for audit
+        const fromInput = document.getElementById('auditFromDate');
+        const toInput = document.getElementById('auditToDate');
+        if (fromInput && toInput && !fromInput.value) {
+            const now = new Date();
+            fromInput.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+            toInput.value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+        }
         
         renderUnifiedAccounts(data.receiving_accounts || []);
         populateOwnerDropdown(data.receiving_accounts || []);
     } catch (e) { console.error(e); }
+}
+
+function populateOwnerDropdown(accounts) {
+    const selects = ['eOwnerName', 'wOwnerName', 'tTaskOwner'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const currentVal = el.value;
+        el.innerHTML = '<option value="">-- Select --</option>' + 
+            accounts.map(a => `<option value="${a.owner_name}">${a.owner_name}</option>`).join('');
+        el.value = currentVal;
+    });
 }
 
 async function saveReceivingAccount() {
@@ -50,233 +71,135 @@ async function saveReceivingAccount() {
     
     try {
         await API.system.updateSettings({ receiving_accounts: accounts });
-        showNotification(accountEditIndex !== null ? "Account updated" : "Account added", "success");
+        showNotification("Account saved", "success");
         cancelAccountEdit();
         loadSettings();
     } catch (e) { showNotification("Failed to save account", "error"); }
 }
 
-function editReceivingAccount(index) {
-    const acc = appSettings.receiving_accounts[index];
-    if (!acc) return;
+function renderUnifiedAccounts(accounts) {
+    const list = document.getElementById('unifiedAccountList');
+    if (!list) return;
+    list.innerHTML = accounts.map((acc, index) => `
+        <div class="tenant-row" style="padding: 1rem; border-color: var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div style="font-weight: 800; font-size: 0.9rem; color: var(--text-main);">${acc.owner_name}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">${acc.label}</div>
+                    <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${acc.upi ? `<span class="badge" style="background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); font-size: 0.6rem;">UPI: ${acc.upi}</span>` : ''}
+                        ${acc.bank_name ? `<span class="badge" style="background: var(--bg-main); color: var(--text-main); border: 1px solid var(--border); font-size: 0.6rem;">${acc.bank_name} - ${acc.account_number}</span>` : ''}
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button onclick="editAccount(${index})" class="btn btn-secondary btn-icon-sm"><i data-lucide="edit-2"></i></button>
+                    <button onclick="deleteAccount(${index})" class="btn btn-secondary btn-icon-sm" style="color: var(--danger);"><i data-lucide="trash-2"></i></button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
 
+function editAccount(index) {
+    const acc = appSettings.receiving_accounts[index];
     accountEditIndex = index;
-    document.getElementById('acc_name').value = acc.owner_name || '';
-    document.getElementById('acc_label').value = acc.label || '';
+    document.getElementById('acc_name').value = acc.owner_name;
+    document.getElementById('acc_label').value = acc.label;
     document.getElementById('acc_upi').value = acc.upi || '';
     document.getElementById('acc_bank').value = acc.bank_name || '';
     document.getElementById('acc_num').value = acc.account_number || '';
     document.getElementById('acc_ifsc').value = acc.ifsc || '';
-
-    const btn = document.getElementById('addAccBtn');
-    if (btn) btn.innerText = "Update Account Record";
     
-    const cancelBtn = document.getElementById('cancelAccEditBtn');
-    if (cancelBtn) cancelBtn.classList.remove('hidden');
-
-    document.getElementById('acc_name').focus();
+    document.getElementById('addAccBtn').innerText = "Update Account Record";
+    document.getElementById('cancelAccEditBtn').classList.remove('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function cancelAccountEdit() {
     accountEditIndex = null;
-    ['acc_name', 'acc_label', 'acc_upi', 'acc_bank', 'acc_num', 'acc_ifsc'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-
-    const btn = document.getElementById('addAccBtn');
-    if (btn) btn.innerText = "Add Account Record";
-
-    const cancelBtn = document.getElementById('cancelAccEditBtn');
-    if (cancelBtn) cancelBtn.classList.add('hidden');
+    document.getElementById('acc_name').value = '';
+    document.getElementById('acc_label').value = '';
+    document.getElementById('acc_upi').value = '';
+    document.getElementById('acc_bank').value = '';
+    document.getElementById('acc_num').value = '';
+    document.getElementById('acc_ifsc').value = '';
+    document.getElementById('addAccBtn').innerText = "Add Account Record";
+    document.getElementById('cancelAccEditBtn').classList.add('hidden');
 }
 
-function renderUnifiedAccounts(accounts) {
-    const container = document.getElementById('unifiedAccountList'); 
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (!accounts || accounts.length === 0) {
-        container.innerHTML = '<p style="font-size:0.8rem; color:var(--text-muted); padding:1rem; text-align:center;">No receiving accounts added yet.</p>';
-        return;
-    }
-
-    accounts.forEach((acc, index) => {
-        const div = document.createElement('div');
-        div.innerHTML = UI.renderUnifiedAccountRow(acc, index);
-        container.appendChild(div);
-    });
-    lucide.createIcons();
-}
-
-function populateOwnerDropdown(accounts) {
-    const select = document.getElementById('tAssignedUpi');
-    if (!select) return;
-    const currentVal = select.value;
-    
-    select.innerHTML = '<option value="">-- Select Receiving Account --</option>';
-    accounts.forEach(acc => {
-        const opt = document.createElement('option');
-        opt.value = acc.owner_name;
-        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
-        select.appendChild(opt);
-    });
-    select.value = currentVal;
-}
-
-async function deleteReceivingAccount(index) {
-    if (!confirm("Remove this account record?")) return;
+async function deleteAccount(index) {
+    if (!confirm("Are you sure? This will remove this receiving account.")) return;
     const accounts = appSettings.receiving_accounts || [];
     accounts.splice(index, 1);
     try {
         await API.system.updateSettings({ receiving_accounts: accounts });
         showNotification("Account removed", "success");
         loadSettings();
-    } catch (e) { showNotification("Failed to remove account", "error"); }
+    } catch (e) { showNotification("Failed to remove", "error"); }
 }
-
-async function loadSystemSettings() { await loadSettings(); }
 
 async function saveSystemSettings() {
     const data = {
-        property_name: document.getElementById('prop_name').value,
-        property_address: document.getElementById('prop_addr').value,
-        email_user: document.getElementById('email_user').value,
-        email_bcc: document.getElementById('email_bcc').value,
+        property_name: document.getElementById('prop_name').value.trim(),
+        property_address: document.getElementById('prop_addr').value.trim(),
+        email_user: document.getElementById('email_user').value.trim(),
         email_pass: document.getElementById('email_pass').value,
-        server_port: parseInt(document.getElementById('server_port').value) || 8080,
-        new_pin: document.getElementById('new_master_pin').value
+        email_bcc: document.getElementById('email_bcc').value.trim(),
+        server_port: parseInt(document.getElementById('server_port').value),
+        new_pin: document.getElementById('new_master_pin').value.trim()
     };
+
     try {
-        const response = await API.system.updateSettings(data);
-        if (response.message && response.message.includes("restarting")) {
-            showNotification("Port changed! System is restarting. Please wait...", "success");
-            setTimeout(() => {
-                const newUrl = window.location.protocol + "//" + window.location.hostname + ":" + data.server_port;
-                window.location.assign(newUrl);
-            }, 5000);
+        const res = await API.system.updateSettings(data);
+        if (res.message && res.message.includes('Restarting')) {
+            showNotification(res.message, "warning");
         } else {
-            showNotification("Settings updated", "success");
-            const pinInput = document.getElementById('new_master_pin');
-            if (pinInput) pinInput.value = '';
-            // Update global appSettings so branding shows up immediately
-            appSettings.property_name = data.property_name;
-            appSettings.property_address = data.property_address;
+            showNotification("Settings updated successfully", "success");
+            loadSettings();
         }
-    } catch (e) { showNotification("Failed to update settings", "error"); }
+    } catch (e) { showNotification("Update failed", "error"); }
 }
 
 async function testSMTPSettings() {
-    showNotification("Testing...", "info");
+    showNotification("Sending test email...", "info");
     try {
         await API.system.testEmail();
-        showNotification("Test email sent!", "success");
-    } catch (e) { showNotification(e.message, "error"); }
-}
-
-async function importTenantsCSV(input) {
-    if (!input.files[0]) return;
-    
-    if (!confirm("This will add all units from the CSV to your current directory. Proceed?")) {
-        input.value = '';
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('csv_file', input.files[0]);
-
-    showNotification("Importing records...", "info");
-    try {
-        const response = await fetch('/api/renters/import', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-        if (response.ok) {
-            showNotification(result.message, "success");
-            if (typeof loadManageTenants === 'function') loadManageTenants();
-        } else {
-            showNotification(result.error || "Import failed", "error");
-        }
-    } catch (e) {
-        showNotification("Network error during import", "error");
-        console.error(e);
-    } finally {
-        input.value = '';
-    }
-}
-
-async function exportTenantsCSV() {
-    showNotification("Exporting directory...", "info");
-    try {
-        const response = await fetch('/api/renters/export');
-        if (!response.ok) throw new Error("Export failed");
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `unit_directory_${new Date().toISOString().slice(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        a.remove();
-        showNotification("Directory exported successfully", "success");
-    } catch (e) {
-        showNotification("Failed to export directory", "error");
-        console.error(e);
-    }
+        showNotification("Test email sent successfully!", "success");
+    } catch (e) { showNotification("SMTP Test failed. Check credentials.", "error"); }
 }
 
 async function backupDatabase() {
-    const filenameInput = document.getElementById('backupFilename');
-    const filename = filenameInput ? filenameInput.value.trim() : "rent_backup";
-    
-    showNotification("Creating backup...", "info");
+    const prefix = document.getElementById('backupFilename').value || 'manual_backup';
+    showNotification("Preparing backup...", "info");
     try {
-        const response = await fetch('/api/db/backup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename })
-        });
-
-        if (!response.ok) throw new Error("Backup failed");
-
-        // Convert response to blob and download
-        const blob = await response.blob();
+        const blob = await API.system.createBackup(prefix);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${new Date().toISOString().slice(0,10)}_${filename}.db`;
+        a.download = `${new Date().toISOString().split('T')[0]}_${prefix}.db`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
-        a.remove();
-
-        showNotification("Backup downloaded successfully", "success");
-    } catch (e) { 
-        showNotification("Failed to create backup", "error");
-        console.error(e);
-    }
+        showNotification("Backup downloaded", "success");
+    } catch (e) { showNotification("Backup failed", "error"); }
 }
 
 async function restoreDatabase() {
     const fileInput = document.getElementById('restoreFile');
-    const pinInput = document.getElementById('restorePin');
-    
-    if (!fileInput.files[0]) return showNotification("Please select a .db file", "error");
-    if (!pinInput.value) return showNotification("Enter Master PIN for safety", "error");
+    const pin = document.getElementById('restorePin').value;
 
-    if (!confirm("This will delete all current data and replace it with the backup file. Are you absolutely sure?")) return;
+    if (!fileInput.files.length) return showNotification("Please select a .db file", "error");
+    if (!pin) return showNotification("PIN required for restore", "error");
 
-    const formData = new FormData();
-    formData.append('backup_file', fileInput.files[0]);
-    formData.append('pin', pinInput.value);
+    if (!confirm("CRITICAL: This will replace your entire database. Continue?")) return;
 
-    showNotification("Restoring data...", "info");
     try {
-        const response = await fetch('/api/db/restore', {
+        const formData = new FormData();
+        formData.append('backup_file', fileInput.files[0]);
+        formData.append('pin', pin);
+
+        const response = await fetch('/api/system/restore', {
             method: 'POST',
             body: formData
         });
@@ -295,63 +218,152 @@ async function restoreDatabase() {
 }
 
 async function viewAuditReport() {
-    const month = document.getElementById('auditMonth')?.value;
-    if (!month) return showNotification("Please select a month", "error");
+    const fromDate = document.getElementById('auditFromDate')?.value;
+    const toDate = document.getElementById('auditToDate')?.value;
+    const includeTax = document.getElementById('auditIncludeTax')?.checked;
+    const municipalTax = parseFloat(document.getElementById('auditMunicipalTax')?.value || 0);
+    
+    if (!fromDate || !toDate) return showNotification("Please select Start and End dates", "error");
     
     showNotification("Generating audit...", "info");
     try {
-        const data = await API.system.getAuditReport(month);
+        const data = await API.system.getAuditReport(fromDate, toDate);
         const auditContent = document.getElementById('auditContent');
         if (!auditContent) return;
 
+        // Strictly financial cash-flow filter (Income, Expenses, Payouts)
         const filteredLogs = (data.logs || []).filter(l => 
-            l.action === 'PAYMENT_RECORDED' || l.action === 'EXPENSE_ADDED'
+            ['PAYMENT_RECORDED', 'EXPENSE_RECORDED', 'EXPENSE_ADDED', 'OWNER_PAYOUT'].includes(l.action)
         );
 
-        let logsHtml = filteredLogs.length > 0 
-            ? filteredLogs.map(l => `
-                <div style="border-bottom: 1px dashed var(--border); padding: 8px 0; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: bold; font-size: 0.75rem; text-transform: uppercase; color: var(--text-main);">${l.action.replace('_', ' ')}</div>
-                        <div style="font-size: 0.7rem; color: var(--text-muted);">${l.details}</div>
+        const logsHtml = filteredLogs.length > 0 
+            ? `
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border);">
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">DATE</th>
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">ACTIVITY</th>
+                        <th style="padding: 10px; text-align: left; color: var(--text-muted);">DETAILS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filteredLogs.map(l => {
+                        let color = 'var(--text-main)';
+                        if (l.action.includes('PAYMENT')) color = 'var(--success)';
+                        if (l.action.includes('EXPENSE')) color = 'var(--danger)';
+                        if (l.action.includes('PAYOUT')) color = 'var(--warning)';
+
+                        const logDate = new Date(l.timestamp).toLocaleDateString('en-IN', {day:'2-digit', month:'short'});
+
+                        return `
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 10px; font-weight: 700; color: var(--text-muted); width: 60px;">${logDate}</td>
+                            <td style="padding: 10px; font-weight: 900; color: ${color}; white-space: nowrap; text-transform: uppercase; font-size: 0.65rem;">
+                                ${l.action.replace(/_/g, ' ')}
+                            </td>
+                            <td style="padding: 10px; font-weight: 700; color: var(--text-main); line-height: 1.4;">${l.details}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`
+            : '<p style="text-align: center; color: var(--text-muted); padding: 3rem; font-weight: 800;">No financial activities recorded for this period.</p>';
+
+        // Indian Tax Estimator (Section 24)
+        let taxHtml = '';
+        if (includeTax) {
+            const grossIncome = data.summary.total_paid;
+            const netAnnualValue = Math.max(0, grossIncome - municipalTax);
+            const standardDeduction = netAnnualValue * 0.30;
+            const netTaxableIncome = netAnnualValue - standardDeduction;
+
+            taxHtml = `
+                <!-- TAX ESTIMATOR (SECTION 24) -->
+                <div style="margin-bottom: 2.5rem; background: #fff; border: 2px solid var(--primary); border-radius: 14px; padding: 20px; break-inside: avoid;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--border); padding-bottom: 12px; margin-bottom: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Income Tax Projection (India)</h3>
+                        <span style="font-size: 0.6rem; font-weight: 800; background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 4px;">SEC 24a • ESTIMATE</span>
                     </div>
-                    <div style="font-size: 0.65rem; color: var(--text-muted); font-family: monospace;">${l.timestamp.slice(11, 16)}</div>
-                </div>`).join('')
-            : '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No income or expense records found for this period.</p>';
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <tr>
+                            <td style="padding: 8px 0; color: var(--text-muted); font-weight: 700;">Gross Annual Value (Collected Rent)</td>
+                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--text-main);">${currencyFormatter.format(grossIncome)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: var(--danger); font-weight: 700;">Less: Municipal Taxes Paid</td>
+                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--danger);">${currencyFormatter.format(municipalTax)}</td>
+                        </tr>
+                        <tr style="border-top: 1px solid var(--border);">
+                            <td style="padding: 8px 0; color: var(--text-main); font-weight: 800;">Net Annual Value (NAV)</td>
+                            <td style="padding: 8px 0; font-weight: 900; text-align: right; color: var(--text-main);">${currencyFormatter.format(netAnnualValue)}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: var(--danger); font-weight: 700;">Less: Standard Deduction u/s 24a @ 30%</td>
+                            <td style="padding: 8px 0; font-weight: 800; text-align: right; color: var(--danger);">${currencyFormatter.format(standardDeduction)}</td>
+                        </tr>
+                        <tr style="border-top: 1.5px dashed var(--border); font-size: 1rem;">
+                            <td style="padding: 12px 0; color: var(--primary); font-weight: 900;">EST. TAXABLE INCOME (HOUSE PROPERTY)</td>
+                            <td style="padding: 12px 0; font-weight: 900; text-align: right; color: var(--primary);">${currencyFormatter.format(netTaxableIncome)}</td>
+                        </tr>
+                    </table>
+                    <p style="margin-top: 10px; font-size: 0.65rem; color: var(--text-muted); font-style: italic; line-height: 1.4;">
+                        * This is an automated estimate based on Section 24 of the IT Act. Interest on home loans (Sec 24b) is not included.
+                    </p>
+                </div>
+            `;
+        }
 
         auditContent.innerHTML = `
-            <div id="printableAudit" style="font-family: var(--font-main), sans-serif; color: #000;">
-                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem;">
-                    <h1 style="margin: 0; font-size: 1.8rem; font-weight: 900; letter-spacing: 1px; color: #000; text-transform: uppercase;">Financial Audit Report</h1>
-                    <p style="margin: 10px 0; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; text-transform: uppercase; border-radius: 4px; letter-spacing: 1px;">PERIOD: ${new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
+            <div id="printableAudit" style="font-family: var(--font-main), sans-serif; color: var(--text-main); background: white; padding: 25px;">
+                <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2.5rem;">
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 900; letter-spacing: 1px; color: var(--primary); text-transform: uppercase;">Financial Audit Report</h1>
+                    <p style="margin: 12px 0; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 8px 25px; text-transform: uppercase; border-radius: 8px; letter-spacing: 2px; font-size: 1.1rem;">
+                        PERIOD: ${new Date(fromDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})} - ${new Date(toDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}
+                    </p>
                 </div>
 
-                <!-- Primary Metrics -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 2rem;">
-                    <div style="border: 2px solid #000; border-radius: 8px; padding: 15px; text-align: center; background: #fff;">
-                        <div style="font-size: 0.8rem; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px;">TOTAL INCOME</div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #000; margin-top: 5px;">${currencyFormatter.format(data.summary.total_paid)}</div>
+                <!-- Financial Performance Grid -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2.5rem;">
+                    <div style="background: var(--bg-main); border: 1.5px solid var(--border); border-radius: 14px; padding: 15px; text-align: center;">
+                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Total Billed</div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(data.summary.total_billed)}</div>
                     </div>
-                    <div style="border: 2px solid #000; border-radius: 8px; padding: 15px; text-align: center; background: #fff;">
-                        <div style="font-size: 0.8rem; font-weight: bold; color: #333; text-transform: uppercase; letter-spacing: 1px;">TOTAL EXPENSES</div>
-                        <div style="font-size: 1.5rem; font-weight: 900; color: #000; margin-top: 5px;">${currencyFormatter.format(data.summary.total_expenses)}</div>
+                    <div style="background: var(--primary-light); border: 1.5px solid var(--primary); border-radius: 14px; padding: 15px; text-align: center;">
+                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Advance Collected</div>
+                        <div style="font-size: 1.4rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(data.summary.total_advances)}</div>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 1.5rem;">
-                    <h3 style="font-size: 0.95rem; font-weight: 900; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px; text-transform: uppercase; color: #000; letter-spacing: 1px;">Income & Expense Details</h3>
-                    <div style="border: 1.5px solid #000; border-radius: 8px; padding: 5px 15px; background: #fff;">
+                <!-- Primary Cashflow Metrics -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2.5rem;">
+                    <div style="border: 1.5px solid var(--success); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-success-light);">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Income</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--success);">${currencyFormatter.format(data.summary.total_paid)}</div>
+                    </div>
+                    <div style="border: 1.5px solid var(--danger); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-danger-light);">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Total Expenses</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--danger);">${currencyFormatter.format(data.summary.total_expenses)}</div>
+                    </div>
+                    <div style="border: 1.5px solid var(--warning); border-radius: 14px; padding: 15px; text-align: center; background: var(--bg-warning-light);">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--warning); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Owner Payouts</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: var(--warning);">${currencyFormatter.format(data.summary.total_payouts)}</div>
+                    </div>
+                </div>
+
+                ${taxHtml}
+
+                <div style="margin-bottom: 1.5rem; break-inside: avoid;">
+                    <h3 style="font-size: 1rem; font-weight: 900; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; text-transform: uppercase; color: var(--text-main); letter-spacing: 1.5px;">Transaction Activity Ledger</h3>
+                    <div style="border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff;">
                         ${logsHtml}
                     </div>
                 </div>
 
-                <div style="margin-top: 3rem; border-top: 1px solid #000; padding-top: 10px; text-align: center; font-size: 0.7rem; color: #555; font-weight: bold;">
-                    THIS DOCUMENT IS A SYSTEM-GENERATED FINANCIAL SUMMARY // RENTBILL PRO
-                    <br>GENERATED ON: ${new Date().toLocaleString('en-IN')}
+                <div style="margin-top: 4rem; border-top: 1.5px solid var(--border); padding-top: 20px; text-align: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 1px;">
+                    THIS DOCUMENT IS AN OFFICIAL SYSTEM-GENERATED FINANCIAL SUMMARY
+                    <br><span style="opacity: 0.7; font-weight: 600;">Report Path: Settings > Audit // Generated: ${new Date().toLocaleString('en-IN')}</span>
                 </div>
             </div>
         `;
-
 
         document.getElementById('auditModal')?.classList.remove('hidden');
         lucide.createIcons();

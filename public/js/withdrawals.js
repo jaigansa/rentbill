@@ -112,12 +112,12 @@ async function printPayoutHistory() {
     if (existingBranding) existingBranding.remove();
 
     const brandingHtml = `
-        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif;">
-            <h2 style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;">${propName}</h2>
-            <p style="margin: 4px 0; font-size: 0.9rem; color: #333;">${propAddr}</p>
-            <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">OWNER PAYOUT STATEMENT</div>
-            <p style="margin: 12px 0 0 0; font-size: 0.85rem; font-weight: 900; color: #000; text-transform: uppercase;">STATEMENT FOR: ${currentWithdrawalOwnerFilter ? currentWithdrawalOwnerFilter.toUpperCase() : 'ALL OWNERS'}</p>
-            <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #555;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif; background: white;">
+            <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
+            <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+            <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">OWNER PAYOUT STATEMENT</div>
+            <p style="margin: 15px 0 0 0; font-size: 0.9rem; font-weight: 900; color: var(--text-main); text-transform: uppercase;">STATEMENT FOR: <span style="border-bottom: 1.5px solid var(--border);">${currentWithdrawalOwnerFilter ? currentWithdrawalOwnerFilter.toUpperCase() : 'ALL OWNERS'}</span></p>
+            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
         </div>
     `;
 
@@ -126,7 +126,25 @@ async function printPayoutHistory() {
     // Hide actions column/buttons
     const style = document.createElement('style');
     style.id = 'print-hide-payout-actions';
-    style.innerHTML = '@media print { .withdrawal-actions, #witToggleBtn, .no-print { display: none !important; } .card { border: none !important; box-shadow: none !important; } }';
+    style.innerHTML = `
+        @media print { 
+            .withdrawal-actions, #witToggleBtn, .no-print, .withdrawal-form-container { display: none !important; } 
+            .tenant-row { 
+                border: 1px solid var(--border) !important; 
+                margin-bottom: 8px !important; 
+                padding: 12px !important; 
+                break-inside: avoid; 
+                flex-direction: row !important; 
+                align-items: center !important; 
+                background: white !important;
+            } 
+            .tenant-row > div:first-child { 
+                background: var(--bg-main) !important; 
+                border: 1px solid var(--border) !important; 
+                border-radius: 8px !important; 
+            }
+        }
+    `;
     document.head.appendChild(style);
 
     window.print();

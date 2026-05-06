@@ -474,7 +474,7 @@ function showOwnerTimeline(ownerName) {
     const titleEl = document.getElementById('timelineOwnerName');
     if (!container || !window.dashboardState) return;
 
-    titleEl.innerText = ownerName;
+    if (titleEl) titleEl.innerText = ownerName;
     const { allPaidBills, withdrawals, expenses } = window.dashboardState;
 
     // Filter income
@@ -509,22 +509,33 @@ function showOwnerTimeline(ownerName) {
     const totalOut = payouts.reduce((sum, p) => sum + p.amount, 0) + maintenance.reduce((sum, e) => sum + e.amount, 0);
     const netBalance = totalIn - totalOut;
 
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
+
     if (timeline.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">No transactions found.</p>';
     } else {
         let html = `
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 2px dashed var(--border);">
-                <div style="background: var(--bg-success-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase;">Total In</div>
-                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--success);">${currencyFormatter.format(totalIn)}</div>
+            <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif; background: white;">
+                <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
+                <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+                <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">ACCOUNT STATEMENT / TIMELINE</div>
+                <p style="margin: 15px 0 0 0; font-size: 0.9rem; font-weight: 900; color: var(--text-main); text-transform: uppercase;">OWNER: <span style="border-bottom: 1.5px solid var(--border);">${ownerName}</span></p>
+                <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+                <div style="background: var(--primary-light); padding: 0.75rem; border: 1.5px solid var(--primary); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">Income</div>
+                    <div style="font-weight: 900; font-size: 0.95rem; color: var(--primary);">${currencyFormatter.format(totalIn)}</div>
                 </div>
-                <div style="background: var(--bg-danger-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Total Out</div>
-                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--danger);">${currencyFormatter.format(totalOut)}</div>
+                <div style="background: var(--bg-warning-light); padding: 0.75rem; border: 1.5px solid var(--warning); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--warning); text-transform: uppercase; letter-spacing: 0.5px;">Payouts</div>
+                    <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main);">${currencyFormatter.format(totalOut)}</div>
                 </div>
-                <div style="background: var(--primary-light); padding: 0.75rem; border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--secondary); text-transform: uppercase;">Balance</div>
-                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--primary);">${currencyFormatter.format(netBalance)}</div>
+                <div style="background: var(--bg-main); padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.5px;">Balance</div>
+                    <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main);">${currencyFormatter.format(netBalance)}</div>
                 </div>
             </div>
             <div class="timeline-list">
@@ -532,19 +543,29 @@ function showOwnerTimeline(ownerName) {
 
         html += timeline.map(item => {
             const isOut = item.type === 'PAYOUT' || item.type === 'EXPENSE';
+            let icon = 'trending-up';
+            let color = 'var(--success)';
+            let bg = 'var(--bg-success-light)';
+
+            if (item.type === 'PAYOUT') { icon = 'banknote'; color = 'var(--warning)'; bg = 'var(--bg-warning-light)'; }
+            else if (item.type === 'EXPENSE') { icon = 'trending-down'; color = 'var(--danger)'; bg = 'var(--bg-danger-light)'; }
+
             return `
-                <div class="tenant-row" style="padding: 0.75rem; border-left: 4px solid ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-bottom: 0.5rem; break-inside: avoid;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${item.date}</span>
-                                <span class="badge ${isOut ? 'badge-danger' : 'badge-success'}" style="font-size: 0.5rem; padding: 1px 4px;">${item.type}</span>
-                            </div>
-                            <div style="font-size: 0.85rem; font-weight: 700; margin-top: 2px; color: var(--text-main);">${item.details}</div>
+                <div class="tenant-row" style="padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: space-between; border-color: var(--border); margin-bottom: 0.4rem; break-inside: avoid; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
+                        <!-- Styled Icon Box -->
+                        <div style="width: 38px; height: 38px; background: ${bg}; color: ${color}; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid ${bg};">
+                            <i data-lucide="${icon}" style="width: 18px; height: 18px;"></i>
                         </div>
-                        <div style="font-weight: 900; font-size: 1rem; color: ${isOut ? 'var(--danger)' : 'var(--success)'}; margin-left: 1rem;">
-                            ${isOut ? '-' : '+'}${currencyFormatter.format(item.amount)}
+                        
+                        <div style="min-width: 0;">
+                            <div style="font-weight: 800; font-size: 0.7rem; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${item.type}</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.details}</div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${new Date(item.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</div>
                         </div>
+                    </div>
+                    <div style="font-weight: 900; font-size: 1.1rem; color: ${isOut ? 'var(--text-main)' : 'var(--primary)'}; text-align: right; flex-shrink: 0;">
+                        ${isOut ? '-' : '+'}${currencyFormatter.format(item.amount)}
                     </div>
                 </div>
             `;
@@ -569,11 +590,8 @@ function printOwnerTimeline() {
     const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
     const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
     
-    const propNameEl = document.getElementById('printPropName');
-    const propAddrEl = document.getElementById('printPropAddr');
-    
-    if (propNameEl) propNameEl.innerText = propName;
-    if (propAddrEl) propAddrEl.innerText = propAddr;
+    document.querySelectorAll('.auditPrintPropName').forEach(el => el.innerText = propName);
+    document.querySelectorAll('.auditPrintPropAddr').forEach(el => el.innerText = propAddr);
 
     // Trigger native print
     window.print();

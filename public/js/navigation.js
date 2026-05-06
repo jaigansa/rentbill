@@ -73,16 +73,15 @@ function switchSubSection(parentSectionId, subSectionId) {
         if (typeof loadWithdrawals === 'function') loadWithdrawals();
     }
     if (subSectionId === 'owners-accounts') {
-        loadSystemSettings(); // This loads receiving accounts
+        loadSettings(); // This loads receiving accounts
     }
     if (subSectionId === 'owners-settlements') {
         loadDashboardStats(); // This loads owner settlement list
     }
-    
+
     if (subSectionId === 'settings-config') {
-        loadSystemSettings();
-    }
-    if (subSectionId === 'settings-expenses') {
+        loadSettings();
+    }    if (subSectionId === 'settings-expenses') {
         loadExpenses();
     }
     if (subSectionId === 'settings-maintenance') {

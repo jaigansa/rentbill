@@ -105,33 +105,43 @@ async function loadTenantHistory(renterId) {
                 return data;
             },
             (b) => `
-                <div class="history-card" id="row-${b.id}">
-                    <div class="history-card-main">
-                        <div class="history-card-info">
-                            <div class="history-month">${b.billing_month.toUpperCase()}</div>
-                            <div class="history-date">
-                                <i data-lucide="clock"></i> ${new Date(b.date_generated).toLocaleDateString('en-IN', {day:'2-digit', month:'short'})}
+                <div class="tenant-row" id="row-${b.id}" style="padding: 0.6rem 1rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; border-color: var(--border); gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
+                        <!-- Styled Date Box -->
+                        <div style="width: 38px; height: 38px; background: var(--primary-light); color: var(--primary); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--primary-light);">
+                            <span style="font-size: 0.5rem; font-weight: 900; text-transform: uppercase; line-height: 1; opacity: 0.8;">${b.billing_month.slice(0, 3)}</span>
+                            <span style="font-size: 0.85rem; font-weight: 900;">${new Date(b.date_generated).getDate()}</span>
+                        </div>
+                        
+                        <div style="min-width: 0;">
+                            <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                                ${currencyFormatter.format(b.total_amount)}
+                                ${b.is_paid ? '<i data-lucide="check-circle" class="icon-success" style="width: 14px; height: 14px;"></i>' : ''}
+                            </div>
+                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">
+                                ${b.is_paid ? `Paid via ${b.payment_method || 'CASH'}` : '<span style="color: var(--danger);">Payment Overdue</span>'}
                             </div>
                         </div>
-                        <div class="history-card-amount">
-                            <div class="amount">${currencyFormatter.format(b.total_amount)}</div>
-                            <span class="badge ${b.is_paid ? 'badge-success' : 'badge-danger'}" style="font-size: 0.6rem; padding: 2px 8px;">
-                                ${b.is_paid ? 'SETTLED' : 'DUE'}
-                            </span>
-                        </div>
                     </div>
-                    <div class="history-card-footer">
-                        ${b.is_paid ? `<div class="payment-method">Paid via ${b.payment_method || 'CASH'}</div>` : '<div></div>'}
-                        <div class="history-actions no-print">
-                            <button class="btn-icon" onclick="prepareAndShare('bill', ${b.id})" title="Share Statement"><i data-lucide="share-2"></i></button>
-                            ${!b.is_paid ? `<button class="btn-icon btn-primary" onclick="openHistoryPaymentModal(${b.id}, ${b.total_amount})" title="Record Payment"><i data-lucide="credit-card"></i></button>` : ''}
-                            <button class="btn-icon btn-danger" onclick="deleteBill(${b.id})" title="Delete Record"><i data-lucide="trash-2"></i></button>
+
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <span class="badge ${b.is_paid ? 'badge-success' : 'badge-danger'}" style="font-size: 0.5rem; padding: 2px 6px; border-radius: 4px; height: fit-content; border: none;">
+                            ${b.is_paid ? 'SETTLED' : 'DUE'}
+                        </span>
+                        
+                        <div class="history-actions no-print" style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary btn-icon-sm" onclick="prepareAndShare('bill', ${b.id})" title="Share" style="width: 32px; height: 32px;"><i data-lucide="share-2"></i></button>
+                            ${!b.is_paid ? `<button class="btn btn-primary btn-icon-sm" onclick="openHistoryPaymentModal(${b.id}, ${b.total_amount})" title="Pay" style="width: 32px; height: 32px;"><i data-lucide="credit-card"></i></button>` : ''}
+                            <button class="btn btn-danger btn-icon-sm" onclick="deleteBill(${b.id})" title="Delete" style="width: 32px; height: 32px;"><i data-lucide="trash-2"></i></button>
                         </div>
                     </div>
                 </div>
             `,
             { limit: 10, triggerId: 'history-scroll-trigger' }
         );
+
+        // Force icon creation for first batch
+        setTimeout(() => lucide.createIcons(), 100);
 
     } catch (e) { console.error("History failed", e); }
 }
@@ -155,12 +165,12 @@ async function printTenantStatement() {
     const tenantName = document.getElementById('historySelectedName')?.innerText || 'All Tenants';
 
     const brandingHtml = `
-        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif;">
-            <h2 style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;">${propName}</h2>
-            <p style="margin: 4px 0; font-size: 0.9rem; color: #333;">${propAddr}</p>
-            <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">TENANT STATEMENT OF ACCOUNT</div>
-            <p style="margin: 12px 0 0 0; font-size: 0.85rem; font-weight: 900; color: #000; text-transform: uppercase;">STATEMENT FOR: ${tenantName}</p>
-            <p style="margin: 4px 0 0 0; font-size: 0.75rem; color: #555;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif; background: white;">
+            <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
+            <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+            <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">TENANT STATEMENT OF ACCOUNT</div>
+            <p style="margin: 15px 0 0 0; font-size: 0.9rem; font-weight: 900; color: var(--text-main); text-transform: uppercase;">STATEMENT FOR: <span style="border-bottom: 1.5px solid var(--border);">${tenantName}</span></p>
+            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
         </div>
     `;
 
@@ -170,7 +180,7 @@ async function printTenantStatement() {
     // Hide the "Action" column for printing
     const style = document.createElement('style');
     style.id = 'print-hide-actions';
-    style.innerHTML = '@media print { .history-actions, .no-print { display: none !important; } .history-card { border: 1px solid #000 !important; margin-bottom: 10px; } }';
+    style.innerHTML = '@media print { .history-actions, .no-print { display: none !important; } .tenant-row { border: 1px solid var(--border) !important; margin-bottom: 8px !important; padding: 12px !important; break-inside: avoid; flex-direction: row !important; align-items: center !important; } .tenant-row > div:first-child { background: var(--bg-main) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; } }';
     document.head.appendChild(style);
 
     // Trigger native print

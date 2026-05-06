@@ -392,27 +392,30 @@ const Templates = {
                         </div>
                     </div>
                     <div id="historyResults" class="hidden">
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem;">
-                            <h3 id="historySelectedName" class="section-title" style="font-size: 1rem;">Tenant Name</h3>
-                            <button onclick="printTenantStatement()" class="btn btn-secondary btn-sm" title="Print Ledger">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1.5px solid var(--border);">
+                            <div>
+                                <h3 id="historySelectedName" class="section-title" style="font-size: 1.1rem; margin-bottom: 2px; color: var(--text-main);">Tenant Name</h3>
+                                <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Detailed Payment History</div>
+                            </div>
+                            <button onclick="printTenantStatement()" class="btn btn-secondary btn-sm" title="Print Ledger" style="border: 1px solid var(--border);">
                                 <i data-lucide="printer"></i> <span class="sm:hidden">Print Ledger</span>
                             </button>
                         </div>
 
                         <!-- Financial Summary for Tenant -->
-                        <div id="historyTenantSummary" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;" class="no-print">
-                            <div style="background: var(--bg-danger-light); padding: 0.75rem; border: 1px solid var(--danger); border-radius: var(--radius-md);">
-                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Outstanding Balance</div>
-                                <div id="histStatBalance" style="font-weight: 900; font-size: 1rem; color: var(--text-main);">₹0</div>
+                        <div id="historyTenantSummary" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;" class="no-print">
+                            <div style="background: var(--bg-danger-light); padding: 0.75rem; border: 1px solid var(--danger); border-radius: var(--radius-md); text-align: center;">
+                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Outstanding</div>
+                                <div id="histStatBalance" style="font-weight: 900; font-size: 1.1rem; color: var(--danger);">₹0</div>
                             </div>
-                            <div style="background: var(--bg-success-light); padding: 0.75rem; border: 1px solid var(--success); border-radius: var(--radius-md);">
-                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase;">Security Advance</div>
-                                <div id="histStatAdvance" style="font-weight: 900; font-size: 1rem; color: var(--text-main);">₹0</div>
+                            <div style="background: var(--bg-success-light); padding: 0.75rem; border: 1px solid var(--success); border-radius: var(--radius-md); text-align: center;">
+                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Advance</div>
+                                <div id="histStatAdvance" style="font-weight: 900; font-size: 1.1rem; color: var(--success);">₹0</div>
                             </div>
                         </div>
 
-                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="list" style="width: 12px; height: 12px;"></i> Billing History
+                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px; letter-spacing: 0.5px;">
+                            <i data-lucide="list-checks" style="width: 14px; height: 14px; color: var(--primary);"></i> Transactions
                         </div>
 
                         <div id="historyBody" class="history-list"></div>
@@ -672,8 +675,30 @@ const Templates = {
                         <h3 class="section-title"><i data-lucide="file-check"></i> Audit & Analysis</h3>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-                        <div class="input-group" style="margin: 0;"><label>Select Audit Period</label><input type="month" id="auditMonth" value="${new Date().toISOString().slice(0, 7)}"></div>
-                        <button onclick="viewAuditReport()" class="btn btn-primary btn-sm" style="width: 100%;">Generate Financial Audit</button>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Generate financial statements for custom ranges like the Financial Year (Apr-Mar).</p>
+                        
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>From Date</label><input type="date" id="auditFromDate"></div>
+                            <div class="input-group"><label>To Date</label><input type="date" id="auditToDate"></div>
+                        </div>
+
+                        <div style="padding: 1.25rem; border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg-input); margin-top: 0.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                <div>
+                                    <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-main);">Indian Tax Projection</div>
+                                    <div style="font-size: 0.65rem; color: var(--text-muted);">Calculate Section 24a Deductions</div>
+                                </div>
+                                <input type="checkbox" id="auditIncludeTax" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                            </div>
+                            <div class="input-group" style="margin-top: 0;">
+                                <label>Municipal Taxes Paid (Deductible)</label>
+                                <input type="number" id="auditMunicipalTax" value="0" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <button onclick="viewAuditReport()" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; height: 48px; font-weight: 900; letter-spacing: 0.5px;">
+                            Generate Financial Audit <i data-lucide="arrow-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -909,13 +934,7 @@ const Templates = {
         </div>
 
         <div id="ownerTimelineModal" class="modal-overlay hidden">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; font-family: var(--font-main), sans-serif;">
-                    <h2 id="printPropName" style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;"></h2>
-                    <p id="printPropAddr" style="margin: 4px 0; font-size: 0.9rem; color: #333;"></p>
-                    <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">ACCOUNT STATEMENT / TIMELINE</div>
-                    <p style="margin: 12px 0 0 0; font-size: 0.8rem; font-weight: bold; color: #555;">Statement Generated: ${new Date().toLocaleString('en-IN')}</p>
-                </div>
+            <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column;">
                 <div class="modal-header no-print">
                     <h3 class="section-title"><i data-lucide="list-tree"></i> Account Timeline</h3>
                     <div style="display: flex; gap: 0.5rem;">
@@ -923,8 +942,8 @@ const Templates = {
                         <button onclick="closeOwnerTimeline()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
                     </div>
                 </div>
-                <div class="modal-body">
-                    <div id="timelineOwnerName" style="font-weight: 900; font-size: 1.2rem; margin-bottom: 1.5rem; text-transform: uppercase; border-left: 5px solid var(--primary); padding-left: 10px;"></div>
+                <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                    <div id="timelineOwnerName" style="font-weight: 900; font-size: 1.2rem; margin-bottom: 1.5rem; text-transform: uppercase; border-left: 5px solid var(--primary); padding-left: 10px; color: var(--primary);"></div>
                     <div id="ownerTimelineContent">
                         <!-- Timeline items injected here -->
                     </div>
@@ -936,19 +955,13 @@ const Templates = {
         </div>
 
         <div id="auditModal" class="modal-overlay hidden">
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="print-only" style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 1.5rem; margin-bottom: 2rem; font-family: var(--font-main), sans-serif;">
-                    <h2 class="auditPrintPropName" style="margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 900;"></h2>
-                    <p class="auditPrintPropAddr" style="margin: 4px 0; font-size: 0.9rem; color: #333;"></p>
-                    <div style="margin-top: 15px; font-weight: 900; background: #000; color: #fff !important; display: inline-block; padding: 5px 20px; font-size: 1rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;">MONTHLY AUDIT REPORT</div>
-                    <p style="margin: 12px 0 0 0; font-size: 0.8rem; font-weight: bold; color: #555;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
-                </div>
+            <div class="modal-content" style="max-width: 800px; display: flex; flex-direction: column;">
                 <div class="modal-header no-print">
                     <h3 class="section-title"><i data-lucide="file-check"></i> Audit Record</h3>
                     <button onclick="closeAuditModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
                 </div>
-                <div class="modal-body" style="background: var(--bg-main);">
-                    <div id="auditContent" style="font-family: monospace; border: 2px solid var(--border); background: var(--bg-card); color: var(--text-main); border-radius: var(--radius-md); overflow: hidden;">
+                <div class="modal-body" style="background: var(--bg-main); padding: 0; overflow-y: auto; flex: 1;">
+                    <div id="auditContent">
                         <!-- Audit content will be injected here -->
                     </div>
                 </div>

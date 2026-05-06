@@ -13,40 +13,39 @@ async function printProfessionalAgreement(id) {
         const propAddr = appSettings.property_address || 'Property Management System';
 
         const htmlMessage = `
-            <div style="background-color: #fff; padding: 20px; font-family: 'Courier New', Courier, monospace; color: #000; line-height: 1.5; max-width: 800px; margin: 0 auto;">
-                <div style="border: 3px solid #000; padding: 20px; position: relative;">
+            <div style="background-color: #fff; padding: 40px; font-family: var(--font-main), sans-serif; color: var(--text-main); line-height: 1.6; max-width: 800px; margin: 0 auto; box-sizing: border-box;">
+                <div style="border: 1px solid var(--border); padding: 40px; border-radius: 4px; position: relative;">
                     <!-- Top Header -->
-                    <div style="text-align: center; border-bottom: 3px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-                        <h2 style="margin: 0; font-size: 22px; text-transform: uppercase;">${propName}</h2>
-                        <p style="margin: 2px 0 10px 0; font-size: 12px; color: #333;">${propAddr}</p>
-                        <span style="background: #000; color: #fff; padding: 5px 15px; font-weight: bold; letter-spacing: 3px; font-size: 18px;">RENTAL AGREEMENT</span>
-                        <p style="margin: 10px 0 0 0; font-size: 12px; font-weight: bold;">RECORD NO: RB-${t.id}-${Date.now().toString().slice(-6)}</p>
+                    <div style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 20px; margin-bottom: 30px;">
+                        <h2 style="margin: 0; font-size: 24px; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
+                        <p style="margin: 8px 0 15px 0; font-size: 13px; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+                        <span style="background: var(--primary); color: #fff; padding: 6px 20px; font-weight: 900; letter-spacing: 2px; font-size: 16px; border-radius: 4px; display: inline-block;">RENTAL AGREEMENT</span>
+                        <p style="margin: 15px 0 0 0; font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">OFFICIAL RECORD NO: RB-${t.id}-${Date.now().toString().slice(-6)}</p>
                     </div>
 
                     <!-- User Info Section -->
-                    <div style="margin-bottom: 25px; border-bottom: 1px dashed #000; padding-bottom: 15px; text-align: center;">
-                        <p style="margin: 2px 0; font-size: 12px; color: #333; text-transform: uppercase; letter-spacing: 1px;">Tenant Information</p>
-                        <p style="margin: 5px 0; font-size: 20px; font-weight: bold; color: #000;">${t.name}</p>
-                        <div style="display: inline-block; background: #000; color: #fff; padding: 3px 12px; font-size: 14px; font-weight: bold; margin-top: 5px;">UNIT: ${t.room_no}</div>
+                    <div style="margin-bottom: 40px; background: var(--bg-main); padding: 25px; border-radius: 8px; text-align: center; border: 1px solid var(--border);">
+                        <p style="margin: 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; font-weight: 800;">Tenant Information</p>
+                        <p style="margin: 10px 0; font-size: 26px; font-weight: 900; color: var(--text-main);">${t.name}</p>
+                        <div style="display: inline-block; border: 1.5px solid var(--primary); color: var(--primary); padding: 4px 18px; font-size: 14px; font-weight: 900; margin-top: 5px; border-radius: 8px; background: white;">UNIT: ${t.room_no}</div>
                     </div>
 
                     <!-- Financials -->
-                    <div style="margin-bottom: 25px;">
-                        <p style="background: #000; color: #fff; display: inline-block; padding: 2px 10px; font-size: 14px; margin-bottom: 10px;">RENT & CHARGES</p>
+                    <div style="margin-bottom: 40px;">
+                        <p style="background: var(--primary); color: #fff; display: inline-block; padding: 4px 15px; font-size: 12px; font-weight: 900; border-radius: 4px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Lease & Financial Terms</p>
                         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                            <tr><td style="padding: 8px; border: 1px solid #000;">START DATE</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${formattedMoveIn}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #000;">MONTHLY RENT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(t.base_rent)}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #000;">WATER/MAINT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(t.water_maint)}</td></tr>
-                            <tr><td style="padding: 8px; border: 1px solid #000;">EB UNIT RATE</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(t.eb_unit_price)}</td></tr>
-                            <tr style="font-weight: bold; background: #f0f0f0;"><td style="padding: 8px; border: 1px solid #000;">SECURITY DEPOSIT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(t.advance_amount)}</td></tr>
+                            <tr><td style="padding: 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">LEASE START DATE</td><td style="padding: 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${formattedMoveIn}</td></tr>
+                            <tr><td style="padding: 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">MONTHLY RENT</td><td style="padding: 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(t.base_rent)}</td></tr>
+                            <tr><td style="padding: 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">WATER/MAINTENANCE</td><td style="padding: 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(t.water_maint)}</td></tr>
+                            <tr><td style="padding: 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">EB UNIT RATE</td><td style="padding: 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(t.eb_unit_price)}</td></tr>
+                            <tr style="font-weight: 900; background: var(--primary-light);"><td style="padding: 15px 12px; border: 1px solid var(--primary); color: var(--primary);">SECURITY DEPOSIT</td><td style="padding: 15px 12px; border: 1px solid var(--primary); text-align: right; color: var(--primary); font-size: 16px;">${currencyFormatter.format(t.advance_amount)}</td></tr>
                         </table>
                     </div>
 
                     <!-- Terms -->
-                    <div class="page-break"></div>
-                    <div style="margin-bottom: 25px; padding-top: 20px;">
-                        <p style="background: #000; color: #fff !important; display: inline-block; padding: 2px 10px; font-size: 14px; margin-bottom: 10px;">HOUSE RULES & TERMS</p>
-                        <ul style="padding-left: 20px; font-size: 12px; line-height: 1.6; margin: 0; text-align: justify;">
+                    <div style="margin-bottom: 40px; page-break-before: always; padding-top: 20px;">
+                        <p style="background: var(--primary); color: #fff !important; display: inline-block; padding: 4px 15px; font-size: 12px; font-weight: 900; border-radius: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">House Rules & Standard Conditions</p>
+                        <ul style="padding-left: 20px; font-size: 13px; line-height: 1.8; margin: 0; text-align: justify; color: var(--text-main);">
                             <li><strong>LEASE PERIOD:</strong> 11 Months. Extension subject to mutual agreement and rent revision.</li>
                             <li><strong>PAYMENT:</strong> Rent must be paid on or before the 5th of every month. A late fee may apply for delays.</li>
                             <li><strong>SECURITY DEPOSIT:</strong> Interest-free advance, refundable only after handing over vacant possession and original keys.</li>
@@ -60,20 +59,19 @@ async function printProfessionalAgreement(id) {
                     </div>
 
                     <!-- Signature Section for Print -->
-                    <div style="margin-top: 50px; display: flex; justify-content: space-between; padding: 0 20px;">
-                        <div style="text-align: center; border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 12px;">OWNER SIGNATURE</div>
-                        <div style="text-align: center; border-top: 1px solid #000; width: 150px; padding-top: 5px; font-size: 12px;">TENANT SIGNATURE</div>
+                    <div style="margin-top: 80px; display: flex; justify-content: space-between; padding: 0 30px;">
+                        <div style="text-align: center; border-top: 1.5px solid var(--text-main); width: 180px; padding-top: 8px; font-size: 12px; font-weight: 800; color: var(--text-main);">OWNER SIGNATURE</div>
+                        <div style="text-align: center; border-top: 1.5px solid var(--text-main); width: 180px; padding-top: 8px; font-size: 12px; font-weight: 800; color: var(--text-main);">TENANT SIGNATURE</div>
                     </div>
 
-                    <!-- Footer Barcode simulation -->
-                    <div style="margin-top: 30px; border-top: 2px solid #000; padding-top: 10px; text-align: center;">
-                        <div style="height: 15px; background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 5px); margin-bottom: 5px;"></div>
-                        <p style="font-size: 10px; margin: 0; letter-spacing: 5px;">OFFICIAL DOCUMENT // RENTBILL SYSTEM</p>
+                    <!-- Footer -->
+                    <div style="margin-top: 60px; border-top: 1px solid var(--border); padding-top: 20px; text-align: center;">
+                        <p style="font-size: 10px; margin: 0; letter-spacing: 3px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">OFFICIAL DOCUMENT // GENERATED VIA RENTBILL PRO SYSTEM</p>
                     </div>
 
                     <!-- Stamp -->
-                    <div style="position: absolute; top: 150px; right: 40px; border: 4px double #000; padding: 5px 10px; transform: rotate(15deg); opacity: 0.3; font-weight: bold; color: #000; font-size: 18px;">
-                        OFFICIAL RECORD
+                    <div style="position: absolute; top: 180px; right: 50px; border: 3px double var(--primary); padding: 10px 20px; transform: rotate(15deg); opacity: 0.15; font-weight: 900; color: var(--primary); font-size: 22px; text-transform: uppercase; border-radius: 8px;">
+                        Verified Record
                     </div>
                 </div>
             </div>`;
@@ -167,9 +165,9 @@ async function prepareAndShare(type, id, extraDetails = null) {
                 if (ownerAcc) {
                     paymentInfo = `*PAYMENT DETAILS:*\n`;
                     htmlPaymentInfo = `
-                        <div style="margin-bottom: 20px; border: 2px solid #000; padding: 12px; background: #fafafa;">
-                            <p style="margin: 0 0 8px 0; font-weight: bold; font-size: 13px; text-decoration: underline;">HOW TO PAY</p>
-                            <p style="margin: 5px 0; font-size: 12px;">Transfer <strong>${currencyFormatter.format(bill.total_amount)}</strong> using details below:</p>
+                        <div class="print-no-break" style="margin-bottom: 25px; border: 1.5px solid var(--primary); border-radius: 12px; padding: 15px; background: var(--bg-main); break-inside: avoid;">
+                            <p style="margin: 0 0 10px 0; font-weight: 900; font-size: 13px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">Payment Instructions</p>
+                            <p style="margin: 5px 0; font-size: 12px; font-weight: 700; color: var(--text-main);">Transfer <strong>${currencyFormatter.format(bill.total_amount)}</strong> using the options below:</p>
                     `;
 
                     if (ownerAcc.upi) {
@@ -180,19 +178,20 @@ async function prepareAndShare(type, id, extraDetails = null) {
                             `Direct Pay: ${upiUrl}\n`;
                         
                         htmlPaymentInfo += `
-                            <div style="background: #fff; border: 1px dashed #000; padding: 10px; margin: 10px 0; text-align: center;">
-                                <div style="margin-bottom: 12px;">
+                            <div style="background: white; border: 1px dashed var(--primary); border-radius: 10px; padding: 15px; margin: 12px 0; text-align: center; break-inside: avoid;">
+                                <div style="margin-bottom: 15px;">
                                     <img src="${qrDataURL}"
-                                         alt="UPI QR Code" style="display: block; margin: 0 auto; max-width: 150px; width: 100%;">                                    <p style="font-size: 9px; color: #666; margin-top: 5px;">Scan with any UPI App</p>
+                                         alt="UPI QR Code" style="display: block; margin: 0 auto; max-width: 140px; width: 100%;">
+                                    <p style="font-size: 10px; color: var(--text-muted); margin-top: 8px; font-weight: 700;">SCAN TO PAY VIA UPI</p>
                                 </div>
-                                <div style="border-top: 1px solid #eee; padding-top: 10px;">
-                                    <div style="background: #f9f9f9; border: 1px solid #ddd; padding: 6px; margin-bottom: 10px; word-break: break-all;">
-                                        <code style="font-size: 12px; font-weight: bold; color: #000;">${ownerAcc.upi}</code>
+                                <div style="border-top: 1px solid var(--border); padding-top: 12px;">
+                                    <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 12px; word-break: break-all;">
+                                        <code style="font-size: 12px; font-weight: 900; color: var(--primary);">${ownerAcc.upi}</code>
                                     </div>
                                     <a href="${upiUrl.replace(' ', '%20')}" 
                                        target="_blank"
-                                       style="text-decoration: none; background: #000; color: #fff; display: block; padding: 8px; border-radius: 4px; font-weight: bold; font-size: 12px;">
-                                        TAP TO PAY
+                                       style="text-decoration: none; background: var(--primary); color: #fff !important; display: block; padding: 10px; border-radius: 8px; font-weight: 900; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                                        TAP TO PAY NOW
                                     </a>
                                 </div>
                             </div>
@@ -207,12 +206,12 @@ async function prepareAndShare(type, id, extraDetails = null) {
                             `IFSC: ${ownerAcc.ifsc}\n`;
                         
                         htmlPaymentInfo += `
-                            <div style="background: #fff; border: 1px dashed #000; padding: 10px; margin-top: 10px; text-align: left;">
-                                <p style="margin: 0 0 5px 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">Bank Transfer Details</p>
-                                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                                    <tr><td style="padding: 2px 0; color: #666;">BANK</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.bank_name}</td></tr>
-                                    <tr><td style="padding: 2px 0; color: #666;">ACC NO</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.account_number}</td></tr>
-                                    <tr><td style="padding: 2px 0; color: #666;">IFSC</td><td style="padding: 2px 0; font-weight: bold; text-align: right;">${ownerAcc.ifsc}</td></tr>
+                            <div style="background: white; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; text-align: left; break-inside: avoid;">
+                                <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Bank Transfer Details</p>
+                                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                    <tr><td style="padding: 4px 0; color: var(--text-muted); font-weight: 600;">BANK</td><td style="padding: 4px 0; font-weight: 900; text-align: right; color: var(--text-main);">${ownerAcc.bank_name}</td></tr>
+                                    <tr><td style="padding: 4px 0; color: var(--text-muted); font-weight: 600;">ACC NO</td><td style="padding: 4px 0; font-weight: 900; text-align: right; color: var(--text-main);">${ownerAcc.account_number}</td></tr>
+                                    <tr><td style="padding: 4px 0; color: var(--text-muted); font-weight: 600;">IFSC</td><td style="padding: 4px 0; font-weight: 900; text-align: right; color: var(--text-main);">${ownerAcc.ifsc}</td></tr>
                                 </table>
                             </div>
                         `;
@@ -271,86 +270,80 @@ async function prepareAndShare(type, id, extraDetails = null) {
             const propName = appSettings.property_name || 'RENTBILL PRO';
             const propAddr = appSettings.property_address || 'Property Management System';
 
-            let htmlAdjustments = '';
+            htmlAdjustments = '';
             if (bill.is_paid) {
-                if (bill.write_off_amount > 0) htmlAdjustments += `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #d32f2f;">WRITE-OFF (Loss)</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">-${currencyFormatter.format(bill.write_off_amount)}</td></tr>`;
-                if (bill.arrears_amount > 0) htmlAdjustments += `<tr><td style="padding: 6px 5px; border: 1px solid #000; color: #f57c00;">CARRY FORWARD</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #f57c00;">${currencyFormatter.format(bill.arrears_amount)}</td></tr>`;
+                if (bill.write_off_amount > 0) htmlAdjustments += `<tr style="break-inside: avoid;"><td style="padding: 6px 5px; border: 1px solid #000; color: #d32f2f;">WRITE-OFF (Loss)</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #d32f2f;">-${currencyFormatter.format(bill.write_off_amount)}</td></tr>`;
+                if (bill.arrears_amount > 0) htmlAdjustments += `<tr style="break-inside: avoid;"><td style="padding: 6px 5px; border: 1px solid #000; color: #f57c00;">CARRY FORWARD</td><td style="padding: 6px 5px; border: 1px solid #000; text-align: right; color: #f57c00;">${currencyFormatter.format(bill.arrears_amount)}</td></tr>`;
             }
 
             htmlMessage = `
-                <div style="background-color: #f0f0f0; padding: 20px 10px; font-family: var(--font-main), sans-serif; color: #000; line-height: 1.5;">
-                    <div style="background-color: #fff; border: 1.5px solid #000; border-radius: 12px; padding: 25px; position: relative; max-width: 600px; margin: 0 auto; overflow-wrap: break-word; box-sizing: border-box; box-shadow: 0 4px 0px #000;">
+                <div style="background-color: var(--bg-main); padding: 20px 10px; font-family: var(--font-main), sans-serif; color: var(--text-main); line-height: 1.5;">
+                    <div class="print-no-break" style="background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; position: relative; max-width: 600px; margin: 0 auto; overflow-wrap: break-word; box-sizing: border-box; box-shadow: var(--shadow); break-inside: avoid;">
                         <!-- Header -->
-                        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-                            <h2 style="margin: 0; font-size: 20px; text-transform: uppercase; font-weight: 900;">${propName}</h2>
-                            <p style="margin: 4px 0 12px 0; font-size: 11px; color: #333;">${propAddr}</p>
-                            <span style="background: #000; color: #fff !important; padding: 6px 15px; font-weight: 900; letter-spacing: 1px; font-size: 13px; display: inline-block; margin-bottom: 8px; border-radius: 4px;">${bill.is_paid ? 'PAYMENT RECEIPT' : 'RENT BILL'}</span>
-                            <p style="margin: 0; font-size: 11px; font-weight: bold;">BILL NO: ${bill.is_paid ? 'REC' : 'INV'}-${bill.id}-${genDate.getTime().toString().slice(-6)}</p>
+                        <div style="text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px; break-inside: avoid;">
+                            <h2 style="margin: 0; font-size: 22px; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 0.5px;">${propName}</h2>
+                            <p style="margin: 6px 0 15px 0; font-size: 11px; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+                            <span style="background: var(--primary); color: white !important; padding: 6px 18px; font-weight: 900; letter-spacing: 1px; font-size: 13px; display: inline-block; margin-bottom: 10px; border-radius: 8px;">${bill.is_paid ? 'PAYMENT RECEIPT' : 'RENT INVOICE'}</span>
+                            <p style="margin: 0; font-size: 11px; font-weight: 800; color: var(--text-muted);">BILL NO: ${bill.is_paid ? 'REC' : 'INV'}-${bill.id}-${genDate.getTime().toString().slice(-6)}</p>
                         </div>
 
                         <!-- User Info Section -->
-                        <div style="margin-bottom: 25px; border-bottom: 1px dashed #ccc; padding-bottom: 20px; text-align: center;">
-                            <p style="margin: 2px 0; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1.5px; font-weight: bold;">Tenant Details</p>
-                            <p style="margin: 8px 0; font-size: 22px; font-weight: 900; color: #000;">${t.name}</p>
-                            <div style="display: inline-block; border: 1.5px solid #000; padding: 3px 12px; font-size: 13px; font-weight: 900; margin-top: 5px; border-radius: 6px;">UNIT: ${t.room_no}</div>
-                            <div style="margin-top: 12px; font-size: 14px; font-weight: 900; color: #000;">STAY PERIOD: ${bill.billing_month.toUpperCase()}</div>
-                            ${!bill.is_paid ? `<div style="margin-top: 5px; font-size: 12px; font-weight: bold; color: #000;">DUE BY: ${formattedDueDate}</div>` : ''}
+                        <div style="margin-bottom: 30px; background: var(--primary-light); padding: 20px; border-radius: 12px; text-align: center; break-inside: avoid;">
+                            <p style="margin: 0; font-size: 10px; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 900; opacity: 0.8;">Tenant Details</p>
+                            <p style="margin: 8px 0; font-size: 24px; font-weight: 900; color: var(--text-main);">${t.name}</p>
+                            <div style="display: inline-block; border: 1.5px solid var(--primary); color: var(--primary); padding: 4px 14px; font-size: 14px; font-weight: 900; margin-top: 5px; border-radius: 8px; background: white;">UNIT: ${t.room_no}</div>
+                            <div style="margin-top: 15px; font-size: 15px; font-weight: 800; color: var(--text-main);">PERIOD: ${bill.billing_month.toUpperCase()}</div>
+                            ${!bill.is_paid ? `<div style="margin-top: 6px; font-size: 13px; font-weight: 800; color: var(--danger);">DUE BY: ${formattedDueDate}</div>` : ''}
                         </div>
 
                         <!-- Match-Style Electricity Table -->
-                        <div style="margin-bottom: 25px;">
-                            <p style="background: #000; color: #fff !important; display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 4px; text-transform: uppercase;">Electricity Calculation</p>
+                        <div style="margin-bottom: 25px; break-inside: avoid;">
+                            <p style="background: var(--primary); color: white !important; display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Electricity Consumption</p>
                             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                <tr><td style="padding: 8px; border: 1px solid #000;">PREVIOUS READING</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${bill.prev_eb_reading}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">CURRENT READING</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${bill.curr_eb_reading}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">UNITS USED (x ${t.eb_unit_price})</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${ebUnits.toFixed(1)}</td></tr>
-                                <tr style="font-weight: 900; background: #f0f0f0;"><td style="padding: 8px; border: 1px solid #000;">TOTAL ELECTRICITY</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(ebCost)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">PREVIOUS READING</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${bill.prev_eb_reading}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">CURRENT READING</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${bill.curr_eb_reading}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">UNITS (x ${t.eb_unit_price})</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${ebUnits.toFixed(1)}</td></tr>
+                                <tr style="font-weight: 900; background: var(--bg-main); break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--primary);">TOTAL EB COST</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; color: var(--primary);">${currencyFormatter.format(ebCost)}</td></tr>
                             </table>
                         </div>
 
                         <!-- Financials -->
-                        <div style="margin-bottom: 25px;">
-                            <p style="background: #000; color: #fff !important; display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 4px; text-transform: uppercase;">Bill Details</p>
+                        <div style="margin-bottom: 25px; break-inside: avoid;">
+                            <p style="background: var(--primary); color: white !important; display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Bill Itemization</p>
                             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                <tr><td style="padding: 8px; border: 1px solid #000;">MONTHLY RENT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.rent_amount)}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">WATER/MAINT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.water_amount)}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">ELECTRICITY</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(ebCost)}</td></tr>
-                                ${otherFees > 0 ? `<tr><td style="padding: 8px; border: 1px solid #000;">EXTRA CHARGES</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(otherFees)}</td></tr>` : ''}
-                                ${bill.arrears_included > 0 ? `<tr><td style="padding: 8px; border: 1px solid #000;">PREV. ARREARS</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.arrears_included)}</td></tr>` : ''}
-                                ${bill.discount_amount > 0 ? `<tr><td style="padding: 8px; border: 1px solid #000;">DISCOUNT / ADJ (-)</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">-${currencyFormatter.format(bill.discount_amount)}</td></tr>` : ''}
-                                <tr style="font-weight: 900; background: #f0f0f0;"><td style="padding: 8px; border: 1px solid #000;">TOTAL DUE</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.total_amount)}</td></tr>
-                                ${!bill.is_paid ? `
-                                    <tr style="font-weight: 900; background: #000; color: #fff;"><td style="padding: 10px 8px; border: 1px solid #000; color: #fff;">DUE DATE</td><td style="padding: 10px 8px; border: 1px solid #000; text-align: right; color: #fff;">${formattedDueDate}</td></tr>
-                                ` : ''}
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">MONTHLY RENT</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(bill.rent_amount)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">WATER/MAINT</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(bill.water_amount)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">ELECTRICITY</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(ebCost)}</td></tr>
+                                ${otherFees > 0 ? `<tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">EXTRA CHARGES</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(otherFees)}</td></tr>` : ''}
+                                ${bill.arrears_included > 0 ? `<tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">PREV. ARREARS</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(bill.arrears_included)}</td></tr>` : ''}
+                                ${bill.discount_amount > 0 ? `<tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--danger); font-weight: 700;">DISCOUNT / ADJ (-)</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; color: var(--danger); font-weight: 800;">-${currencyFormatter.format(bill.discount_amount)}</td></tr>` : ''}
+                                <tr style="font-weight: 900; background: var(--primary-light); break-inside: avoid;"><td style="padding: 12px; border: 1px solid var(--primary); color: var(--primary); font-size: 15px;">TOTAL DUE</td><td style="padding: 12px; border: 1px solid var(--primary); text-align: right; color: var(--primary); font-size: 15px;">${currencyFormatter.format(bill.total_amount)}</td></tr>
                                 ${bill.is_paid ? `
-                                    <tr style="font-weight: 900; background: #fafafa;"><td style="padding: 10px 8px; border: 1px solid #000;">TOTAL PAID</td><td style="padding: 10px 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(bill.paid_amount)}</td></tr>
+                                    <tr style="font-weight: 900; background: var(--bg-success-light); break-inside: avoid;"><td style="padding: 12px; border: 1px solid var(--success); color: var(--success);">TOTAL PAID</td><td style="padding: 12px; border: 1px solid var(--success); text-align: right; color: var(--success);">${currencyFormatter.format(bill.paid_amount)}</td></tr>
                                     ${htmlAdjustments}
                                 ` : ''}
                             </table>
-                            <div style="margin-top: 15px; font-size: 11px; font-weight: bold; font-style: italic; color: #333;">
-                                Amount in words: ${amountInWords}
+                            <div style="margin-top: 15px; font-size: 12px; font-weight: 800; color: var(--text-main); background: var(--bg-main); padding: 10px; border-radius: 8px; border: 1px dashed var(--border);">
+                                <span style="color: var(--text-muted); text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 2px;">Amount in words</span>
+                                ${amountInWords}
                             </div>
                         </div>
 
                         <!-- Payment Instructions -->
-                        ${!bill.is_paid ? htmlPaymentInfo : ''}
+                        <div class="print-no-break" style="break-inside: avoid;">
+                            ${!bill.is_paid ? htmlPaymentInfo : ''}
+                        </div>
 
                         <!-- Status Stamp -->
-                        <div style="display: flex; gap: 15px; justify-content: center; margin: 20px auto;">
-                            <div style="border: 2px solid #000; border-radius: 8px; padding: 8px 20px; transform: rotate(-3deg); font-weight: 900; font-size: 20px; text-align: center; text-transform: uppercase;">
+                        <div style="display: flex; justify-content: center; margin: 30px auto 10px auto; break-inside: avoid;">
+                            <div style="border: 2px solid ${bill.is_paid ? 'var(--success)' : 'var(--danger)'}; color: ${bill.is_paid ? 'var(--success)' : 'var(--danger)'}; border-radius: 12px; padding: 12px 35px; transform: rotate(-3deg); font-weight: 900; font-size: 26px; text-align: center; text-transform: uppercase; background: white; box-shadow: 4px 4px 0px ${bill.is_paid ? 'var(--bg-success-light)' : 'var(--bg-danger-light)'};">
                                 ${bill.is_paid ? 'PAID' : 'PENDING'}
                             </div>
-                            ${bill.is_paid ? `
-                            <div style="border: 2px solid #000; border-radius: 8px; padding: 8px 20px; transform: rotate(3deg); font-weight: 900; font-size: 20px; text-align: center; color: #000; text-transform: uppercase;">
-                                VERIFIED
-                            </div>
-                            ` : ''}
                         </div>
 
                         <!-- Footer -->
-                        <div style="margin-top: 25px; border-top: 2px solid #000; padding-top: 15px; text-align: center;">
-                            <div style="height: 8px; background: repeating-linear-gradient(90deg, #000, #000 4px, #fff 4px, #fff 8px); margin-bottom: 8px;"></div>
-                            <p style="font-size: 10px; margin: 0; letter-spacing: 2px; font-weight: bold;">GENERATED: ${formattedGenDate} // OFFICIAL DOCUMENT</p>
+                        <div style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; text-align: center; break-inside: avoid;">
+                            <p style="font-size: 10px; margin: 0; letter-spacing: 2px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Generated: ${formattedGenDate} • RentBill Pro Official Document</p>
                         </div>
                     </div>
                 </div>`;
@@ -403,47 +396,46 @@ async function prepareAndShare(type, id, extraDetails = null) {
             const propAddr = appSettings.property_address || 'Property Management System';
 
             htmlMessage = `
-                <div style="background-color: #f0f0f0; padding: 20px 10px; font-family: var(--font-main), sans-serif; color: #000; line-height: 1.5;">
-                    <div style="background-color: #fff; border: 1.5px solid #000; border-radius: 12px; padding: 25px; position: relative; max-width: 600px; margin: 0 auto; overflow-wrap: break-word; box-sizing: border-box; box-shadow: 0 4px 0px #000;">
+                <div style="background-color: var(--bg-main); padding: 20px 10px; font-family: var(--font-main), sans-serif; color: var(--text-main); line-height: 1.5;">
+                    <div style="background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; position: relative; max-width: 600px; margin: 0 auto; overflow-wrap: break-word; box-sizing: border-box; box-shadow: var(--shadow);">
                         <!-- Header -->
-                        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
-                            <h2 style="margin: 0; font-size: 20px; text-transform: uppercase; font-weight: 900;">${propName}</h2>
-                            <p style="margin: 4px 0 12px 0; font-size: 11px; color: #333;">${propAddr}</p>
-                            <span style="background: #000; color: #fff !important; padding: 6px 15px; font-weight: 900; letter-spacing: 1px; font-size: 13px; display: inline-block; margin-bottom: 8px; border-radius: 4px;">EXIT SETTLEMENT</span>
-                            <p style="margin: 0; font-size: 11px; font-weight: bold;">DOC NO: CLR-${t.id}-${genDate.getTime().toString().slice(-6)}</p>
+                        <div style="text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 25px;">
+                            <h2 style="margin: 0; font-size: 22px; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 0.5px;">${propName}</h2>
+                            <p style="margin: 6px 0 15px 0; font-size: 11px; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+                            <span style="background: var(--primary); color: white !important; padding: 6px 18px; font-weight: 900; letter-spacing: 1px; font-size: 13px; display: inline-block; margin-bottom: 10px; border-radius: 8px;">EXIT SETTLEMENT</span>
+                            <p style="margin: 0; font-size: 11px; font-weight: 800; color: var(--text-muted);">DOC NO: CLR-${t.id}-${genDate.getTime().toString().slice(-6)}</p>
                         </div>
 
                         <!-- User Info Section -->
-                        <div style="margin-bottom: 25px; border-bottom: 1px dashed #ccc; padding-bottom: 20px; text-align: center;">
-                            <p style="margin: 2px 0; font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1.5px; font-weight: bold;">Tenant Details</p>
-                            <p style="margin: 8px 0; font-size: 22px; font-weight: 900; color: #000;">${t.name}</p>
-                            <div style="display: inline-block; border: 1.5px solid #000; padding: 3px 12px; font-size: 13px; font-weight: 900; margin-top: 5px; border-radius: 6px;">UNIT: ${t.room_no} | STAY: ${moveInDate} - ${vacateDate}</div>
+                        <div style="margin-bottom: 30px; background: var(--primary-light); padding: 20px; border-radius: 12px; text-align: center; break-inside: avoid;">
+                            <p style="margin: 0; font-size: 10px; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 900; opacity: 0.8;">Tenant Details</p>
+                            <p style="margin: 8px 0; font-size: 24px; font-weight: 900; color: var(--text-main);">${t.name}</p>
+                            <div style="display: inline-block; border: 1.5px solid var(--primary); color: var(--primary); padding: 4px 14px; font-size: 13px; font-weight: 900; margin-top: 5px; border-radius: 8px; background: white;">UNIT: ${t.room_no} | STAY: ${moveInDate} - ${vacateDate}</div>
                         </div>
 
                         <!-- Financials -->
-                        <div style="margin-bottom: 25px;">
-                            <p style="background: #000; color: #fff !important; display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 4px; text-transform: uppercase;">Settlement Summary</p>
+                        <div style="margin-bottom: 25px; break-inside: avoid;">
+                            <p style="background: var(--primary); color: white !important; display: inline-block; padding: 4px 12px; font-size: 11px; font-weight: 900; margin-bottom: 12px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">Settlement Summary</p>
                             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                <tr><td style="padding: 8px; border: 1px solid #000;">SECURITY DEPOSIT</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(s.advance)}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">PENDING RENT (-)</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(s.rentDue)}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">PENDING EB (-)</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(s.ebDue)}</td></tr>
-                                <tr><td style="padding: 8px; border: 1px solid #000;">REPAIRS/OTHERS (-)</td><td style="padding: 8px; border: 1px solid #000; text-align: right;">${currencyFormatter.format(s.repairs)}</td></tr>
-                                <tr style="font-weight: 900; background: #f0f0f0;"><td style="padding: 10px 8px; border: 1px solid #000;">${s.refundLabel.toUpperCase()}</td><td style="padding: 10px 8px; border: 1px solid #000; text-align: right;">${s.totalRefund}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">SECURITY DEPOSIT</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; font-weight: 800;">${currencyFormatter.format(s.advance)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">PENDING RENT (-)</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; color: var(--danger); font-weight: 800;">${currencyFormatter.format(s.rentDue)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">PENDING EB (-)</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; color: var(--danger); font-weight: 800;">${currencyFormatter.format(s.ebDue)}</td></tr>
+                                <tr style="break-inside: avoid;"><td style="padding: 10px 12px; border: 1px solid var(--border); color: var(--text-muted); font-weight: 700;">REPAIRS/OTHERS (-)</td><td style="padding: 10px 12px; border: 1px solid var(--border); text-align: right; color: var(--danger); font-weight: 800;">${currencyFormatter.format(s.repairs)}</td></tr>
+                                <tr style="font-weight: 900; background: var(--primary-light); break-inside: avoid;"><td style="padding: 12px; border: 1px solid var(--primary); color: var(--primary); font-size: 15px;">${s.refundLabel.toUpperCase()}</td><td style="padding: 12px; border: 1px solid var(--primary); text-align: right; color: var(--primary); font-size: 15px;">${s.totalRefund}</td></tr>
                             </table>
-                            ${s.reason && s.reason !== 'None' ? `<p style="margin-top: 12px; font-size: 11px; color: #333;"><strong>Reason for Charges:</strong> ${s.reason}</p>` : ''}
-                            <p style="margin-top: 10px; font-size: 11px; color: #333;"><strong>Final EB Reading:</strong> ${s.ebReading}</p>
-                            <p style="margin-top: 20px; font-size: 13px; line-height: 1.5; color: #000;">The premises has been inspected and vacated. All dues cleared. Best wishes for your future!</p>
+                            ${s.reason && s.reason !== 'None' ? `<div style="margin-top: 15px; background: var(--bg-main); padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary); break-inside: avoid;"><p style="margin: 0; font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 800;">Reason for Charges</p><p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-main); font-weight: 600;">${s.reason}</p></div>` : ''}
+                            <p style="margin-top: 12px; font-size: 12px; font-weight: 800; color: var(--text-muted); text-align: center; background: var(--bg-main); padding: 8px; border-radius: 8px; break-inside: avoid;">Final EB Reading: <span style="color: var(--text-main);">${s.ebReading}</span></p>
+                            <p style="margin-top: 25px; font-size: 13px; line-height: 1.6; color: var(--text-main); text-align: center; font-style: italic; break-inside: avoid;">The premises has been inspected and vacated. All dues cleared. Best wishes for your future!</p>
                         </div>
 
                         <!-- Status Stamp -->
-                        <div style="display: block; margin: 25px auto; width: fit-content; border: 2px solid #000; border-radius: 8px; padding: 10px 25px; transform: rotate(-3deg); font-weight: 900; font-size: 20px; text-align: center; text-transform: uppercase;">
+                        <div style="display: block; margin: 30px auto 10px auto; width: fit-content; border: 2px solid var(--success); color: var(--success); border-radius: 12px; padding: 12px 30px; transform: rotate(-3deg); font-weight: 900; font-size: 22px; text-align: center; text-transform: uppercase; background: white; box-shadow: 4px 4px 0px var(--bg-success-light); break-inside: avoid;">
                             VERIFIED & CLEARED
                         </div>
 
                         <!-- Footer -->
-                        <div style="margin-top: 25px; border-top: 2px solid #000; padding-top: 15px; text-align: center;">
-                            <div style="height: 8px; background: repeating-linear-gradient(90deg, #000, #000 4px, #fff 4px, #fff 8px); margin-bottom: 8px;"></div>
-                            <p style="font-size: 10px; margin: 0; letter-spacing: 2px; font-weight: bold;">GENERATED: ${formattedGenDate} // OFFICIAL DOCUMENT</p>
+                        <div style="margin-top: 30px; border-top: 1px solid var(--border); padding-top: 20px; text-align: center; break-inside: avoid;">
+                            <p style="font-size: 10px; margin: 0; letter-spacing: 2px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Generated: ${formattedGenDate} • RentBill Pro Official Document</p>
                         </div>
                     </div>
                 </div>`;
@@ -481,14 +473,10 @@ async function shareTo(channel) {
             const err = await res.json();
             showNotification(err.error || "Email failed", "error");
         }
-    } else if (channel === 'copy') {
-        const plainText = shareData.message;
-        navigator.clipboard.writeText(plainText).then(() => {
-            showNotification("Text copied to clipboard", "success");
-        });
     } else if (channel === 'print') {
         const printArea = document.getElementById('print-area');
         if (printArea) {
+            document.body.classList.add('printing-bill');
             // Populate hidden print area with HTML content
             printArea.innerHTML = shareData.htmlMessage;
             printArea.classList.remove('hidden');
@@ -498,6 +486,7 @@ async function shareTo(channel) {
             
             // Re-hide after print dialog closes
             setTimeout(() => {
+                document.body.classList.remove('printing-bill');
                 printArea.classList.add('hidden');
                 printArea.innerHTML = '';
             }, 500);
