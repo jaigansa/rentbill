@@ -57,6 +57,9 @@ func GetSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"db_path":            config.AppConfig.DbPath,
 		"username":           config.AppConfig.Username,
+		"property_name":      config.AppConfig.PropertyName,
+		"property_address":   config.AppConfig.PropertyAddress,
+		"agreement_terms":    config.AppConfig.AgreementTerms,
 		"email_user":         config.AppConfig.EmailUser,
 		"email_bcc":          config.AppConfig.EmailBCC,
 		"server_port":        config.AppConfig.ServerPort,
@@ -66,39 +69,53 @@ func GetSettings(c *gin.Context) {
 
 func UpdateSettings(c *gin.Context) {
 	var req struct {
-		EmailUser         string                    `json:"email_user"`
-		EmailPass         string                    `json:"email_pass"`
-		EmailBCC          string                    `json:"email_bcc"`
-		NewPin            string                    `json:"new_pin"`
-		ServerPort        int                       `json:"server_port"`
+		PropertyName      *string                   `json:"property_name"`
+		PropertyAddress   *string                   `json:"property_address"`
+		AgreementTerms    *string                   `json:"agreement_terms"`
+		EmailUser         *string                   `json:"email_user"`
+		EmailPass         *string                   `json:"email_pass"`
+		EmailBCC          *string                   `json:"email_bcc"`
+		NewPin            *string                   `json:"new_pin"`
+		NewStaffPin       *string                   `json:"new_staff_pin"`
+		ServerPort        *int                      `json:"server_port"`
 		ReceivingAccounts []models.ReceivingAccount `json:"receiving_accounts"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input: " + err.Error()})
 		return
 	}
-	if req.EmailUser != "" {
-		config.AppConfig.EmailUser = req.EmailUser
-	}
-	if req.EmailPass != "" {
-		config.AppConfig.EmailPass = req.EmailPass
-	}
+
+	if req.PropertyName != nil { config.AppConfig.PropertyName = *req.PropertyName }
+	if req.PropertyAddress != nil { config.AppConfig.PropertyAddress = *req.PropertyAddress }
+	if req.AgreementTerms != nil { config.AppConfig.AgreementTerms = *req.AgreementTerms }
+	if req.EmailUser != nil { config.AppConfig.EmailUser = *req.EmailUser }
+	if req.EmailPass != nil { config.AppConfig.EmailPass = *req.EmailPass }
+	if req.EmailBCC != nil { config.AppConfig.EmailBCC = *req.EmailBCC }
+	
 	portChanged := false
-	if req.ServerPort > 0 && req.ServerPort != config.AppConfig.ServerPort {
-		config.AppConfig.ServerPort = req.ServerPort
+	if req.ServerPort != nil && *req.ServerPort > 0 && *req.ServerPort != config.AppConfig.ServerPort {
+		config.AppConfig.ServerPort = *req.ServerPort
 		portChanged = true
 	}
-	config.AppConfig.EmailBCC = req.EmailBCC
+
 	if req.ReceivingAccounts != nil {
 		config.AppConfig.ReceivingAccounts = req.ReceivingAccounts
 	}
-	if req.NewPin != "" {
-		hash, err := config.HashPassword(req.NewPin)
+
+	if req.NewPin != nil && *req.NewPin != "" {
+		hash, err := config.HashPassword(*req.NewPin)
 		if err == nil {
 			config.AppConfig.MasterPinHash = hash
 			database.DB.Exec("UPDATE users SET pin_hash = ? WHERE username = ?", hash, config.AppConfig.Username)
 		}
 	}
+	if req.NewStaffPin != nil && *req.NewStaffPin != "" {
+		hash, err := config.HashPassword(*req.NewStaffPin)
+		if err == nil {
+			config.AppConfig.StaffPinHash = hash
+		}
+	}
+
 	config.SaveConfig()
 
 	if portChanged {

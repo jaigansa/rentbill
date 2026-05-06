@@ -84,19 +84,40 @@ func InitConfig() {
 	if _, err := os.Stat(ConfigPath); os.IsNotExist(err) {
 		hash, _ := HashPassword("1234")
 		AppConfig = models.Config{
-			DbPath:        "./rentbill.db",
-			MasterPinHash: hash,
-			Username:      "admin",
-			SessionSecret: "rb-pro-secret-key-change-me-for-security-2026",
-			ServerPort:    8080,
+			DbPath:          "./rentbill.db",
+			MasterPinHash:   hash,
+			Username:        "admin",
+			PropertyName:    "RENTBILL PRO",
+			PropertyAddress: "Property Management System",
+			SessionSecret:   "rb-pro-secret-key-change-me-for-security-2026",
+			ServerPort:      8080,
 		}
 		SaveConfig()
 	} else {
 		file, _ := os.ReadFile(ConfigPath)
 		json.Unmarshal(file, &AppConfig)
+		if AppConfig.PropertyName == "" {
+			AppConfig.PropertyName = "RENTBILL PRO"
+		}
+		if AppConfig.PropertyAddress == "" {
+			AppConfig.PropertyAddress = "Property Management System"
+		}
+		if AppConfig.AgreementTerms == "" {
+			AppConfig.AgreementTerms = `1. LEASE PERIOD: 11 Months. Extension subject to mutual agreement.
+2. PAYMENT: Rent must be paid on or before the 5th of every month.
+3. SECURITY DEPOSIT: Interest-free advance, refundable on vacancy.
+4. MAINTENANCE: Tenant is responsible for internal minor repairs.
+5. USAGE: Premises to be used for residential purposes only.
+6. NOTICE PERIOD: 1 month written notice required from either party.`
+		}
 		if AppConfig.MasterPinHash == "" {
 			hash, _ := HashPassword("1234")
 			AppConfig.MasterPinHash = hash
+			SaveConfig()
+		}
+		if AppConfig.StaffPinHash == "" {
+			hash, _ := HashPassword("0000")
+			AppConfig.StaffPinHash = hash
 			SaveConfig()
 		}
 		if AppConfig.ServerPort == 0 {

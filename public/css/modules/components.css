@@ -406,6 +406,12 @@
     color: var(--text-main);
 }
 
+.activity-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
 .checklist-card {
     border: 2px dashed var(--border) !important;
     background: var(--bg-info-light) !important;

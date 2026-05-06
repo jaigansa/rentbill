@@ -45,8 +45,9 @@ function updatePinDots() {
 
 async function verifyPin() {
     try {
-        await API.auth.verify(currentPin);
+        const res = await API.auth.verify(currentPin);
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userRole', res.role || 'owner');
         location.reload(); // Hard reload after login to ensure session cookie is sent correctly
     } catch (e) {
         showNotification("Wrong PIN", "error");
@@ -66,7 +67,12 @@ async function forgotPin() {
     }
 }
 
-function logout() {
+async function logout() {
+    try {
+        await API.auth.logout();
+    } catch (e) {
+        console.warn("Server logout failed", e);
+    }
     localStorage.removeItem('isLoggedIn');
     location.reload();
 }

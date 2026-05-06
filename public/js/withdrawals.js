@@ -128,21 +128,25 @@ async function printPayoutHistory() {
     style.id = 'print-hide-payout-actions';
     style.innerHTML = `
         @media print { 
-            .withdrawal-actions, #witToggleBtn, .no-print, .withdrawal-form-container { display: none !important; } 
+            body { background: white !important; color: black !important; }
+            .withdrawal-actions, #witToggleBtn, .no-print, .withdrawal-form-container, .sub-nav { display: none !important; } 
+            #owners-payouts { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
             .tenant-row { 
-                border: 1px solid var(--border) !important; 
+                border: 1px solid #eee !important; 
                 margin-bottom: 8px !important; 
                 padding: 12px !important; 
                 break-inside: avoid; 
                 flex-direction: row !important; 
                 align-items: center !important; 
                 background: white !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
             } 
             .tenant-row > div:first-child { 
-                background: var(--bg-main) !important; 
-                border: 1px solid var(--border) !important; 
-                border-radius: 8px !important; 
+                background: transparent !important; 
+                border: none !important; 
             }
+            @page { margin: 1.5cm; }
         }
     `;
     document.head.appendChild(style);

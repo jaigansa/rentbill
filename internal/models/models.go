@@ -5,7 +5,11 @@ import "time"
 type Config struct {
 	DbPath            string             `json:"db_path"`
 	MasterPinHash     string             `json:"master_pin_hash"`
+	StaffPinHash      string             `json:"staff_pin_hash"`
 	Username          string             `json:"username"`
+	PropertyName      string             `json:"property_name"`
+	PropertyAddress   string             `json:"property_address"`
+	AgreementTerms    string             `json:"agreement_terms"`
 	EmailUser         string             `json:"email_user"`
 	EmailPass         string             `json:"email_pass"`
 	EmailBCC          string             `json:"email_bcc"`

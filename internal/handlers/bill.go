@@ -537,3 +537,37 @@ func GetAllPaidBills(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, bills)
 }
+
+func GetTrendData(c *gin.Context) {
+	// Aggregate last 6 months
+	type MonthTrend struct {
+		Month    string  `json:"month"`
+		Income   float64 `json:"income"`
+		Expenses float64 `json:"expenses"`
+	}
+	var trends []MonthTrend
+
+	now := time.Now()
+	for i := 5; i >= 0; i-- {
+		t := now.AddDate(0, -i, 0)
+		
+		var income, expenses float64
+		// Income (Rent collected in this month)
+		database.DB.QueryRow(`SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND strftime('%Y-%m', payment_date) = ?`, t.Format("2006-01")).Scan(&income)
+		
+		// Expenses (Maintenance + Payouts in this month)
+		var maint, payouts float64
+		database.DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&maint)
+		database.DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM withdrawals WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&payouts)
+		
+		expenses = maint + payouts
+
+		trends = append(trends, MonthTrend{
+			Month:    t.Format("Jan"),
+			Income:   income,
+			Expenses: expenses,
+		})
+	}
+
+	c.JSON(http.StatusOK, trends)
+}

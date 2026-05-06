@@ -52,20 +52,17 @@ function switchSubSection(parentSectionId, subSectionId) {
     });
     
     // Specific triggers for sub-sections
-    if (subSectionId === 'tenants-billing') {
-        loadTenants();
+    if (subSectionId === 'tenants-ledger') {
+        loadTenants(); // Load Billing list
+        initHistorySection(false); // Populate History dropdown (without resetting view)
     }
-    if (subSectionId === 'tenants-directory') {
-        loadManageTenants();
-    }
-    if (subSectionId === 'tenants-statements') {
-        initHistorySection(true);
+    if (subSectionId === 'tenants-registry') {
+        loadSettings(); // Populate owner dropdowns
+        loadManageTenants(); // Load Directory
+        if (typeof loadVault === 'function') loadVault(); // Load Vault documents
     }
     if (subSectionId === 'tenants-archived') {
         if (typeof toggleHistory === 'function') toggleHistory(true);
-    }
-    if (subSectionId === 'tenants-vault') {
-        if (typeof loadVault === 'function') loadVault();
     }
     
     if (subSectionId === 'owners-payouts') {
@@ -93,7 +90,7 @@ function switchSubSection(parentSectionId, subSectionId) {
 
 function quickRegisterTenant() {
     showSection('tenants-section');
-    switchSubSection('tenants-section', 'tenants-directory');
+    switchSubSection('tenants-section', 'tenants-registry');
     const form = document.getElementById('entrance-form');
     if (form && form.classList.contains('hidden')) {
         toggleRegForm();
@@ -133,7 +130,7 @@ function quickGenerateAudit() {
 function quickPay(renterId, billId, amount) {
     if (billId) {
         showSection('tenants-section');
-        switchSubSection('tenants-section', 'tenants-statements');
+        switchSubSection('tenants-section', 'tenants-ledger');
         loadTenantHistory(renterId);
         setTimeout(() => {
             if (typeof openHistoryPaymentModal === 'function') {
@@ -142,7 +139,7 @@ function quickPay(renterId, billId, amount) {
         }, 300);
     } else {
         showSection('tenants-section');
-        switchSubSection('tenants-section', 'tenants-statements');
+        switchSubSection('tenants-section', 'tenants-ledger');
         loadTenantHistory(renterId);
     }
 }

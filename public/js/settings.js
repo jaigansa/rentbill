@@ -6,12 +6,14 @@ async function loadSettings() {
         appSettings = data;
         const propName = document.getElementById('prop_name');
         const propAddr = document.getElementById('prop_addr');
+        const agTerms = document.getElementById('agreement_terms');
         const emailUser = document.getElementById('email_user');
         const emailBcc = document.getElementById('email_bcc');
         const srvPort = document.getElementById('server_port');
         
         if (propName) propName.value = data.property_name || '';
         if (propAddr) propAddr.value = data.property_address || '';
+        if (agTerms) agTerms.value = data.agreement_terms || '';
         if (emailUser) emailUser.value = data.email_user || '';
         if (emailBcc) emailBcc.value = data.email_bcc || '';
         if (srvPort) srvPort.value = data.server_port || 8080;
@@ -80,7 +82,10 @@ async function saveReceivingAccount() {
         showNotification("Account saved", "success");
         cancelAccountEdit();
         loadSettings();
-    } catch (e) { showNotification("Failed to save account", "error"); }
+    } catch (e) { 
+        console.error(e);
+        showNotification("Failed to save: " + (e.message || "Unknown error"), "error"); 
+    }
 }
 
 function renderUnifiedAccounts(accounts) {
@@ -108,7 +113,7 @@ function renderUnifiedAccounts(accounts) {
 }
 
 function populateOwnerDropdown(accounts) {
-    const selects = ['eOwnerName', 'wOwnerName', 'tTaskOwner'];
+    const selects = ['eOwnerName', 'wOwnerName', 'tTaskOwner', 'tAssignedUpi', 'payReceiverInput'];
     selects.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -130,7 +135,8 @@ function editAccount(index) {
     document.getElementById('acc_ifsc').value = acc.ifsc || '';
     
     document.getElementById('addAccBtn').innerText = "Update Account Record";
-    document.getElementById('cancelAccEditBtn').classList.remove('hidden');
+    const cancelBtn = document.getElementById('cancelAccEditBtn');
+    if (cancelBtn) cancelBtn.classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -143,29 +149,35 @@ function cancelAccountEdit() {
     document.getElementById('acc_num').value = '';
     document.getElementById('acc_ifsc').value = '';
     document.getElementById('addAccBtn').innerText = "Add Account Record";
-    document.getElementById('cancelAccEditBtn').classList.add('hidden');
+    const cancelBtn = document.getElementById('cancelAccEditBtn');
+    if (cancelBtn) cancelBtn.classList.add('hidden');
 }
 
 async function deleteAccount(index) {
     if (!confirm("Are you sure? This will remove this receiving account.")) return;
-    const accounts = appSettings.receiving_accounts || [];
+    const accounts = [...appSettings.receiving_accounts]; // Clone
     accounts.splice(index, 1);
     try {
         await API.system.updateSettings({ receiving_accounts: accounts });
         showNotification("Account removed", "success");
         loadSettings();
-    } catch (e) { showNotification("Failed to remove", "error"); }
+    } catch (e) { 
+        console.error(e);
+        showNotification("Failed to remove: " + (e.message || "Unknown error"), "error"); 
+    }
 }
 
 async function saveSystemSettings() {
     const data = {
         property_name: document.getElementById('prop_name').value.trim(),
         property_address: document.getElementById('prop_addr').value.trim(),
+        agreement_terms: document.getElementById('agreement_terms')?.value.trim() || '',
         email_user: document.getElementById('email_user').value.trim(),
         email_pass: document.getElementById('email_pass').value,
         email_bcc: document.getElementById('email_bcc').value.trim(),
-        server_port: parseInt(document.getElementById('server_port').value),
-        new_pin: document.getElementById('new_master_pin').value.trim()
+        server_port: parseInt(document.getElementById('server_port').value) || 8080,
+        new_pin: document.getElementById('new_master_pin').value.trim(),
+        new_staff_pin: document.getElementById('new_staff_pin').value.trim()
     };
 
     try {
@@ -176,7 +188,10 @@ async function saveSystemSettings() {
             showNotification("Settings updated successfully", "success");
             loadSettings();
         }
-    } catch (e) { showNotification("Update failed", "error"); }
+    } catch (e) { 
+        console.error(e);
+        showNotification("Update failed: " + (e.message || "Unknown error"), "error"); 
+    }
 }
 
 async function testSMTPSettings() {
@@ -396,5 +411,26 @@ function printAudit() {
     document.querySelectorAll('.auditPrintPropName').forEach(el => el.innerText = propName);
     document.querySelectorAll('.auditPrintPropAddr').forEach(el => el.innerText = propAddr);
 
+    // Inject temporary print style
+    const style = document.createElement('style');
+    style.id = 'print-audit-style';
+    style.innerHTML = `
+        @media print {
+            body { background: white !important; color: black !important; }
+            .app-section, .no-print, .sub-nav { display: none !important; }
+            #auditModal { display: block !important; position: static !important; width: 100% !important; background: white !important; }
+            .modal-overlay { background: white !important; padding: 0 !important; }
+            .modal-content { box-shadow: none !important; border: none !important; width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
+            @page { margin: 1.5cm; }
+        }
+    `;
+    document.head.appendChild(style);
+
     window.print();
+
+    // Cleanup
+    setTimeout(() => {
+        const styleEl = document.getElementById('print-audit-style');
+        if (styleEl) styleEl.remove();
+    }, 500);
 }

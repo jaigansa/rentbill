@@ -43,19 +43,11 @@ async function printProfessionalAgreement(id) {
                     </div>
 
                     <!-- Terms -->
-                    <div style="margin-bottom: 40px; page-break-before: always; padding-top: 20px;">
+                    <div style="margin-bottom: 40px; page-break-before: auto; padding-top: 20px;">
                         <p style="background: var(--primary); color: #fff !important; display: inline-block; padding: 4px 15px; font-size: 12px; font-weight: 900; border-radius: 4px; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">House Rules & Standard Conditions</p>
-                        <ul style="padding-left: 20px; font-size: 13px; line-height: 1.8; margin: 0; text-align: justify; color: var(--text-main);">
-                            <li><strong>LEASE PERIOD:</strong> 11 Months. Extension subject to mutual agreement and rent revision.</li>
-                            <li><strong>PAYMENT:</strong> Rent must be paid on or before the 5th of every month. A late fee may apply for delays.</li>
-                            <li><strong>SECURITY DEPOSIT:</strong> Interest-free advance, refundable only after handing over vacant possession and original keys.</li>
-                            <li><strong>MAINTENANCE & REPAIRS:</strong> Tenant is responsible for internal repairs (electrical/plumbing) and maintaining the premises in good condition.</li>
-                            <li><strong>USAGE:</strong> Premises to be used for residential purposes only. No commercial activity or subletting allowed.</li>
-                            <li><strong>MODIFICATIONS:</strong> No structural changes, drilling, or painting without the Owner's written consent.</li>
-                            <li><strong>NOTICE PERIOD:</strong> 1 month (30 days) written notice required from either party for termination.</li>
-                            <li><strong>EXIT CONDITION:</strong> Painting, deep cleaning, and any damage repair charges will be deducted from the security advance.</li>
-                            <li><strong>INSPECTION:</strong> Owner reserves the right to inspect the premises with 24-hour prior notice.</li>
-                        </ul>
+                        <div style="font-size: 13px; line-height: 1.8; color: #000 !important; text-align: justify;">
+                            ${(appSettings.agreement_terms || 'Standard conditions apply.').split('\n').map(line => line.trim() ? `<p style="margin: 0 0 10px 0;">${line}</p>` : '').join('')}
+                        </div>
                     </div>
 
                     <!-- Signature Section for Print -->

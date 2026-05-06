@@ -2,6 +2,7 @@ let hFullBills = [];
 let hBillsVisibleCount = 10;
 let currentHistoryRenterId = null;
 let resetHistoryScroll = null;
+let hAllTenants = []; // Global cache for all tenants for instant lookup
 
 async function initHistorySection(reset = false) {
     const select = document.getElementById('historyTenantSelect');
@@ -13,51 +14,31 @@ async function initHistorySection(reset = false) {
         const emptyState = document.getElementById('historyEmptyState');
         if (resultsDiv) resultsDiv.classList.add('hidden');
         if (emptyState) emptyState.classList.remove('hidden');
-        toggleHistoryMode('tenants');
     }
 
     try {
-        const tenants = await API.tenants.getAll();
-        const historyTenants = await API.tenants.getHistory();
-        const allTenants = [...tenants, ...historyTenants];
+        // If cache is empty, fetch data
+        if (!window.allTenants.length && !window.historyTenants.length) {
+            await refreshGlobalTenantCache();
+        }
         
+        const combined = [...(window.allTenants || []), ...(window.historyTenants || [])];
         const currentVal = select.value;
-        select.innerHTML = '<option value="">-- Select Unit / Tenant --</option>';
+        select.innerHTML = '<option value="">-- Select Unit for History --</option>';
         
-        allTenants.sort((a, b) => a.room_no.localeCompare(b.room_no, undefined, {numeric: true}));
+        if (combined.length === 0) return;
+
+        combined.sort((a, b) => a.room_no.localeCompare(b.room_no, undefined, {numeric: true}));
         
-        allTenants.forEach(t => {
+        combined.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            const status = t.is_active === 0 ? ' (ARCHIVED)' : '';
+            const status = t.is_active === 0 ? ' (VACATED)' : '';
             opt.innerText = `UNIT ${t.room_no} • ${t.name}${status}`;
             select.appendChild(opt);
         });
         select.value = currentVal;
-        
-        if (typeof loadWithdrawals === 'function') loadWithdrawals();
     } catch (e) { console.error("Failed to load tenants for history", e); }
-}
-
-function toggleHistoryMode(mode) {
-    const tenantsContent = document.getElementById('historyTenantsContent');
-    const ownersContent = document.getElementById('owners-payouts');
-    const btnTenants = document.getElementById('btnHistoryTenants');
-    const btnOwners = document.getElementById('btnHistoryOwners');
-
-    if (mode === 'tenants') {
-        tenantsContent?.classList.remove('hidden');
-        ownersContent?.classList.add('hidden');
-        btnTenants?.classList.add('active');
-        btnOwners?.classList.remove('active');
-    } else {
-        tenantsContent?.classList.add('hidden');
-        ownersContent?.classList.remove('hidden');
-        btnTenants?.classList.remove('active');
-        btnOwners?.classList.add('active');
-        populateWithdrawalFilters();
-        loadWithdrawals();
-    }
 }
 
 async function loadTenantHistory(renterId) {
@@ -83,25 +64,28 @@ async function loadTenantHistory(renterId) {
         resetHistoryScroll();
         resetHistoryScroll = null;
     }
-    if (historyBody) historyBody.innerHTML = '';
+    if (historyBody) historyBody.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted); font-weight: 800;">Syncing records...</div>';
 
     try {
-        const renter = await API.tenants.getOne(renterId);
-        nameLabel.innerText = renter.name;
+        // INSTANT UI UPDATE: Use cache instead of waiting for API
+        const combined = [...window.allTenants, ...window.historyTenants];
+        const renter = combined.find(t => t.id == renterId);
         
-        // Populate Summary
-        const balEl = document.getElementById('histStatBalance');
-        const advEl = document.getElementById('histStatAdvance');
-        if (balEl) balEl.innerText = currencyFormatter.format(renter.balance || 0);
-        if (advEl) advEl.innerText = currencyFormatter.format(renter.advance_amount || 0);
+        if (renter) {
+            nameLabel.innerText = renter.name;
+            const balEl = document.getElementById('histStatBalance');
+            const advEl = document.getElementById('histStatAdvance');
+            if (balEl) balEl.innerText = currencyFormatter.format(renter.balance || 0);
+            if (advEl) advEl.innerText = currencyFormatter.format(renter.advance_amount || 0);
+        }
 
-        // Clear loading state
-        if (historyBody) historyBody.innerHTML = '';
-
+        // Setup Infinite Scroll (API call happens inside this)
         resetHistoryScroll = setupInfiniteScroll(
             historyBody,
             async (offset, limit) => {
                 const data = await API.bills.getByRenter(renterId, limit, offset);
+                // Clear the "Syncing..." message on first load
+                if (offset === 0 && historyBody) historyBody.innerHTML = '';
                 return data;
             },
             (b) => `
@@ -140,7 +124,7 @@ async function loadTenantHistory(renterId) {
             { limit: 10, triggerId: 'history-scroll-trigger' }
         );
 
-        // Force icon creation for first batch
+        // Force icon creation
         setTimeout(() => lucide.createIcons(), 100);
 
     } catch (e) { console.error("History failed", e); }
@@ -180,7 +164,31 @@ async function printTenantStatement() {
     // Hide the "Action" column for printing
     const style = document.createElement('style');
     style.id = 'print-hide-actions';
-    style.innerHTML = '@media print { .history-actions, .no-print { display: none !important; } .tenant-row { border: 1px solid var(--border) !important; margin-bottom: 8px !important; padding: 12px !important; break-inside: avoid; flex-direction: row !important; align-items: center !important; } .tenant-row > div:first-child { background: var(--bg-main) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; } }';
+    style.innerHTML = `
+        @media print { 
+            body { background: white !important; color: black !important; }
+            .app-section, .no-print, .sub-nav, #historyTenantSelect, .card-header, #historyEmptyState, .history-actions, .modal-overlay { display: none !important; } 
+            #historyResults { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
+            .tenant-row { 
+                border: 1px solid #eee !important; 
+                margin-bottom: 8px !important; 
+                padding: 12px !important; 
+                break-inside: avoid; 
+                flex-direction: row !important; 
+                align-items: center !important; 
+                background: white !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            } 
+            .tenant-row > div:first-child { 
+                background: transparent !important; 
+                border: none !important; 
+            }
+            .room-badge { border: 1px solid #000 !important; color: black !important; background: white !important; }
+            @page { margin: 1.5cm; }
+        }
+    `;
     document.head.appendChild(style);
 
     // Trigger native print

@@ -131,96 +131,83 @@ async function loadDashboardStats() {
         // --- Store data for timeline ---
         window.dashboardState = { allPaidBills, withdrawals, expenses };
 
-        // Update Collection Progress (Logic: Active units only)
-        const activePaid = finSummary.active_paid || 0;
-        const activeOutstanding = (finSummary.active_dues || 0) + (finSummary.total_arrears || 0); // Arrears are already filtered by active=1 in backend
-        const totalPotential = activePaid + activeOutstanding;
-        const percent = totalPotential > 0
-            ? Math.min(100, Math.round((activePaid / totalPotential) * 100))
-            : 0;
-
-        const percentEl = document.getElementById('statCollectionPercent');
-        const barEl = document.getElementById('collectionProgressBar');
-        const textEl = document.getElementById('collectionProgressText');
-        const detailsEl = document.getElementById('collectionDetails');
-        const duesEl = document.getElementById('statTotalDues');
-        const arrearsEl = document.getElementById('statTotalArrears');
-
-        if (percentEl) percentEl.innerText = `${percent}%`;
-        if (barEl) barEl.style.width = `${percent}%`;
-        if (textEl) textEl.innerText = `${percent}% COLLECTED`;
-        if (detailsEl) detailsEl.innerText = `${finSummary.active_paid_count || 0} of ${finSummary.active_total_count || 0} bills settled (Active Units)`;
-        if (duesEl) duesEl.innerText = currencyFormatter.format(finSummary.active_dues || 0);
-        if (arrearsEl) arrearsEl.innerText = currencyFormatter.format(finSummary.total_arrears || 0);
-
-        // --- NEW: Bill Generation Progress ---
-        const pendingTasks = await API.bills.getPendingBills();
-        const unbilledUnits = pendingTasks.filter(t => t.type === 'MISSING_BILL' || t.type === 'DRAFT_BILL').length;
-        const totalActiveUnits = tenants.length;
-        const billedUnits = Math.max(0, totalActiveUnits - unbilledUnits);
-        const billingPercent = totalActiveUnits > 0 ? Math.round((billedUnits / totalActiveUnits) * 100) : 0;
-
-        const bPercentEl = document.getElementById('statBillingPercent');
-        const bBarEl = document.getElementById('billingProgressBar');
-        const bTextEl = document.getElementById('billingProgressText');
-        const bDetailsEl = document.getElementById('billingDetails');
-
-        if (bPercentEl) bPercentEl.innerText = `${billingPercent}%`;
-        if (bBarEl) bBarEl.style.width = `${billingPercent}%`;
-        if (bTextEl) bTextEl.innerText = `${billingPercent}% GENERATED`;
-        if (bDetailsEl) bDetailsEl.innerText = `${billedUnits} of ${totalActiveUnits} active units billed`;
-
-        // --- NEW: Payout Progress ---
-        const payoutPercent = totalPaid > 0 ? Math.min(100, Math.round((payoutsTotal / totalPaid) * 100)) : 0;
-        
-        const pPercentEl = document.getElementById('statPayoutPercent');
-        const pBarEl = document.getElementById('payoutProgressBar');
-        const pTextEl = document.getElementById('payoutProgressText');
-        const pDetailsEl = document.getElementById('payoutDetails');
-
-        if (pPercentEl) pPercentEl.innerText = `${payoutPercent}%`;
-        if (pBarEl) pBarEl.style.width = `${payoutPercent}%`;
-        if (pTextEl) pTextEl.innerText = `${payoutPercent}% TRANSFERRED`;
-        if (pDetailsEl) pDetailsEl.innerText = `${currencyFormatter.format(payoutsTotal)} of ${currencyFormatter.format(totalPaid)} income paid out`;
-        // --- Onboarding Checklist Logic ---
-        const hasAccounts = appSettings.receiving_accounts && appSettings.receiving_accounts.length > 0;
-        const hasTenants = tenants.length > 0;
-        const hasBills = finSummary.total_count > 0;
-        const checklistCard = document.getElementById('setupChecklist');
-        
-        if (checklistCard) {
-            if (!hasAccounts || !hasTenants || !hasBills) {
-                checklistCard.classList.remove('hidden');
-                updateChecklist('check-step-1', hasAccounts);
-                updateChecklist('check-step-2', hasTenants);
-                updateChecklist('check-step-3', hasBills);
-            } else {
-                checklistCard.classList.add('hidden');
-            }
-        }
-
-        // Populate Pending Collections List
-        const pendingList = document.getElementById('pendingCollectionList');
-        if (pendingList && tenantLedger) {
-            const defaulters = tenantLedger.filter(e => e.balance > 0).sort((a, b) => b.balance - a.balance);
-            if (defaulters.length === 0) {
-                pendingList.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--success); font-weight:800; padding:1rem;">ALL DUES COLLECTED! 🎉</p>';
-            } else {
-                pendingList.innerHTML = defaulters.map(e => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:8px 12px; border:1px solid var(--border); border-left:4px solid var(--danger);">
-                        <div style="flex:1;">
-                            <div style="font-size:0.75rem; font-weight:900; color:var(--text-main);">${e.name} <span style="color:var(--text-muted); font-weight:700; font-size:0.6rem;">(${e.room_no})</span></div>
-                            <div style="font-size:0.6rem; color:var(--text-muted); font-weight:700;">TOTAL DUE: ${currencyFormatter.format(e.balance)}</div>
-                        </div>
-                        <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-statements'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.6rem; min-height:24px;">View</button>
-                    </div>
-                `).join('');
-            }
-        }
-
         renderTenantLedger(tenantLedger);
         loadMonthlyTracker();
+        renderAnalyticsChart(); // NEW: Trigger chart render
     } catch (e) { console.error("Stats failed", e); }
+}
+
+let analyticsChart = null;
+async function renderAnalyticsChart() {
+    const canvas = document.getElementById('trendChart');
+    if (!canvas) return;
+
+    try {
+        const trends = await API.bills.getTrends();
+        const labels = trends.map(t => t.month);
+        const incomeData = trends.map(t => t.income);
+        const expenseData = trends.map(t => t.expenses);
+
+        if (analyticsChart) {
+            analyticsChart.destroy();
+        }
+
+        const ctx = canvas.getContext('2d');
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6366f1';
+        const dangerColor = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim() || '#ef4444';
+
+        analyticsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Income',
+                        data: incomeData,
+                        borderColor: primaryColor,
+                        backgroundColor: primaryColor + '10',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: primaryColor
+                    },
+                    {
+                        label: 'Expenses',
+                        data: expenseData,
+                        borderColor: dangerColor,
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+                        ticks: { 
+                            font: { size: 10, weight: 'bold' },
+                            callback: value => '₹' + (value >= 1000 ? (value/1000) + 'k' : value)
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 10, weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    } catch (e) { console.error("Chart load failed", e); }
 }
 
 function renderTenantLedger(ledger) {
@@ -249,224 +236,102 @@ function renderTenantLedger(ledger) {
                             </div>
                             <div class="math-row" style="width: 250px; justify-content: flex-start; gap: 1rem;">
                                 <span style="width: 100px;">Paid:</span>
-                                <span style="color: var(--success);">${currencyFormatter.format(e.total_paid)}</span>
+                                <span>${currencyFormatter.format(e.total_paid)}</span>
                             </div>
                         </div>
                     </div>
-                    <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-                        <div>
-                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Current Balance</div>
-                            <div style="font-weight: 900; font-size: 1.1rem; color: ${hasDues ? 'var(--danger)' : 'var(--success)'};">
-                                ${currencyFormatter.format(e.balance)}
-                            </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Current Balance</div>
+                        <div style="font-weight: 900; font-size: 1.1rem; color: ${hasDues ? 'var(--danger)' : 'var(--success)'};">
+                            ${currencyFormatter.format(e.balance)}
                         </div>
-                        <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-statements'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
                     </div>
+                    <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-ledger'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-async function loadMonthlyTracker() {
-    const trackingEl = document.getElementById('currentTrackingMonth');
-    if (trackingEl) trackingEl.innerText = "All Pending Tasks";
-    const container = document.getElementById('monthlyChecklist');
+async function loadActivityLogs() {
+    const filter = document.getElementById('logFilter')?.value || 'ALL';
+    const container = document.getElementById('activityLog');
     if (!container) return;
-    try {
-        const tasks = await API.bills.getPendingBills();
-        
-        // Add arrears-only entries from tenants who don't have a task yet
-        if (window.allTenants) {
-            window.allTenants.forEach(t => {
-                if (t.pending_arrears > 0) {
-                    // Check if this tenant already has a PENDING_PAYMENT, DRAFT_BILL or ARREARS_ONLY task
-                    const hasTask = tasks.some(tk => tk.renter_id === t.id && (tk.type === 'PENDING_PAYMENT' || tk.type === 'ARREARS_ONLY' || tk.type === 'DRAFT_BILL' || tk.type === 'MISSING_BILL'));
-                    if (!hasTask) {
-                        tasks.push({
-                            type: 'ARREARS_ONLY',
-                            renter_id: t.id,
-                            name: t.name,
-                            room_no: t.room_no,
-                            billing_month: 'Previous Balance',
-                            amount: t.pending_arrears,
-                            arrears: t.pending_arrears
-                        });
-                    }
-                }
-            });
-        }
 
-        container.innerHTML = '';
-        if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i data-lucide="check-circle" style="color: var(--success); opacity: 0.5;"></i>
-                    <p>All units are up to date!</p>
-                </div>`;
-            lucide.createIcons();
+    try {
+        const logs = await API.system.getLogs(filter, 20);
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:2rem; color:var(--text-muted);">No activity recorded.</p>';
             return;
         }
 
-        tasks.forEach(s => {
-            const isMissing = s.type === 'MISSING_BILL';
-            const isDraft = s.type === 'DRAFT_BILL';
-            const isArrears = s.type === 'ARREARS_ONLY';
-            const isPending = s.type === 'PENDING_PAYMENT';
+        const icons = {
+            'PAYMENT_RECORDED': 'check-circle',
+            'BILL_GENERATED': 'file-plus',
+            'TENANT_REGISTERED': 'user-plus',
+            'TENANT_UPDATED': 'user-cog',
+            'EXPENSE_RECORDED': 'trending-down',
+            'OWNER_PAYOUT': 'banknote',
+            'UNIT_VACATED': 'door-open'
+        };
+
+        container.innerHTML = logs.map(l => {
+            const date = new Date(l.timestamp);
+            const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
             
-            const item = document.createElement('div');
-            item.className = 'card';
-            item.style.padding = '1rem';
-            item.style.marginBottom = '0.75rem';
-            item.style.border = `2px solid ${isMissing ? 'var(--danger)' : (isDraft ? 'var(--border)' : (isArrears ? 'var(--warning)' : 'var(--primary)'))}`;
-
-            const actionBtn = (isMissing || isDraft)
-                ? `<button onclick="draftBillNow(${s.renter_id}, '${s.billing_month}')" class="btn btn-secondary btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px; border-style: dashed;">Draft Now</button>`
-                : `
-                <div style="display: flex; gap: 4px;">
-                    <button onclick="sendWhatsAppReminder(${s.renter_id}, '${s.billing_month}', ${s.amount})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.65rem; height: auto; min-height: 32px; color: #25D366; border-color: #25D366;" title="Send Reminder">
-                        <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
-                    </button>
-                    <button onclick="quickPay(${s.renter_id}, ${s.bill_id || 'null'}, ${s.amount})" class="btn ${isArrears ? 'btn-secondary' : 'btn-primary'} btn-sm" style="padding: 4px 12px; font-size: 0.65rem; height: auto; min-height: 32px;">${isArrears ? 'View Dues' : 'Pay Now'}</button>
-                </div>`;
-
-            const arrearNotice = s.arrears > 0 ? `<div style="font-size: 0.6rem; color: var(--danger); font-weight: 900; margin-top: 2px;">INCLUDES ARREARS: ${currencyFormatter.format(s.arrears)}</div>` : '';
-
-            let statusColor = isMissing ? 'var(--danger)' : (isDraft ? 'var(--text-muted)' : (isArrears ? 'var(--warning)' : 'var(--primary)'));
-            let statusLabel = '';
-            let periodLabel = s.billing_month === 'Previous Balance' ? s.billing_month : `Stay Period: ${s.billing_month}`;
-            
-            if (isMissing) {
-                statusLabel = `&bull; OVERDUE: BILL NOT GENERATED`;
-            } else if (isDraft) {
-                statusLabel = `&bull; POSTPAID BILL DUE: DRAFT NOW`;
-            } else if (isPending) {
-                statusLabel = `&bull; UNPAID: ${currencyFormatter.format(s.amount)}`;
-            } else if (isArrears) {
-                statusLabel = `&bull; BALANCE PENDING: ${currencyFormatter.format(s.amount)}`;
-            }
-
-            item.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <span class="room-badge" style="height: auto; min-height: 0; padding: 2px 8px; font-size: 0.6rem; min-width: 0; background: ${isMissing ? 'var(--danger)' : (isDraft ? 'transparent' : (isArrears ? 'var(--warning)' : 'var(--primary)'))}; color: ${isDraft ? 'var(--text-main)' : 'var(--bg-card)'}; border: 1px solid var(--border);">UNIT ${s.room_no}</span>
-                        ${actionBtn}
+            return `
+                <div class="tenant-row" style="padding: 0.6rem 1rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 1rem; border-color: var(--border);">
+                    <div style="width: 38px; height: 38px; background: var(--bg-main); color: var(--text-muted); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border);">
+                        <i data-lucide="${icons[l.action] || 'activity'}" style="width: 18px; height: 18px;"></i>
                     </div>
-                    <div style="font-size: 1rem; font-weight: 900; color: var(--text-main); text-transform: uppercase; margin-top: 2px;">${s.name}</div>
-                    <div style="display:flex; flex-direction: column; border-top: 1px dashed var(--border); padding-top: 6px;">
-                        <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; font-weight:800; color:${statusColor}; text-transform: uppercase;">
-                            <i data-lucide="${isMissing ? 'file-plus' : (isDraft ? 'file-text' : (isArrears ? 'alert-circle' : 'calendar'))}" style="width:12px; height:12px;"></i> 
-                            ${periodLabel} <span style="font-size: 0.65rem;">${statusLabel}</span>
+                    
+                    <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                        <div style="min-width: 0;">
+                            <div style="font-weight: 800; font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">${l.action.replace(/_/g, ' ')}</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${l.details}</div>
                         </div>
-                        ${arrearNotice}
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${dateStr}</div>
+                            <div style="font-size: 0.6rem; font-weight: 700; color: var(--text-muted); opacity: 0.8;">${timeStr}</div>
+                        </div>
                     </div>
-                </div>`;
-            container.appendChild(item);
-        });
+                </div>
+            `;
+        }).join('');
         lucide.createIcons();
+    } catch (e) { console.error(e); }
+}
+
+async function loadMonthlyTracker() {
+    const container = document.getElementById('monthlyTracker');
+    if (!container) return;
+
+    try {
+        const now = new Date();
+        const monthStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+        const report = await API.bills.getMonthlyReport(monthStr);
+
+        if (!report || report.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--text-muted);">No data for this month.</p>';
+            return;
+        }
+
+        container.innerHTML = report.map(u => `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; min-width: 60px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: ${u.is_paid ? 'var(--success)' : (u.is_billed ? 'var(--warning)' : 'var(--border)')};"></div>
+                <span style="font-size:0.6rem; font-weight:800;">${u.room_no}</span>
+            </div>
+        `).join('');
     } catch (e) { console.error(e); }
 }
 
 function draftBillNow(renterId, monthName) {
     showSection('tenants-section');
-    switchSubSection('tenants-section', 'tenants-billing');
+    switchSubSection('tenants-section', 'tenants-ledger');
     if (typeof loadSpecificBilling === 'function') {
         loadSpecificBilling(renterId, monthName);
     }
-}
-
-function searchDashboard() {
-    const term = document.getElementById('dashboardSearch').value.toLowerCase();
-    
-    // Helper to toggle visibility and handle empty states
-    const filterList = (containerId, itemSelector, emptyMsg) => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        const items = container.querySelectorAll(itemSelector);
-        let visibleCount = 0;
-        items.forEach(item => {
-            const matches = item.innerText.toLowerCase().includes(term);
-            item.style.display = matches ? '' : 'none';
-            if (matches) visibleCount++;
-        });
-
-        let emptyEl = container.querySelector('.search-no-results');
-        if (visibleCount === 0 && term !== "") {
-            if (!emptyEl) {
-                emptyEl = document.createElement('div');
-                emptyEl.className = 'search-no-results';
-                emptyEl.style.cssText = 'text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.8rem; font-weight:700; border: 2px dashed var(--border); border-radius:var(--radius-md); margin-top:0.5rem;';
-                emptyEl.innerText = emptyMsg;
-                container.appendChild(emptyEl);
-            }
-        } else if (emptyEl) {
-            emptyEl.remove();
-        }
-    };
-
-    filterList('monthlyChecklist', '.card', 'No matching pending tasks');
-    filterList('ownerSettlementList', '.tenant-row', 'No matching owner accounts');
-    filterList('tenantLedgerList', '.tenant-row', 'No matching tenant records');
-}
-
-function showHelp(topic) {
-    const helpData = {
-        'potential': 'Sum of base rent for all active units. This is the total you SHOULD collect every month.',
-        'arrears': 'Unpaid balance from previous months that has been carried forward. These are automatically added to the next bill.'
-    };
-    showNotification(helpData[topic] || "No help available", "info");
-}
-
-function updateChecklist(id, isComplete) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const icon = el.querySelector('.check-icon');
-    const btn = el.querySelector('button');
-    
-    if (isComplete) {
-        el.classList.add('complete');
-        if (icon) icon.setAttribute('data-lucide', 'check-circle-2');
-        if (btn) btn.classList.add('hidden');
-    } else {
-        el.classList.remove('complete');
-        if (icon) icon.setAttribute('data-lucide', 'circle');
-        if (btn) btn.classList.remove('hidden');
-    }
-    lucide.createIcons();
-}
-
-let resetLogsScroll = null;
-
-async function loadActivityLogs() {
-    const listDiv = document.getElementById('activityLog');
-    if (!listDiv) return;
-
-    const filter = document.getElementById('logFilter')?.value || 'ALL';
-    
-    // Reset if filter changed
-    if (resetLogsScroll) {
-        resetLogsScroll();
-    }
-
-    const actionIcons = {
-        'TENANT_REGISTERED': 'user-plus', 'TENANT_UPDATED': 'user-cog',
-        'TENANT_DELETED': 'user-minus', 'TENANT_REMOVED': 'user-minus',
-        'BILL_GENERATED': 'file-text', 'PAYMENT_RECORDED': 'check-circle',
-        'ARREARS_CARRIED': 'trending-up', 'BILL_DELETED': 'file-x',
-        'UNIT_VACATED': 'home', 'TENANT_RESTORED': 'rotate-ccw',
-        'DB_BACKUP': 'database', 'FORGOT_PIN': 'shield-alert',
-        'EXPENSE_RECORDED': 'trending-down', 'EXPENSE_REMOVED': 'trash-2',
-        'OWNER_PAYOUT': 'banknote', 'OWNER_PAYOUT_DELETED': 'trash-2'
-    };
-    resetLogsScroll = setupInfiniteScroll(
-        listDiv,
-        async (offset, limit) => {
-            const data = await API.system.getLogs(filter, limit, offset);
-            return data;
-        },
-        (l) => UI.renderLogItem(l, actionIcons),
-        { limit: 30, triggerId: 'logs-scroll-trigger' }
-    );
 }
 
 function showOwnerTimeline(ownerName) {
@@ -480,12 +345,12 @@ function showOwnerTimeline(ownerName) {
     // Filter income
     const income = allPaidBills.filter(b => (b.received_by || b.assigned_owner) === ownerName).map(b => ({
         type: 'INCOME',
-        date: b.payment_date || b.billing_month,
+        date: b.payment_date || b.date_generated,
         amount: b.paid_amount,
-        details: `Rent from ${b.tenant_name} (Unit ${b.room_no}) via ${b.payment_method || 'Unknown'}`
+        details: `Rent payment from ${b.tenant_name} (${b.room_no}) for ${b.billing_month}`
     }));
 
-    // Filter payouts (Withdrawals)
+    // Filter payouts
     const payouts = (withdrawals || []).filter(w => w.owner_name === ownerName).map(w => ({
         type: 'PAYOUT',
         date: w.date,
@@ -498,15 +363,15 @@ function showOwnerTimeline(ownerName) {
         type: 'EXPENSE',
         date: e.date,
         amount: e.amount,
-        details: `MAINTENANCE (${e.category.toUpperCase()}): ${e.notes || 'Work'}`
+        details: `${e.category.toUpperCase()}: ${e.notes || 'No notes'}`
     }));
 
-    // Combine and sort by date descending
+    // Combine and sort
     const timeline = [...income, ...payouts, ...maintenance].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Calculate Summary
     const totalIn = income.reduce((sum, i) => sum + i.amount, 0);
-    const totalOut = payouts.reduce((sum, p) => sum + p.amount, 0) + maintenance.reduce((sum, e) => sum + e.amount, 0);
+    const totalOut = payouts.reduce((sum, p) => sum + p.amount, 0) + maintenance.reduce((sum, m) => sum + m.amount, 0);
     const netBalance = totalIn - totalOut;
 
     const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';

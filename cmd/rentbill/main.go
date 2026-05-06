@@ -64,6 +64,7 @@ func main() {
                         auth.POST("/db/backup", handlers.CreateBackup)
                         auth.POST("/db/restore", handlers.RestoreDatabase)
                         auth.POST("/auth/check-pin", handlers.CheckPin)
+                        auth.POST("/auth/logout", handlers.Logout)
                         auth.GET("/reports/audit", handlers.GetAuditReport)
 
                         // Renters
@@ -90,6 +91,7 @@ func main() {
                         auth.GET("/reports/pending-bills", handlers.GetAllPendingBills)
 			auth.GET("/reports/tenant-ledger", handlers.GetTenantLedger)
                         auth.GET("/reports/all-paid-bills", handlers.GetAllPaidBills)
+                        auth.GET("/reports/trends", handlers.GetTrendData)
                         auth.GET("/last-eb/:renter_id", handlers.GetLastEB)
 
                         // Expenses

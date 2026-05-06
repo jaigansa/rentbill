@@ -21,14 +21,23 @@ func VerifyPin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "PIN required"})
 		return
 	}
+
+	role := ""
 	if config.CheckPasswordHash(req.Pin, config.AppConfig.MasterPinHash) {
+		role = "owner"
+	} else if config.CheckPasswordHash(req.Pin, config.AppConfig.StaffPinHash) {
+		role = "staff"
+	}
+
+	if role != "" {
 		session := sessions.Default(c)
 		session.Set("user", config.AppConfig.Username)
+		session.Set("role", role)
 		if err := session.Save(); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to establish session"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"success": true})
+		c.JSON(http.StatusOK, gin.H{"success": true, "role": role})
 	} else {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid PIN"})
 	}
@@ -89,4 +98,12 @@ func CheckPin(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "PIN required"})
 	}
+}
+
+func Logout(c *gin.Context) {
+	session := sessions.Default(c)
+	session.Clear()
+	session.Options(sessions.Options{MaxAge: -1})
+	session.Save()
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }

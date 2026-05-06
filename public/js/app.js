@@ -3,6 +3,8 @@
 let appSettings = {};
 let editMode = false;
 let editId = null;
+window.allTenants = []; // Global cache for active tenants
+window.historyTenants = []; // Global cache for archived tenants
 
 // --- Initialization ---
 window.onload = async () => {
@@ -11,10 +13,52 @@ window.onload = async () => {
     const isAuthenticated = await checkAuth();
     if (isAuthenticated) {
         await loadSettings();
+        await refreshGlobalTenantCache();
+        applyPermissions(); // NEW: Apply role-based restrictions
     }
     lucide.createIcons();
     registerServiceWorker();
 };
+
+function applyPermissions() {
+    const role = localStorage.getItem('userRole') || 'owner';
+    if (role === 'staff') {
+        document.body.classList.add('role-staff');
+        // Hide sensitive nav items
+        const settingsNav = document.querySelector('button[onclick*="settings-section"]');
+        if (settingsNav) settingsNav.style.display = 'none';
+        
+        const withdrawalsNav = document.querySelector('button[onclick*="owners-section"]');
+        if (withdrawalsNav) withdrawalsNav.style.display = 'none';
+
+        // Add a style tag to hide delete buttons and sensitive UI via CSS
+        const style = document.createElement('style');
+        style.id = 'staff-permissions-style';
+        style.innerHTML = `
+            .role-staff .btn-danger, 
+            .role-staff .delete-btn,
+            .role-staff button[onclick*="delete"],
+            .role-staff button[onclick*="markVacant"],
+            .role-staff #settings-audit,
+            .role-staff #settings-database,
+            .role-staff .no-staff { 
+                display: none !important; 
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+async function refreshGlobalTenantCache() {
+    try {
+        const [active, history] = await Promise.all([
+            API.tenants.getAll(),
+            API.tenants.getHistory()
+        ]);
+        window.allTenants = active || [];
+        window.historyTenants = history || [];
+    } catch (e) { console.error("Cache refresh failed", e); }
+}
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
@@ -55,14 +99,14 @@ async function confirmActionWithPin() {
             showNotification("Removed", "success");
             if (typeof resetForm === 'function') resetForm();
             showSection('tenants-section');
-            switchSubSection('tenants-section', 'tenants-billing');
+            switchSubSection('tenants-section', 'tenants-ledger');
             pendingDeleteId = null;
         } else if (typeof pendingDeleteBillId !== 'undefined' && pendingDeleteBillId) {
             await API.bills.delete(pendingDeleteBillId);
             showNotification("Deleted", "success");
             if (typeof loadTenantHistory === 'function') {
                 showSection('tenants-section');
-                switchSubSection('tenants-section', 'tenants-statements');
+                switchSubSection('tenants-section', 'tenants-ledger');
                 loadTenantHistory(pendingDeleteBillRenterId);
             }
             pendingDeleteBillId = null;
