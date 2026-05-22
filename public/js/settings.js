@@ -27,6 +27,7 @@ async function loadSettings() {
         
         renderUnifiedAccounts(data.receiving_accounts || []);
         populateOwnerDropdown(data.receiving_accounts || []);
+        if (typeof populateWithdrawalFilters === 'function') populateWithdrawalFilters();
     } catch (e) { console.error(e); }
 }
 
@@ -57,6 +58,9 @@ async function saveReceivingAccount() {
     const bank = document.getElementById('acc_bank').value.trim();
     const num = document.getElementById('acc_num').value.trim();
     const ifsc = document.getElementById('acc_ifsc').value.trim();
+    const pName = document.getElementById('acc_prop_name').value.trim();
+    const pAddr = document.getElementById('acc_prop_addr').value.trim();
+    const pTerms = document.getElementById('acc_terms').value.trim();
     
     if (!name || !label) return showNotification("Owner Name and Label are required", "error");
     if (!upi && !bank) return showNotification("Please provide either UPI or Bank details", "error");
@@ -68,7 +72,10 @@ async function saveReceivingAccount() {
         upi: upi,
         bank_name: bank,
         account_number: num,
-        ifsc: ifsc
+        ifsc: ifsc,
+        property_name: pName,
+        property_address: pAddr,
+        agreement_terms: pTerms
     };
 
     if (accountEditIndex !== null) {
@@ -118,12 +125,11 @@ function populateOwnerDropdown(accounts) {
         const el = document.getElementById(id);
         if (!el) return;
         const currentVal = el.value;
-        el.innerHTML = '<option value="">-- Select --</option>' + 
+        el.innerHTML = '<option value="">-- Select --</option>' +
             accounts.map(a => `<option value="${a.owner_name}">${a.owner_name}</option>`).join('');
         el.value = currentVal;
     });
 }
-
 function editAccount(index) {
     const acc = appSettings.receiving_accounts[index];
     accountEditIndex = index;
@@ -133,6 +139,9 @@ function editAccount(index) {
     document.getElementById('acc_bank').value = acc.bank_name || '';
     document.getElementById('acc_num').value = acc.account_number || '';
     document.getElementById('acc_ifsc').value = acc.ifsc || '';
+    document.getElementById('acc_prop_name').value = acc.property_name || '';
+    document.getElementById('acc_prop_addr').value = acc.property_address || '';
+    document.getElementById('acc_terms').value = acc.agreement_terms || '';
     
     document.getElementById('addAccBtn').innerText = "Update Account Record";
     const cancelBtn = document.getElementById('cancelAccEditBtn');
@@ -148,6 +157,9 @@ function cancelAccountEdit() {
     document.getElementById('acc_bank').value = '';
     document.getElementById('acc_num').value = '';
     document.getElementById('acc_ifsc').value = '';
+    document.getElementById('acc_prop_name').value = '';
+    document.getElementById('acc_prop_addr').value = '';
+    document.getElementById('acc_terms').value = '';
     document.getElementById('addAccBtn').innerText = "Add Account Record";
     const cancelBtn = document.getElementById('cancelAccEditBtn');
     if (cancelBtn) cancelBtn.classList.add('hidden');
@@ -203,7 +215,8 @@ async function testSMTPSettings() {
 }
 
 async function backupDatabase() {
-    const prefix = document.getElementById('backupFilename').value || 'manual_backup';
+    const filenameEl = document.getElementById('backupFilename');
+    const prefix = filenameEl ? (filenameEl.value || 'manual_backup') : 'dashboard_backup';
     showNotification("Preparing backup...", "info");
     try {
         const blob = await API.system.createBackup(prefix);
@@ -282,6 +295,7 @@ async function viewAuditReport() {
                     <tr style="border-bottom: 2px solid var(--border);">
                         <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">DATE</th>
                         <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">ACTIVITY</th>
+                        <th style="padding: 10px; text-align: right; color: var(--text-muted); font-weight: 800;">AMOUNT</th>
                         <th style="padding: 10px; text-align: left; color: var(--text-muted); font-weight: 800;">DETAILS</th>
                     </tr>
                 </thead>
@@ -298,6 +312,7 @@ async function viewAuditReport() {
                             <td style="padding: 10px; font-weight: 900; color: ${color}; white-space: nowrap; text-transform: uppercase; font-size: 0.65rem;">
                                 ${l.action.replace(/_/g, ' ')}
                             </td>
+                            <td style="padding: 10px; font-weight: 900; text-align: right; color: ${color};">${l.amount > 0 ? currencyFormatter.format(l.amount) : '-'}</td>
                             <td style="padding: 10px; font-weight: 700; color: var(--text-main); line-height: 1.4;">${l.details}</td>
                         </tr>`;
                     }).join('')}

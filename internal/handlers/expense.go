@@ -26,7 +26,9 @@ func GetExpenses(c *gin.Context) {
 		rows.Scan(&e.ID, &e.Category, &e.Amount, &e.Date, &e.Notes, &e.OwnerName)
 		expenses = append(expenses, e)
 	}
-	if expenses == nil { expenses = []models.Expense{} }
+	if expenses == nil {
+		expenses = []models.Expense{}
+	}
 	c.JSON(http.StatusOK, expenses)
 }
 
@@ -45,12 +47,12 @@ func CreateExpense(c *gin.Context) {
 	}
 
 	id, _ := res.LastInsertId()
-	database.LogActivity("EXPENSE_RECORDED", "Recorded: "+e.Category, config.AppConfig.Username)
+	database.LogActivity("EXPENSE_RECORDED", "Recorded: "+e.Category, config.AppConfig.Username, e.Amount)
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
 }
 
 func DeleteExpense(c *gin.Context) {
 	database.DB.Exec("DELETE FROM expenses WHERE id = ?", c.Param("id"))
-	database.LogActivity("EXPENSE_REMOVED", "Removed expense ID: "+c.Param("id"), config.AppConfig.Username)
+	database.LogActivity("EXPENSE_REMOVED", "Removed expense ID: "+c.Param("id"), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

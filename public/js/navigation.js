@@ -127,6 +127,15 @@ function quickGenerateAudit() {
     }
 }
 
+function quickDownloadBackup() {
+    if (typeof backupDatabase === 'function') {
+        backupDatabase();
+    } else {
+        showSection('settings-section');
+        switchSubSection('settings-section', 'settings-database');
+    }
+}
+
 function quickPay(renterId, billId, amount) {
     if (billId) {
         showSection('tenants-section');

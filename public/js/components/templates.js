@@ -75,21 +75,58 @@ const Templates = {
                 
                 <!-- Executive Stats -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                    <h3 class="section-title" style="margin: 0; font-size: 0.8rem;">Executive Summary</h3>
-                    <button onclick="loadDashboardStats()" class="btn btn-secondary btn-icon-sm" title="Refresh Dashboard"><i data-lucide="refresh-cw" style="width: 14px;"></i></button>
+                    <h3 class="section-title" style="margin: 0; font-size: 0.9rem; font-weight: 900; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px;">Executive Summary</h3>
+                    <button onclick="loadDashboardStats()" class="btn btn-secondary btn-icon-sm" title="Refresh Dashboard" style="border-radius: 8px;"><i data-lucide="refresh-cw" style="width: 14px;"></i></button>
                 </div>
                 
+                <!-- Quick Actions -->
+                <div class="quick-actions-grid no-print" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                    <div onclick="quickRegisterTenant()" class="quick-action-btn">
+                        <div class="qa-icon" style="background: var(--bg-success-light); color: var(--success);"><i data-lucide="user-plus"></i></div>
+                        <span>Register</span>
+                    </div>
+                    <div onclick="quickAddExpense()" class="quick-action-btn">
+                        <div class="qa-icon" style="background: var(--bg-danger-light); color: var(--danger);"><i data-lucide="trending-down"></i></div>
+                        <span>Expense</span>
+                    </div>
+                    <div onclick="quickRecordPayout()" class="quick-action-btn">
+                        <div class="qa-icon" style="background: var(--bg-warning-light); color: var(--warning);"><i data-lucide="banknote"></i></div>
+                        <span>Payout</span>
+                    </div>
+                    <div onclick="quickGenerateAudit()" class="quick-action-btn">
+                        <div class="qa-icon" style="background: var(--bg-info-light); color: var(--info);"><i data-lucide="file-check"></i></div>
+                        <span>Audit</span>
+                    </div>
+                    <div onclick="quickDownloadBackup()" class="quick-action-btn">
+                        <div class="qa-icon" style="background: var(--primary-light); color: var(--primary);"><i data-lucide="database"></i></div>
+                        <span>Backup</span>
+                    </div>
+                </div>
+
                 <!-- Analytics Chart -->
-                <div class="card" style="padding: 1rem; margin-bottom: 1rem; background: var(--bg-card);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">6-Month Financial Trend</div>
-                        <div style="display: flex; gap: 10px; font-size: 0.6rem; font-weight: 800; text-transform: uppercase;">
-                            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; background: var(--primary); border-radius: 2px;"></span> Income</span>
-                            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; background: var(--danger); border-radius: 2px;"></span> Expenses</span>
+                <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: var(--bg-card); border-radius: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                        <div style="font-size: 0.75rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">6-Month Performance</div>
+                        <div style="display: flex; gap: 12px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase;">
+                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: var(--primary); border-radius: 3px;"></span> Income</span>
+                            <span style="display: flex; align-items: center; gap: 5px;"><span style="width: 10px; height: 10px; background: var(--danger); border-radius: 3px;"></span> Outflow</span>
                         </div>
                     </div>
-                    <div style="height: 180px; position: relative;">
+                    <div style="height: 200px; position: relative;">
                         <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Financial Alerts (Defaulters) -->
+                <div id="defaulterAlerts" class="hidden" style="margin-bottom: 1.5rem;">
+                    <div style="background: var(--bg-danger-light); border: 2.5px solid var(--danger); border-radius: 16px; padding: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h4 style="margin: 0; font-size: 0.8rem; font-weight: 950; color: var(--danger); text-transform: uppercase; letter-spacing: 1px;">
+                                <i data-lucide="alert-triangle" style="width: 16px; vertical-align: middle; margin-right: 6px;"></i> High Dues Alert
+                            </h4>
+                            <span id="defaulterCount" class="badge badge-danger" style="font-size: 0.7rem;">0 Units</span>
+                        </div>
+                        <div id="defaulterList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
                     </div>
                 </div>
 
@@ -128,6 +165,26 @@ const Templates = {
                     </div>
                 </div>
 
+                <!-- Monthly Status Tracker -->
+                <div class="card" style="margin-top: 1rem;">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="calendar-check"></i> Monthly Tracker</h3>
+                        <div style="display: flex; gap: 10px; font-size: 0.55rem; font-weight: 800; text-transform: uppercase;">
+                            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%;"></span> Paid</span>
+                            <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 8px; height: 8px; background: var(--warning); border-radius: 50%;"></span> Unpaid</span>
+                        </div>
+                    </div>
+                    <div id="monthlyTracker" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; justify-content: center;"></div>
+                </div>
+
+                <!-- Tenant Ledger / Overview -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="list"></i> Unit Ledgers</h3>
+                    </div>
+                    <div id="tenantLedgerList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+
                 <!-- Activity Timeline -->
                 <div class="card">
                     <div class="card-header">
@@ -161,7 +218,7 @@ const Templates = {
                 </button>
             </div>
 
-            <div id="tenants-ledger" class="sub-section">
+            <div id="tenants-ledger" class="sub-section hidden">
                 <!-- Unit Billing -->
                 <div class="card no-print" style="padding: 1.5rem; margin-bottom: 2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -186,42 +243,47 @@ const Templates = {
                 <div id="historyTenantsContent">
                     <div class="card no-print" style="margin-bottom: 1.5rem;">
                         <div class="input-group" style="margin:0;">
-                            <label>Detailed Unit Statement</label>
-                            <select id="historyTenantSelect" onchange="loadTenantHistory(this.value)" style="font-weight: 800; color: var(--primary); border: 1.5px solid var(--primary); border-radius: 10px;">
+                            <label style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block;">Select Unit for Detailed Ledger</label>
+                            <select id="historyTenantSelect" onchange="loadTenantHistory(this.value)" style="font-weight: 900; color: var(--primary); border: 2px solid var(--primary); border-radius: 12px; height: 50px; font-size: 1rem; padding: 0 1rem; background: var(--bg-card);">
                                 <option value="">-- Select Unit for History --</option>
                             </select>
                         </div>
                     </div>
                     <div id="historyResults" class="hidden">
-                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1.5px solid var(--border);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
                             <div>
-                                <h3 id="historySelectedName" class="section-title" style="font-size: 1.1rem; margin-bottom: 2px; color: var(--text-main);">Tenant Name</h3>
-                                <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Detailed Payment History</div>
+                                <h3 id="historySelectedName" class="section-title" style="font-size: 1.25rem; margin-bottom: 4px; color: var(--text-main); font-weight: 950;">Tenant Name</h3>
+                                <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.75px;">Comprehensive Payment History & Ledger</div>
                             </div>
-                            <button onclick="printTenantStatement()" class="btn btn-secondary btn-sm" title="Print Ledger" style="border: 1px solid var(--border);">
-                                <i data-lucide="printer"></i> <span class="sm:hidden">Print Ledger</span>
+                            <button onclick="printTenantStatement()" class="btn btn-secondary btn-sm" title="Print Ledger" style="border: 1px solid var(--border); height: 40px; padding: 0 1.25rem; font-weight: 800;">
+                                <i data-lucide="printer"></i> <span class="sm:hidden">Print Statement</span>
                             </button>
                         </div>
 
-                        <div id="historyTenantSummary" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.25rem;" class="no-print">
-                            <div style="background: var(--bg-danger-light); padding: 0.75rem; border: 1px solid var(--danger); border-radius: var(--radius-md); text-align: center;">
-                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--danger); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Outstanding</div>
-                                <div id="histStatBalance" style="font-weight: 900; font-size: 1.1rem; color: var(--danger);">₹0</div>
+                        <div id="historyTenantSummary" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;" class="no-print">
+                            <div style="background: var(--bg-danger-light); padding: 1rem; border: 1.5px solid var(--danger); border-radius: 12px; text-align: left;">
+                                <div style="font-size: 0.6rem; font-weight: 900; color: var(--danger); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; opacity: 0.8;">Outstanding Arrears</div>
+                                <div id="histStatBalance" style="font-weight: 950; font-size: 1.25rem; color: var(--danger); line-height: 1.2;">₹0</div>
                             </div>
-                            <div style="background: var(--bg-success-light); padding: 0.75rem; border: 1px solid var(--success); border-radius: var(--radius-md); text-align: center;">
-                                <div style="font-size: 0.6rem; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Advance</div>
-                                <div id="histStatAdvance" style="font-weight: 900; font-size: 1.1rem; color: var(--success);">₹0</div>
+                            <div style="background: var(--bg-success-light); padding: 1rem; border: 1.5px solid var(--success); border-radius: 12px; text-align: left;">
+                                <div style="font-size: 0.6rem; font-weight: 900; color: var(--success); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; opacity: 0.8;">Security Advance</div>
+                                <div id="histStatAdvance" style="font-weight: 950; font-size: 1.25rem; color: var(--success); line-height: 1.2;">₹0</div>
                             </div>
+                        </div>
+
+                        <div class="card-header no-print" style="margin-bottom: 1rem; padding: 0;">
+                             <h4 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px;">Recent Transactions</h4>
                         </div>
 
                         <div id="historyBody" class="history-list"></div>
                         <div id="historyLoadMoreContainer" style="margin-top: 1.5rem; text-align: center;" class="hidden no-print">
-                            <button onclick="loadMoreTenantHistory()" class="btn btn-secondary btn-sm" style="width: 100%; border-style: dashed; font-weight: 800;">LOAD OLDER RECORDS</button>
+                            <button onclick="loadMoreTenantHistory()" class="btn btn-secondary btn-sm" style="width: 100%; border-style: dashed; font-weight: 900; height: 44px; letter-spacing: 0.5px;">LOAD OLDER RECORDS</button>
                         </div>
                     </div>
-                    <div id="historyEmptyState" class="empty-state no-print">
-                        <i data-lucide="file-search"></i>
-                        <p>Select a unit above to view full ledger</p>
+                    <div id="historyEmptyState" class="empty-state no-print" style="padding: 4rem 2rem; background: var(--bg-input); border: 2px dashed var(--border); border-radius: 20px;">
+                        <i data-lucide="file-text" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p style="font-weight: 800; color: var(--text-muted); font-size: 1.1rem;">Select a unit above to view the full ledger</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.7; margin-top: 8px;">You can track payments, generate statements, and manage dues here.</p>
                     </div>
                 </div>
             </div>
@@ -229,13 +291,13 @@ const Templates = {
             <div id="tenants-registry" class="sub-section hidden">
                 <!-- Unit Directory -->
                 <div class="card" style="margin-bottom: 2rem;">
-                    <div class="card-header">
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
                         <h3 class="section-title"><i data-lucide="users"></i> Unit Directory</h3>
-                        <div style="display: flex; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
                             <input type="file" id="importCsvInput" accept=".csv" class="hidden" onchange="importTenantsCSV(this)">
-                            <button onclick="document.getElementById('importCsvInput').click()" class="btn btn-secondary btn-icon-sm" title="Import CSV"><i data-lucide="upload"></i></button>
-                            <button onclick="exportTenantsCSV()" class="btn btn-secondary btn-icon-sm" title="Download CSV"><i data-lucide="download"></i></button>
-                            <button onclick="toggleRegForm()" id="regToggleBtn" class="btn btn-primary btn-sm">Register</button>
+                            <button onclick="document.getElementById('importCsvInput').click()" class="btn btn-secondary btn-icon-sm" title="Import CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="upload"></i></button>
+                            <button onclick="exportTenantsCSV()" class="btn btn-secondary btn-icon-sm" title="Download CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="download"></i></button>
+                            <button onclick="toggleRegForm()" id="regToggleBtn" class="btn btn-primary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Register</button>
                         </div>
                     </div>
                     <div id="entrance-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
@@ -273,6 +335,15 @@ const Templates = {
                         <h3 class="section-title"><i data-lucide="folder-lock"></i> Document Vault</h3>
                         <button onclick="toggleUploadForm()" id="uploadToggleBtn" class="btn btn-secondary btn-sm">New Upload</button>
                     </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <input type="text" id="vaultSearch" placeholder="Search files..." oninput="searchVault()" class="input-sm" style="flex: 2;">
+                        <select id="vaultFilter" onchange="loadVault()" class="input-sm" style="flex: 1;">
+                            <option value="">All Types</option>
+                            <option value="ID Proof">ID Proof</option>
+                            <option value="Lease Agreement">Lease</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                     <div id="vaultList" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;"></div>
                 </div>
             </div>
@@ -302,13 +373,16 @@ const Templates = {
                 </button>
             </div>
 
-            <div id="owners-payouts" class="sub-section">
+            <div id="owners-payouts" class="sub-section hidden">
                 <div class="card">
-                    <div class="card-header no-print">
+                    <div class="card-header no-print" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
                         <h3 class="section-title"><i data-lucide="banknote"></i> Owner Payouts</h3>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <button onclick="printPayoutHistory()" class="btn btn-secondary btn-icon-sm" title="Print History"><i data-lucide="printer"></i></button>
-                            <button onclick="toggleWithdrawalForm()" id="witToggleBtn" class="btn btn-primary btn-sm">Record Payout</button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <select id="payoutOwnerFilter" onchange="loadWithdrawals(this.value)" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase; cursor: pointer; min-width: 140px;">
+                                <option value="">All Owners</option>
+                            </select>
+                            <button onclick="toggleWithdrawalForm()" id="witToggleBtn" class="btn btn-primary btn-sm" style="height: 34px; border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Record Payout</button>
+                            <button onclick="printPayoutHistory()" class="btn btn-secondary btn-icon-sm" title="Print History" style="height: 34px; width: 34px; border-radius: 8px; border: 1.5px solid var(--border);"><i data-lucide="printer"></i></button>
                         </div>
                     </div>
                     <div id="withdrawal-form" class="hidden no-print" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
@@ -324,9 +398,6 @@ const Templates = {
                         </div>
                     </div>
                     <div id="withdrawalList" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
-                    <div id="payoutLoadMoreContainer" style="margin-top: 1.5rem; text-align: center;" class="hidden no-print">
-                        <button onclick="loadMoreWithdrawals()" class="btn btn-secondary btn-sm" style="width: 100%; border-style: dashed;">Load Older Payouts</button>
-                    </div>
                 </div>
             </div>
 
@@ -343,6 +414,9 @@ const Templates = {
                             <div class="input-group"><label>Bank Name</label><input type="text" id="acc_bank"></div>
                             <div class="input-group"><label>Acc Number</label><input type="text" id="acc_num"></div>
                             <div class="input-group"><label>IFSC Code</label><input type="text" id="acc_ifsc"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Branding (Optional)</label><input type="text" id="acc_prop_name" placeholder="Overridden Property Name"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Address (Optional)</label><input type="text" id="acc_prop_addr" placeholder="Overridden Address"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Terms (Optional)</label><textarea id="acc_terms" rows="3" placeholder="Specific terms for this building" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea></div>
                         </div>
                         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
                             <button onclick="saveReceivingAccount()" id="addAccBtn" class="btn btn-primary" style="flex: 2;">Add Account Record</button>
@@ -384,7 +458,7 @@ const Templates = {
                 </button>
             </div>
 
-            <div id="settings-config" class="sub-section">
+            <div id="settings-config" class="sub-section hidden">
                 <div class="card">
                     <div class="card-header">
                         <h3 class="section-title"><i data-lucide="server"></i> System Configuration</h3>
@@ -418,9 +492,9 @@ const Templates = {
 
             <div id="settings-expenses" class="sub-section hidden">
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="section-title"><i data-lucide="trending-down"></i> Maintenance Logs</h3>
-                        <button onclick="toggleExpenseForm()" id="expToggleBtn" class="btn btn-secondary btn-sm">Record Outflow</button>
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="trending-down"></i> Expenses</h3>
+                        <button onclick="toggleExpenseForm()" id="expToggleBtn" class="btn btn-secondary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Record Outflow</button>
                     </div>
                     <div id="expense-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
                         <div class="grid-inputs">
@@ -438,9 +512,25 @@ const Templates = {
 
             <div id="settings-maintenance" class="sub-section hidden">
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="section-title"><i data-lucide="wrench"></i> Maintenance Tickets</h3>
-                        <button onclick="toggleTaskForm()" id="taskToggleBtn" class="btn btn-primary btn-sm">New Ticket</button>
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="wrench"></i> Task Board</h3>
+                        <button onclick="toggleTaskForm()" id="taskToggleBtn" class="btn btn-primary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">New Ticket</button>
+                    </div>
+                    <div id="maintenance-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Unit/Room</label><select id="tTaskRenter"><option value="">-- Common Area --</option></select></div>
+                            <div class="input-group"><label>Task Title *</label><input type="text" id="tTaskTitle" placeholder="Repair leaky tap..."></div>
+                            <div class="input-group"><label>Category</label><select id="tTaskCat"><option>Plumbing</option><option>Electrical</option><option>Structural</option><option>Painting</option><option>Cleaning</option><option>Other</option></select></div>
+                            <div class="input-group"><label>Priority</label><select id="tTaskPrio"><option value="3">High</option><option value="2" selected>Medium</option><option value="1">Low</option></select></div>
+                            <div class="input-group"><label>Owner / Assigned To</label><select id="tTaskOwner"></select></div>
+                            <div class="input-group"><label>Est. Cost</label><input type="number" id="tTaskEst" value="0"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Task Photo</label><input type="file" id="tTaskPhoto" accept="image/*" style="padding: 8px;"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Description</label><textarea id="tTaskDesc" rows="2" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea></div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="addTask()" class="btn btn-primary" style="flex: 2;">Create Ticket</button>
+                            <button onclick="toggleTaskForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                        </div>
                     </div>
                     <div id="taskList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
                 </div>
@@ -511,6 +601,9 @@ const Templates = {
                 </div>
                 <div class="modal-body">
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <button onclick="shareTo('show')" class="btn" style="background: var(--info); color: white; width: 100%; border: none;">
+                            <i data-lucide="eye"></i> View Document
+                        </button>
                         <button onclick="shareTo('wa')" class="btn" style="background: #25D366; color: white; width: 100%; border: none;">
                             <i data-lucide="message-circle"></i> WhatsApp
                         </button>
@@ -524,6 +617,21 @@ const Templates = {
                             <i data-lucide="copy"></i> Copy Text
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="previewModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 800px; background: var(--bg-main);">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="file-text"></i> Document Preview</h3>
+                    <button onclick="closePreviewModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body" id="previewContent" style="padding: 1rem; background: var(--bg-main);">
+                </div>
+                <div class="modal-footer">
+                    <button onclick="shareTo('print')" class="btn btn-primary" style="flex: 2;"><i data-lucide="printer"></i> Print Document</button>
+                    <button onclick="closePreviewModal()" class="btn btn-secondary" style="flex: 1;">Close</button>
                 </div>
             </div>
         </div>
@@ -644,6 +752,7 @@ const Templates = {
                         <div class="input-group"><label>Type</label><select id="docType"><option value="ID Proof">ID Proof</option><option value="Lease Agreement">Lease</option><option value="Other">Other</option></select></div>
                         <div class="input-group"><label>Expiry</label><input type="date" id="docExpiry"></div>
                         <div class="input-group" style="grid-column: 1/-1;"><label>File</label><input type="file" id="docFile"></div>
+                        <div class="input-group" style="grid-column: 1/-1;"><label>Notes</label><input type="text" id="docNotes" placeholder="Optional notes..."></div>
                     </div>
                 </div>
                 <div class="modal-footer">

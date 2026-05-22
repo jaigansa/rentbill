@@ -32,7 +32,7 @@ svg[data-lucide] {
     .print-only { display: block !important; }
     
     /* 2. Hide standard UI elements & Reset Layout */
-    .btn, .nav, .bnav, .modal-overlay, #notification-container, .sidebar, .sidebar-header, .sidebar-footer, .card-header, .help-trigger, #logFilter, #btnHistoryTenants, #btnHistoryOwners, .no-print, #pinOverlay {
+    .btn, .nav, .bnav, .modal-overlay, #notification-container, .sidebar, .sidebar-header, .sidebar-footer, .card-header, .help-trigger, #logFilter, #btnHistoryTenants, #btnHistoryOwners, .no-print, #pinOverlay, #previewModal {
         display: none !important;
     }
 

@@ -53,12 +53,12 @@ func CreateOwnerWithdrawal(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
-	database.LogActivity("OWNER_PAYOUT", fmt.Sprintf("Owner %s withdrew %.2f", w.OwnerName, w.Amount), config.AppConfig.Username)
+	database.LogActivity("OWNER_PAYOUT", fmt.Sprintf("Owner %s withdrew %.2f", w.OwnerName, w.Amount), config.AppConfig.Username, w.Amount)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 func DeleteOwnerWithdrawal(c *gin.Context) {
 	database.DB.Exec("DELETE FROM owner_withdrawals WHERE id = ?", c.Param("id"))
-	database.LogActivity("OWNER_PAYOUT_DELETED", "Deleted withdrawal record "+c.Param("id"), config.AppConfig.Username)
+	database.LogActivity("OWNER_PAYOUT_DELETED", "Deleted withdrawal record "+c.Param("id"), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

@@ -19,12 +19,15 @@ type Config struct {
 }
 
 type ReceivingAccount struct {
-	OwnerName     string `json:"owner_name"`
-	Label         string `json:"label"`
-	UPI           string `json:"upi"`
-	BankName      string `json:"bank_name"`
-	AccountNumber string `json:"account_number"`
-	IFSC          string `json:"ifsc"`
+	OwnerName       string `json:"owner_name"`
+	Label           string `json:"label"`
+	UPI             string `json:"upi"`
+	BankName        string `json:"bank_name"`
+	AccountNumber   string `json:"account_number"`
+	IFSC            string `json:"ifsc"`
+	PropertyName    string `json:"property_name"`
+	PropertyAddress string `json:"property_address"`
+	AgreementTerms  string `json:"agreement_terms"`
 }
 
 type Renter struct {
@@ -49,26 +52,26 @@ type Renter struct {
 }
 
 type Bill struct {
-	ID              int      `json:"id"`
-	RenterID        int      `json:"renter_id"`
-	BillingMonth    string   `json:"billing_month"`
-	PrevEBReading   float64  `json:"prev_eb_reading"`
-	CurrEBReading   float64  `json:"curr_eb_reading"`
-	Others          float64  `json:"others"`
-	TotalAmount     float64  `json:"total_amount"`
-	IsPaid          int      `json:"is_paid"`
-	PaymentMethod   *string  `json:"payment_method"`
-	PaymentDetails  *string  `json:"payment_details"`
-	PaymentDate     *string  `json:"payment_date"`
-	DateGenerated   string   `json:"date_generated"`
-	Notes           string   `json:"notes"`
-	RentAmount      float64  `json:"rent_amount"`
-	WaterAmount     float64  `json:"water_amount"`
-	PaidAmount      float64  `json:"paid_amount"`
-	DiscountAmount  float64  `json:"discount_amount"`
-	WriteOffAmount  float64  `json:"write_off_amount"`
-	ArrearsAmount   float64  `json:"arrears_amount"`
-	ArrearsIncluded float64  `json:"arrears_included"`
+	ID              int     `json:"id"`
+	RenterID        int     `json:"renter_id"`
+	BillingMonth    string  `json:"billing_month"`
+	PrevEBReading   float64 `json:"prev_eb_reading"`
+	CurrEBReading   float64 `json:"curr_eb_reading"`
+	Others          float64 `json:"others"`
+	TotalAmount     float64 `json:"total_amount"`
+	IsPaid          int     `json:"is_paid"`
+	PaymentMethod   *string `json:"payment_method"`
+	PaymentDetails  *string `json:"payment_details"`
+	PaymentDate     *string `json:"payment_date"`
+	DateGenerated   string  `json:"date_generated"`
+	Notes           string  `json:"notes"`
+	RentAmount      float64 `json:"rent_amount"`
+	WaterAmount     float64 `json:"water_amount"`
+	PaidAmount      float64 `json:"paid_amount"`
+	DiscountAmount  float64 `json:"discount_amount"`
+	WriteOffAmount  float64 `json:"write_off_amount"`
+	ArrearsAmount   float64 `json:"arrears_amount"`
+	ArrearsIncluded float64 `json:"arrears_included"`
 }
 
 type Expense struct {
@@ -85,6 +88,7 @@ type ActivityLog struct {
 	ID        int       `json:"id"`
 	Action    string    `json:"action"`
 	Details   string    `json:"details"`
+	Amount    float64   `json:"amount"`
 	Username  string    `json:"username"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -99,20 +103,21 @@ type OwnerWithdrawal struct {
 }
 
 type MaintenanceTask struct {
-	ID            int      `json:"id"`
-	RenterID      *int     `json:"renter_id"` // Optional link to unit
-	UnitRoom      string   `json:"unit_room,omitempty"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Category      string   `json:"category"`
-	Priority      string   `json:"priority"`
-	Status        string   `json:"status"` // Pending, In Progress, Resolved
-	OwnerName     string   `json:"owner_name"`
-	EstimatedCost float64  `json:"estimated_cost"`
-	ActualCost    float64  `json:"actual_cost"`
-	DateReported  string   `json:"date_reported"`
-	DateResolved  *string  `json:"date_resolved"`
-	Timestamp     string   `json:"timestamp"`
+	ID            int     `json:"id"`
+	RenterID      *int    `json:"renter_id"` // Optional link to unit
+	UnitRoom      string  `json:"unit_room,omitempty"`
+	Title         string  `json:"title"`
+	Description   string  `json:"description"`
+	Category      string  `json:"category"`
+	Priority      string  `json:"priority"`
+	Status        string  `json:"status"` // Pending, In Progress, Resolved
+	OwnerName     string  `json:"owner_name"`
+	EstimatedCost float64 `json:"estimated_cost"`
+	ActualCost    float64 `json:"actual_cost"`
+	DateReported  string  `json:"date_reported"`
+	DateResolved  *string `json:"date_resolved"`
+	PhotoPath     string  `json:"photo_path"`
+	Timestamp     string  `json:"timestamp"`
 }
 
 type Document struct {

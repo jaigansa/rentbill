@@ -81,7 +81,7 @@ func ForgotPin(c *gin.Context) {
 	database.DB.Exec("UPDATE users SET pin_hash = ? WHERE username = ?", hash, config.AppConfig.Username)
 	config.SaveConfig()
 
-	database.LogActivity("FORGOT_PIN", "Reset PIN sent to "+config.AppConfig.EmailUser, config.AppConfig.Username)
+	database.LogActivity("FORGOT_PIN", "Reset PIN sent to "+config.AppConfig.EmailUser, config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 

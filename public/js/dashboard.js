@@ -104,22 +104,36 @@ async function loadDashboardStats() {
                     // Balance = Income - (Payouts + Maintenance paid by this owner)
                     const balance = s.income - (s.payouts + s.maintenance);
                     return `
-                        <div class="tenant-row" style="padding: 1rem; border-left: 4px solid var(--primary);">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <div style="font-weight: 900; font-size: 0.9rem; text-transform: uppercase;">${owner}</div>
-                                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                                        In: ${currencyFormatter.format(s.income)} | Out: ${currencyFormatter.format(s.payouts)} | Main: ${currencyFormatter.format(s.maintenance)}
+                        <div class="tenant-row" style="padding: 1.25rem; border-left: 5px solid var(--primary); background: var(--bg-card); border-radius: 12px; margin-bottom: 0.75rem; box-shadow: var(--shadow-sm);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 900; font-size: 1.1rem; text-transform: uppercase; color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;">${owner}</div>
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span>
+                                            <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Income:</span>
+                                            <span style="font-size: 0.75rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(s.income)}</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--warning);"></span>
+                                            <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Payouts:</span>
+                                            <span style="font-size: 0.75rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(s.payouts)}</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger);"></span>
+                                            <span style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Expenses/Maint:</span>
+                                            <span style="font-size: 0.75rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(s.maintenance)}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
-                                    <div>
-                                        <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted);">BALANCE</div>
-                                        <div style="font-weight: 900; font-size: 1.1rem; color: ${balance > 0 ? 'var(--primary)' : 'var(--text-main)'};">
+                                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%;">
+                                    <div style="margin-bottom: 1rem;">
+                                        <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Current Balance</div>
+                                        <div style="font-weight: 900; font-size: 1.3rem; color: ${balance > 0 ? 'var(--primary)' : 'var(--text-main)'}; letter-spacing: -1px;">
                                             ${currencyFormatter.format(balance)}
                                         </div>
                                     </div>
-                                    <button onclick="showOwnerTimeline('${owner}')" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Timeline</button>
+                                    <button onclick="showOwnerTimeline('${owner}')" class="btn btn-primary btn-sm" style="padding: 6px 12px; font-size: 0.65rem; border-radius: 6px; font-weight: 800; text-transform: uppercase;">View Timeline</button>
                                 </div>
                             </div>
                         </div>
@@ -132,9 +146,64 @@ async function loadDashboardStats() {
         window.dashboardState = { allPaidBills, withdrawals, expenses };
 
         renderTenantLedger(tenantLedger);
+        renderDefaulters(tenantLedger); // NEW: Highlight defaulters
         loadMonthlyTracker();
         renderAnalyticsChart(); // NEW: Trigger chart render
     } catch (e) { console.error("Stats failed", e); }
+}
+
+function renderDefaulters(ledger) {
+    const container = document.getElementById('defaulterAlerts');
+    const list = document.getElementById('defaulterList');
+    const countEl = document.getElementById('defaulterCount');
+    if (!container || !list) return;
+
+    // Filter tenants with significant balance (> ₹100)
+    const defaulters = ledger.filter(e => e.balance > 100).sort((a, b) => b.balance - a.balance);
+
+    if (defaulters.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    container.classList.remove('hidden');
+    if (countEl) countEl.innerText = `${defaulters.length} Units`;
+
+    list.innerHTML = defaulters.map(e => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: white; padding: 0.75rem 1rem; border-radius: 12px; border: 1.5px solid rgba(239, 68, 68, 0.2); box-shadow: var(--shadow-sm);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="room-badge" style="background: var(--danger); color: white; border: none; font-size: 0.75rem; min-width: 45px;">${e.room_no}</div>
+                <div>
+                    <div style="font-weight: 900; font-size: 0.9rem; color: var(--text-main); text-transform: uppercase;">${e.name}</div>
+                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Pending: ${currencyFormatter.format(e.balance)}</div>
+                </div>
+            </div>
+            <button onclick="quickRemind('${e.id}')" class="btn btn-danger btn-sm" style="padding: 6px 12px; font-size: 0.65rem; border-radius: 8px; font-weight: 800;">
+                <i data-lucide="bell" style="width: 12px; margin-right: 4px;"></i> REMIND
+            </button>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+function quickRemind(renterId) {
+    if (typeof prepareAndShare === 'function') {
+        showNotification("Finding latest record...", "info");
+        
+        // Fetch the single latest bill for this renter (paid or unpaid)
+        // The latest bill is the most relevant for a reminder as it usually contains the most up-to-date arrears.
+        API.bills.getByRenter(renterId, 1).then(bills => {
+            if (bills && bills.length > 0) {
+                const latestBill = bills[0];
+                prepareAndShare('bill', latestBill.id);
+            } else {
+                showNotification("No bills found for this unit. Generate a bill first.", "warning");
+            }
+        }).catch(err => {
+            console.error("Remind failed", err);
+            showNotification("Could not load bill details", "error");
+        });
+    }
 }
 
 let analyticsChart = null;
@@ -246,7 +315,6 @@ function renderTenantLedger(ledger) {
                             ${currencyFormatter.format(e.balance)}
                         </div>
                     </div>
-                    <button onclick="showSection('tenants-section'); switchSubSection('tenants-section', 'tenants-ledger'); loadTenantHistory(${e.id})" class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.6rem; height: auto; min-height: 0; border-width: 2px;">Statement</button>
                 </div>
             </div>
         `;
@@ -288,7 +356,10 @@ async function loadActivityLogs() {
                     
                     <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                         <div style="min-width: 0;">
-                            <div style="font-weight: 800; font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">${l.action.replace(/_/g, ' ')}</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="font-weight: 800; font-size: 0.75rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">${l.action.replace(/_/g, ' ')}</div>
+                                ${l.amount > 0 ? `<div style="font-weight: 900; font-size: 0.75rem; color: var(--text-main); background: var(--bg-main); padding: 1px 6px; border-radius: 4px; border: 1px solid var(--border);">${currencyFormatter.format(l.amount)}</div>` : ''}
+                            </div>
                             <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${l.details}</div>
                         </div>
                         <div style="text-align: right; flex-shrink: 0;">
@@ -416,21 +487,21 @@ function showOwnerTimeline(ownerName) {
             else if (item.type === 'EXPENSE') { icon = 'trending-down'; color = 'var(--danger)'; bg = 'var(--bg-danger-light)'; }
 
             return `
-                <div class="tenant-row" style="padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: space-between; border-color: var(--border); margin-bottom: 0.4rem; break-inside: avoid; gap: 1rem;">
+                <div class="tenant-row" style="padding: 0.8rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border: 1.5px solid var(--border); border-radius: 12px; margin-bottom: 0.5rem; break-inside: avoid; gap: 1rem; transition: transform 0.2s ease;">
                     <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
                         <!-- Styled Icon Box -->
-                        <div style="width: 38px; height: 38px; background: ${bg}; color: ${color}; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid ${bg};">
-                            <i data-lucide="${icon}" style="width: 18px; height: 18px;"></i>
+                        <div style="width: 40px; height: 40px; background: var(--bg-input); color: ${color}; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1.5px solid var(--border);">
+                            <i data-lucide="${icon}" style="width: 20px; height: 20px;"></i>
                         </div>
                         
-                        <div style="min-width: 0;">
-                            <div style="font-weight: 800; font-size: 0.7rem; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px;">${item.type}</div>
-                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin: 1px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.details}</div>
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${new Date(item.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</div>
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="font-weight: 800; font-size: 0.65rem; color: ${color}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">${item.type}</div>
+                            <div style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); line-height: 1.3; overflow: hidden; text-overflow: ellipsis;">${item.details}</div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-top: 4px;">${new Date(item.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</div>
                         </div>
                     </div>
-                    <div style="font-weight: 900; font-size: 1.1rem; color: ${isOut ? 'var(--text-main)' : 'var(--primary)'}; text-align: right; flex-shrink: 0;">
-                        ${isOut ? '-' : '+'}${currencyFormatter.format(item.amount)}
+                    <div style="font-weight: 900; font-size: 1.1rem; color: ${isOut ? 'var(--text-main)' : 'var(--primary)'}; text-align: right; flex-shrink: 0; letter-spacing: -0.5px;">
+                        ${isOut ? '−' : '+'}${currencyFormatter.format(item.amount).replace('₹', '').trim()}
                     </div>
                 </div>
             `;

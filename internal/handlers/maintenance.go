@@ -3,6 +3,8 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"rentbill/internal/config"
@@ -17,16 +19,16 @@ func GetMaintenanceTasks(c *gin.Context) {
 
 	query := `SELECT t.id, t.renter_id, COALESCE(r.room_no, 'COMMON') as unit_room, t.title, t.description, 
 			t.category, t.priority, t.status, t.owner_name, t.estimated_cost, t.actual_cost, 
-			t.date_reported, t.date_resolved, t.timestamp 
+			t.date_reported, t.date_resolved, t.photo_path, t.timestamp 
 			FROM maintenance_tasks t 
 			LEFT JOIN renters r ON t.renter_id = r.id `
-	
+
 	var args []interface{}
 	if status != "" && status != "ALL" {
 		query += " WHERE t.status = ? "
 		args = append(args, status)
 	}
-	
+
 	query += " ORDER BY t.priority DESC, t.timestamp DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
@@ -40,12 +42,14 @@ func GetMaintenanceTasks(c *gin.Context) {
 	var tasks []models.MaintenanceTask
 	for rows.Next() {
 		var t models.MaintenanceTask
-		rows.Scan(&t.ID, &t.RenterID, &t.UnitRoom, &t.Title, &t.Description, 
-			&t.Category, &t.Priority, &t.Status, &t.OwnerName, &t.EstimatedCost, &t.ActualCost, 
-			&t.DateReported, &t.DateResolved, &t.Timestamp)
+		rows.Scan(&t.ID, &t.RenterID, &t.UnitRoom, &t.Title, &t.Description,
+			&t.Category, &t.Priority, &t.Status, &t.OwnerName, &t.EstimatedCost, &t.ActualCost,
+			&t.DateReported, &t.DateResolved, &t.PhotoPath, &t.Timestamp)
 		tasks = append(tasks, t)
 	}
-	if tasks == nil { tasks = []models.MaintenanceTask{} }
+	if tasks == nil {
+		tasks = []models.MaintenanceTask{}
+	}
 	c.JSON(http.StatusOK, tasks)
 }
 
@@ -60,14 +64,14 @@ func CreateMaintenanceTask(c *gin.Context) {
 		(renter_id, title, description, category, priority, status, owner_name, estimated_cost, date_reported) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		t.RenterID, t.Title, t.Description, t.Category, t.Priority, t.Status, t.OwnerName, t.EstimatedCost, t.DateReported)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
 		return
 	}
 
 	id, _ := res.LastInsertId()
-	database.LogActivity("MAINTENANCE_TASK_CREATED", "New Task: "+t.Title, config.AppConfig.Username)
+	database.LogActivity("MAINTENANCE_TASK_CREATED", "New Task: "+t.Title, config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
 }
 
@@ -80,11 +84,11 @@ func UpdateMaintenanceTask(c *gin.Context) {
 
 	_, err := database.DB.Exec(`UPDATE maintenance_tasks 
 		SET title=?, description=?, category=?, priority=?, status=?, owner_name=?, 
-		estimated_cost=?, actual_cost=?, date_resolved=? 
+		estimated_cost=?, actual_cost=?, date_resolved=?, photo_path=? 
 		WHERE id = ?`,
-		t.Title, t.Description, t.Category, t.Priority, t.Status, t.OwnerName, 
-		t.EstimatedCost, t.ActualCost, t.DateResolved, c.Param("id"))
-	
+		t.Title, t.Description, t.Category, t.Priority, t.Status, t.OwnerName,
+		t.EstimatedCost, t.ActualCost, t.DateResolved, t.PhotoPath, c.Param("id"))
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
@@ -92,15 +96,41 @@ func UpdateMaintenanceTask(c *gin.Context) {
 
 	// If resolved and has actual cost, we might want to log it specifically
 	if t.Status == "Resolved" && t.ActualCost > 0 {
-		database.LogActivity("MAINTENANCE_TASK_RESOLVED", fmt.Sprintf("Resolved: %s (Cost: %.2f)", t.Title, t.ActualCost), config.AppConfig.Username)
+		database.LogActivity("MAINTENANCE_TASK_RESOLVED", fmt.Sprintf("Resolved: %s (Cost: %.2f)", t.Title, t.ActualCost), config.AppConfig.Username, t.ActualCost)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
+func UploadMaintenancePhoto(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+
+	// Use relative path for storage
+	dir := "./uploads/maintenance"
+	os.MkdirAll(dir, 0755)
+	
+	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), file.Filename)
+	path := fmt.Sprintf("%s/%s", dir, filename)
+	
+	if err := c.SaveUploadedFile(file, path); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+		return
+	}
+
+	// Return the web-accessible path
+	webPath := fmt.Sprintf("/uploads/maintenance/%s", filename)
+	database.DB.Exec("UPDATE maintenance_tasks SET photo_path = ? WHERE id = ?", webPath, c.Param("id"))
+	
+	c.JSON(http.StatusOK, gin.H{"success": true, "path": webPath})
+}
+
 func DeleteMaintenanceTask(c *gin.Context) {
 	database.DB.Exec("DELETE FROM maintenance_tasks WHERE id = ?", c.Param("id"))
-	database.LogActivity("MAINTENANCE_TASK_DELETED", "Deleted task ID: "+c.Param("id"), config.AppConfig.Username)
+	database.LogActivity("MAINTENANCE_TASK_DELETED", "Deleted task ID: "+c.Param("id"), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -110,7 +140,7 @@ func ConvertTaskToExpense(c *gin.Context) {
 	err := database.DB.QueryRow(`SELECT title, category, actual_cost, owner_name, date_resolved 
 		FROM maintenance_tasks WHERE id = ?`, c.Param("id")).Scan(
 		&t.Title, &t.Category, &t.ActualCost, &t.OwnerName, &t.DateResolved)
-	
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
@@ -129,12 +159,12 @@ func ConvertTaskToExpense(c *gin.Context) {
 	// Insert into expenses
 	_, err = database.DB.Exec("INSERT INTO expenses (category, amount, date, notes, owner_name) VALUES (?, ?, ?, ?, ?)",
 		t.Category, t.ActualCost, date, "Task: "+t.Title, t.OwnerName)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create expense"})
 		return
 	}
 
-	database.LogActivity("EXPENSE_RECORDED", "Converted Task to Expense: "+t.Title, config.AppConfig.Username)
+	database.LogActivity("EXPENSE_RECORDED", "Converted Task to Expense: "+t.Title, config.AppConfig.Username, t.ActualCost)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

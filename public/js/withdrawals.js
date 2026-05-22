@@ -1,9 +1,16 @@
 let resetWithdrawalsScroll = null;
 let currentWithdrawalOwnerFilter = '';
 
-async function loadWithdrawals(owner = '') {
+async function loadWithdrawals(owner = null) {
     const listDiv = document.getElementById('withdrawalList');
     if (!listDiv) return;
+
+    // If owner is null, it means we're calling from navigation or refresh
+    // Try to get current filter value, fallback to ''
+    if (owner === null) {
+        const filterSelect = document.getElementById('payoutOwnerFilter');
+        owner = filterSelect ? filterSelect.value : '';
+    }
 
     currentWithdrawalOwnerFilter = owner;
 
@@ -22,10 +29,6 @@ async function loadWithdrawals(owner = '') {
         (w) => UI.renderWithdrawalItem(w, deleteWithdrawal),
         { limit: 20, triggerId: 'withdrawals-scroll-trigger' }
     );
-}
-
-function loadMoreWithdrawals() {
-    // Handled by infinite scroll
 }
 
 function populateWithdrawalFilters() {
@@ -111,13 +114,35 @@ async function printPayoutHistory() {
     const existingBranding = listDiv.querySelector('.print-branding');
     if (existingBranding) existingBranding.remove();
 
+    // Calculate Total for the current view
+    let totalAmount = 0;
+    const items = listDiv.querySelectorAll('.tenant-row');
+    items.forEach(item => {
+        const text = item.innerText || '';
+        const match = text.match(/₹\s?([0-9,.]+)/);
+        if (match) {
+            totalAmount += parseFloat(match[1].replace(/,/g, ''));
+        }
+    });
+
     const brandingHtml = `
         <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif; background: white;">
             <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
             <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
             <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">OWNER PAYOUT STATEMENT</div>
-            <p style="margin: 15px 0 0 0; font-size: 0.9rem; font-weight: 900; color: var(--text-main); text-transform: uppercase;">STATEMENT FOR: <span style="border-bottom: 1.5px solid var(--border);">${currentWithdrawalOwnerFilter ? currentWithdrawalOwnerFilter.toUpperCase() : 'ALL OWNERS'}</span></p>
-            <p style="margin: 6px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+            
+            <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; border: 1.5px solid var(--border); padding: 15px; border-radius: 8px;">
+                <div>
+                    <p style="margin: 0; font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Statement For</p>
+                    <p style="margin: 4px 0 0 0; font-size: 1.1rem; font-weight: 900; color: var(--primary); text-transform: uppercase;">${currentWithdrawalOwnerFilter ? currentWithdrawalOwnerFilter : 'ALL OWNERS'}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Total Payout Amount</p>
+                    <p style="margin: 4px 0 0 0; font-size: 1.1rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalAmount)}</p>
+                </div>
+            </div>
+
+            <p style="margin: 15px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; text-align: left;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
         </div>
     `;
 

@@ -1,25 +1,51 @@
 # Binaries
 /rentbill
 /rentbill_prod
+*.test
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
 # Databases
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # Backups
 backups/
+**/backups/
+
+# Uploads
+uploads/
+**/uploads/
 
 # Local Config
 config.json
+.env
+.env.*
+!.env.example
 
 # Releases
 *.tar.gz
 /rentbill_release/
 /rentbill_deploy.tar.gz
 
-# Project Audits
-UI_UX_IMPROVEMENTS.md
+# Go related
+vendor/
+coverage.out
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS files
 .DS_Store
 Thumbs.db
+
+# Project Audits
+UI_UX_IMPROVEMENTS.md

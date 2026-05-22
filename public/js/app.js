@@ -142,6 +142,7 @@ document.addEventListener('keydown', (e) => {
         // Cleanup specific modal states if needed
         if (typeof closeSettlementModal === 'function') closeSettlementModal();
         if (typeof closePaymentModal === 'function') closePaymentModal();
+        if (typeof closePreviewModal === 'function') closePreviewModal();
         if (typeof closeShareModal === 'function') closeShareModal();
         if (typeof closeTaskModal === 'function') closeTaskModal();
         if (typeof toggleTaskForm === 'function' && !document.getElementById('createTaskModal').classList.contains('hidden')) toggleTaskForm();

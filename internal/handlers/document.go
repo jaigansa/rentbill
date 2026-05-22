@@ -16,18 +16,18 @@ import (
 
 func GetDocuments(c *gin.Context) {
 	renterID := c.Query("renter_id")
-	
+
 	query := `SELECT d.id, d.renter_id, COALESCE(r.room_no, 'Global') as unit_room, 
 			d.file_name, d.file_path, d.file_type, d.upload_date, d.expiry_date, d.notes 
 			FROM documents d 
 			LEFT JOIN renters r ON d.renter_id = r.id `
-	
+
 	var args []interface{}
 	if renterID != "" {
 		query += " WHERE d.renter_id = ? "
 		args = append(args, renterID)
 	}
-	
+
 	query += " ORDER BY d.upload_date DESC"
 
 	rows, err := database.DB.Query(query, args...)
@@ -40,11 +40,13 @@ func GetDocuments(c *gin.Context) {
 	var docs []models.Document
 	for rows.Next() {
 		var d models.Document
-		rows.Scan(&d.ID, &d.RenterID, &d.UnitRoom, &d.FileName, &d.FilePath, 
+		rows.Scan(&d.ID, &d.RenterID, &d.UnitRoom, &d.FileName, &d.FilePath,
 			&d.FileType, &d.UploadDate, &d.ExpiryDate, &d.Notes)
 		docs = append(docs, d)
 	}
-	if docs == nil { docs = []models.Document{} }
+	if docs == nil {
+		docs = []models.Document{}
+	}
 	c.JSON(http.StatusOK, docs)
 }
 
@@ -79,7 +81,7 @@ func UploadDocument(c *gin.Context) {
 		(renter_id, file_name, file_path, file_type, expiry_date, notes) 
 		VALUES (?, ?, ?, ?, ?, ?)`,
 		renterID, file.Filename, "/uploads/"+uniqueName, fileType, expiryDate, notes)
-	
+
 	if err != nil {
 		os.Remove(dst) // Cleanup
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save document record"})
@@ -87,8 +89,8 @@ func UploadDocument(c *gin.Context) {
 	}
 
 	id, _ := res.LastInsertId()
-	database.LogActivity("DOCUMENT_UPLOADED", "Uploaded: "+file.Filename, config.AppConfig.Username)
-	c.JSON(http.StatusOK, gin.H{"success": true, "id": id, "path": "/uploads/"+uniqueName})
+	database.LogActivity("DOCUMENT_UPLOADED", "Uploaded: "+file.Filename, config.AppConfig.Username, 0)
+	c.JSON(http.StatusOK, gin.H{"success": true, "id": id, "path": "/uploads/" + uniqueName})
 }
 
 func DeleteDocument(c *gin.Context) {
@@ -103,6 +105,6 @@ func DeleteDocument(c *gin.Context) {
 	os.Remove("." + filePath)
 
 	database.DB.Exec("DELETE FROM documents WHERE id = ?", c.Param("id"))
-	database.LogActivity("DOCUMENT_DELETED", "Deleted document ID: "+c.Param("id"), config.AppConfig.Username)
+	database.LogActivity("DOCUMENT_DELETED", "Deleted document ID: "+c.Param("id"), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

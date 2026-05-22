@@ -44,6 +44,13 @@ function renderTaskList(tasks) {
                     </div>
                     <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main); margin-bottom: 4px;">${task.title}</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">${task.description || 'No description'}</div>
+                    
+                    ${task.photo_path ? `
+                        <div style="margin-bottom: 12px;">
+                            <img src="${task.photo_path}" onclick="window.open('${task.photo_path}', '_blank')" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 1.5px solid var(--border); cursor: zoom-in; object-fit: cover;">
+                        </div>
+                    ` : ''}
+
                     <div style="display: flex; align-items: center; gap: 12px; font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">
                         <span><i data-lucide="user" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i> ${task.owner_name || 'Common'}</span>
                         <span><i data-lucide="calendar" style="width: 10px; height: 10px; display: inline-block; margin-right: 2px;"></i> ${task.date_reported}</span>
@@ -78,21 +85,36 @@ function getStatusBadgeClass(status) {
 }
 
 function toggleTaskForm() {
-    const modal = document.getElementById('createTaskModal');
-    const isHidden = modal.classList.toggle('hidden');
+    const form = document.getElementById('maintenance-form');
+    if (!form) return;
+    const isHidden = form.classList.toggle('hidden');
+    const btn = document.getElementById('taskToggleBtn');
+    
     if (!isHidden) {
-        document.body.classList.add('modal-open');
-        document.getElementById('tTaskDateReported').value = new Date().toISOString().split('T')[0];
+        if (btn) btn.innerText = "Cancel";
         populateTaskDropdowns();
     } else {
-        document.body.classList.remove('modal-open');
+        if (btn) btn.innerText = "New Ticket";
+        // Clear inputs
+        document.getElementById('tTaskTitle').value = '';
+        document.getElementById('tTaskDesc').value = '';
+        document.getElementById('tTaskEst').value = '0';
+        document.getElementById('tTaskPhoto').value = '';
     }
 }
 
-function populateTaskDropdowns() {
+async function populateTaskDropdowns() {
     // Units
-    const unitSelect = document.getElementById('tTaskRenterId');
-    if (unitSelect && window.allTenants) {
+    const unitSelect = document.getElementById('tTaskRenter');
+    if (!unitSelect) return;
+
+    if (!window.allTenants) {
+        try {
+            window.allTenants = await API.renters.getAll();
+        } catch (e) { console.error("Failed to load renters for maintenance", e); }
+    }
+
+    if (window.allTenants) {
         const current = unitSelect.value;
         unitSelect.innerHTML = '<option value="">-- Common / Non-unit --</option>';
         window.allTenants.forEach(t => {
@@ -120,28 +142,28 @@ function populateTaskDropdowns() {
     }
 }
 
-async function saveTask() {
+async function addTask() {
     const title = document.getElementById('tTaskTitle').value;
     const desc = document.getElementById('tTaskDesc').value;
-    const renterId = document.getElementById('tTaskRenterId').value;
-    const category = document.getElementById('tTaskCategory').value;
-    const priority = document.getElementById('tTaskPriority').value;
+    const renterId = document.getElementById('tTaskRenter').value;
+    const category = document.getElementById('tTaskCat').value;
+    const priority = document.getElementById('tTaskPrio').value;
     const owner = document.getElementById('tTaskOwner').value;
-    const estCost = parseFloat(document.getElementById('tTaskEstCost').value) || 0;
-    const date = document.getElementById('tTaskDateReported').value;
+    const estCost = parseFloat(document.getElementById('tTaskEst').value) || 0;
+    const photoFile = document.getElementById('tTaskPhoto').files[0];
 
-    if (!title || !date) return showNotification("Title and Date are required", "error");
+    if (!title) return showNotification("Task Title is required", "error");
 
     const data = {
         title, 
         description: desc,
         renter_id: renterId ? parseInt(renterId) : null,
         category,
-        priority,
+        priority: priority === "3" ? "High" : (priority === "1" ? "Low" : "Medium"),
         status: 'Pending',
         owner_name: owner,
         estimated_cost: estCost,
-        date_reported: date
+        date_reported: new Date().toISOString().split('T')[0]
     };
 
     try {
@@ -150,7 +172,17 @@ async function saveTask() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
+        
         if (res.ok) {
+            const result = await res.json();
+            if (photoFile && result.id) {
+                const formData = new FormData();
+                formData.append('file', photoFile);
+                await fetch(`/api/maintenance/${result.id}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+            }
             showNotification("Ticket raised successfully", "success");
             toggleTaskForm();
             loadTasks();

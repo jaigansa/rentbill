@@ -23,11 +23,11 @@ const UI = {
                     </div>
 
                     <div style="display: flex; gap: 0.5rem; flex-shrink: 0; align-items: center;">
-                        <button class="btn btn-secondary btn-icon-sm edit-btn" title="Edit Profile">
-                            <i data-lucide="edit-2"></i>
+                        <button class="btn btn-secondary btn-icon-sm edit-btn" title="Edit Profile" style="border-radius: 8px; width: 34px; height: 34px;">
+                            <i data-lucide="edit-2" style="width: 16px;"></i>
                         </button>
-                        <button class="btn btn-secondary btn-icon-sm vacant-btn" style="color: var(--danger);" title="Register Exit">
-                            <i data-lucide="log-out"></i>
+                        <button class="btn btn-danger btn-icon-sm vacant-btn" title="Register Exit" style="border-radius: 8px; width: 34px; height: 34px; background: var(--bg-danger-light); border-color: var(--danger); color: var(--danger);">
+                            <i data-lucide="log-out" style="width: 16px;"></i>
                         </button>
                     </div>
                 </div>
@@ -114,31 +114,46 @@ const UI = {
         `;
     },
 
-    renderWithdrawalItem: (w, onDelete) => `
-        <div class="tenant-row" style="padding: 0.6rem 1rem; margin-bottom: 0.4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-color: var(--border);">
-            <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 0;">
-                <!-- Styled Icon Box -->
-                <div style="width: 38px; height: 38px; background: var(--bg-warning-light); color: var(--warning); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--bg-warning-light);">
-                    <i data-lucide="banknote" style="width: 18px; height: 18px;"></i>
+    renderWithdrawalItem: (w, onDelete) => {
+        const d = new Date(w.date);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = d.toLocaleDateString('en-IN', { month: 'short' }).toUpperCase();
+        
+        return `
+            <div class="tenant-row" style="padding: 0.75rem 1.25rem; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; border: 1.5px solid var(--border); border-radius: 12px; transition: transform 0.2s ease;">
+                <div style="display: flex; align-items: center; gap: 1.25rem; flex: 1; min-width: 0;">
+                    <!-- Modern Date Badge -->
+                    <div style="width: 44px; height: 44px; background: var(--bg-input); border: 1.5px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">
+                        <span style="font-size: 0.55rem; font-weight: 800; color: var(--primary); margin-bottom: 2px;">${month}</span>
+                        <span style="font-size: 1rem; font-weight: 900; color: var(--text-main);">${day}</span>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; gap: 1rem;">
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="font-size: 0.7rem; font-weight: 850; color: var(--primary); text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 6px;">
+                                <span>${w.owner_name}</span>
+                                <span style="width: 3px; height: 3px; background: var(--border); border-radius: 50%;"></span>
+                                <span style="color: var(--text-muted);">${d.getFullYear()}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.8;" title="${w.notes || ''}">
+                                ${w.notes || 'No description provided'}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: right; flex-shrink: 0;">
+                            <div style="font-weight: 900; font-size: 1.15rem; color: var(--text-main); letter-spacing: -0.5px;">
+                                ${currencyFormatter.format(w.amount)}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div style="min-width: 0;">
-                    <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
-                        ${currencyFormatter.format(w.amount)}
-                        <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">• Payout</span>
-                    </div>
-                    <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">
-                        <span style="color: var(--primary);">${w.owner_name}</span> • ${new Date(w.date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}
-                    </div>
+
+                <div class="withdrawal-actions no-print">
+                    <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm" style="width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--bg-danger-light); color: var(--danger);"><i data-lucide="trash-2" width="14" height="14"></i></button>
                 </div>
             </div>
-
-            <div class="withdrawal-actions no-print">
-                <button onclick="deleteWithdrawal(${w.id})" class="btn btn-secondary btn-icon-sm" style="width: 32px; height: 32px; border: none; background: transparent; color: var(--danger);"><i data-lucide="trash-2" width="14" height="14"></i></button>
-            </div>
-        </div>
-    `,
-
+        `;
+    },
     renderChannelPill: (acc) => {
         const pill = document.createElement('button');
         pill.className = 'btn btn-secondary btn-sm';

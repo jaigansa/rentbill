@@ -86,7 +86,7 @@ async function renderBillingList() {
 function createTenantCard(t) {
     const card = document.createElement('div');
     card.className = 'tenant-row';
-    card.style.marginBottom = '0.5rem';
+    card.style.marginBottom = '0.75rem';
     
     const now = new Date();
     const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -95,40 +95,40 @@ function createTenantCard(t) {
     card.innerHTML = `
         <div class="tenant-header" onclick="toggleBilling(${t.id})" style="padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer;">
             <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
-                <div class="room-badge" style="min-width: 45px; height: 32px; font-size: 0.8rem; border-radius: 8px;">${t.room_no}</div>
+                <div class="room-badge" style="min-width: 50px; height: 36px; font-size: 0.9rem; border-radius: 10px; font-weight: 900;">${t.room_no}</div>
                 <div>
-                    <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main);">${t.name}</div>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                        <span style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Rent: ${currencyFormatter.format(t.base_rent)}</span>
-                        ${t.pending_arrears > 0 ? `<span class="badge badge-danger" style="font-size: 0.5rem; padding: 1px 4px; border-radius: 4px;">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>` : ''}
+                    <div style="font-weight: 900; font-size: 1rem; color: var(--text-main);">${t.name}</div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px;">
+                        <span style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Rent: ${currencyFormatter.format(t.base_rent)}</span>
+                        ${t.pending_arrears > 0 ? `<span class="badge badge-danger" style="font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; font-weight: 900;">Arrears: ${currencyFormatter.format(t.pending_arrears)}</span>` : ''}
                     </div>
                 </div>
             </div>
-            <div id="icon-${t.id}" style="color: var(--secondary); transition: transform 0.2s ease;">
-                <i data-lucide="chevron-down" width="18"></i>
+            <div id="icon-${t.id}" style="color: var(--secondary); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+                <i data-lucide="chevron-down" width="20"></i>
             </div>
         </div>
         
-        <div id="billing-${t.id}" class="billing-controls hidden" style="padding: 1.5rem; border-top: 1px dashed var(--border); background: var(--bg-main);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                <div class="input-group"><label>Period</label><input type="month" id="month-${t.id}" value="${defaultMonthStr}"></div>
-                <div class="input-group"><label>Prev EB</label><input type="number" id="prev-eb-${t.id}" step="0.01" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group"><label>Curr EB</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group"><label>Arrears</label><input type="number" id="arrears-${t.id}" value="${t.pending_arrears || 0}" oninput="updateLiveTotal(${t.id})" style="color: var(--danger); font-weight: 800;"></div>
-                <div class="input-group"><label>Extra Fee</label><input type="number" id="others-${t.id}" value="0" oninput="updateLiveTotal(${t.id})"></div>
-                <div class="input-group"><label>Waiver (-)</label><input type="number" id="discount-${t.id}" value="0" oninput="updateLiveTotal(${t.id})" style="color: var(--success); font-weight: 800;"></div>
+        <div id="billing-${t.id}" class="billing-controls hidden" style="padding: 1.5rem; border-top: 1.5px dashed var(--border); background: var(--bg-main); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="input-group" style="grid-column: span 2;"><label style="font-size: 0.6rem;">Billing Period</label><input type="month" id="month-${t.id}" value="${defaultMonthStr}" style="font-weight: 800;"></div>
+                <div class="input-group"><label style="font-size: 0.6rem;">Previous Reading</label><input type="number" id="prev-eb-${t.id}" step="0.01" oninput="updateLiveTotal(${t.id})" style="font-weight: 700;"></div>
+                <div class="input-group"><label style="font-size: 0.6rem;">Current Reading</label><input type="number" id="eb-${t.id}" placeholder="Reading" step="0.01" oninput="updateLiveTotal(${t.id})" style="font-weight: 900; border-color: var(--primary);"></div>
+                <div class="input-group"><label style="font-size: 0.6rem;">Arrears</label><input type="number" id="arrears-${t.id}" value="${t.pending_arrears || 0}" oninput="updateLiveTotal(${t.id})" style="color: var(--danger); font-weight: 800;"></div>
+                <div class="input-group"><label style="font-size: 0.6rem;">Extra Charges</label><input type="number" id="others-${t.id}" value="0" oninput="updateLiveTotal(${t.id})" style="font-weight: 700;"></div>
+                <div class="input-group" style="grid-column: span 2;"><label style="font-size: 0.6rem;">Waiver / Discount (-)</label><input type="number" id="discount-${t.id}" value="0" oninput="updateLiveTotal(${t.id})" style="color: var(--success); font-weight: 800;"></div>
             </div>
 
-            <div style="background: var(--bg-card); border: 1.5px solid var(--primary); border-radius: 12px; padding: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;">
-                <div style="flex: 1; min-width: 250px;">
-                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Calculated Draft Total</div>
-                    <div id="total-val-${t.id}" style="font-size: 1.8rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(t.base_rent + t.water_maint + t.pending_arrears)}</div>
-                    <div id="breakdown-${t.id}" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; margin-top: 6px; text-transform: uppercase; line-height: 1.4;">
+            <div style="background: var(--bg-card); border: 2px solid var(--primary); border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 1.25rem;">
+                    <div style="font-size: 0.7rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;">Total Amount Due</div>
+                    <div id="total-val-${t.id}" style="font-size: 2.2rem; font-weight: 950; color: var(--text-main); line-height: 1;">${currencyFormatter.format(t.base_rent + t.water_maint + t.pending_arrears)}</div>
+                    <div id="breakdown-${t.id}" style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; margin-top: 10px; text-transform: uppercase; line-height: 1.5; background: var(--bg-main); padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
                         Rent: ${currencyFormatter.format(t.base_rent)} + Maint: ${currencyFormatter.format(t.water_maint)} + Arrears: ${currencyFormatter.format(t.pending_arrears)}
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="generateBill(${t.id})" style="height: 50px; padding: 0 2rem; font-weight: 900; letter-spacing: 0.5px;">
-                    Generate & Share <i data-lucide="send" style="margin-left: 8px; width: 16px;"></i>
+                <button class="btn btn-primary" onclick="generateBill(${t.id})" style="width: 100%; height: 56px; font-weight: 900; letter-spacing: 1px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 0 var(--primary-dark);">
+                    GENERATE & SHARE <i data-lucide="send" style="margin-left: 10px; width: 20px; height: 20px;"></i>
                 </button>
             </div>
         </div>`;
@@ -189,6 +189,7 @@ async function fetchLastEB(id) {
 }
 
 async function generateBill(id) {
+    const btn = document.querySelector(`.tenant-row:has(#billing-${id}) .btn-primary`);
     const currEB = parseFloat(document.getElementById(`eb-${id}`).value);
     const prevEB = parseFloat(document.getElementById(`prev-eb-${id}`).value);
     const arrears = parseFloat(document.getElementById(`arrears-${id}`).value) || 0;
@@ -202,6 +203,12 @@ async function generateBill(id) {
 
     if (currEB < prevEB) {
         if (!confirm("Current reading is lower than previous. Proceed anyway?")) return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Generating... <i data-lucide="loader-2" class="loading-spin" style="margin-left: 8px; width: 16px;"></i>';
+        lucide.createIcons();
     }
 
     const date = new Date(monthInput + '-01');
@@ -218,14 +225,20 @@ async function generateBill(id) {
             billing_month: formattedMonth
         });
         showNotification("Bill generated", "success");
+        if (typeof prepareAndShare === 'function') {
+            await prepareAndShare('bill', result.id);
+        }
         toggleBilling(id);
-        
-        // Refresh cache and re-render
-        await refreshGlobalTenantCache();
-        await loadTenants();
-        
-        prepareAndShare('bill', result.id);
-    } catch (err) { showNotification(err.message, "error"); }
+        loadTenants(); 
+    } catch (e) {
+        showNotification(e.message || "Failed to generate bill", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Generate & Share <i data-lucide="send" style="margin-left: 8px; width: 16px;"></i>';
+            lucide.createIcons();
+        }
+    }
 }
 
 async function loadSpecificBilling(renterId, monthName) {

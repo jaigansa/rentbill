@@ -57,7 +57,7 @@ func CreateRenter(c *gin.Context) {
 		return
 	}
 	id, _ := res.LastInsertId()
-	database.LogActivity("TENANT_REGISTERED", fmt.Sprintf("Registered %s for Unit %s", r.Name, r.RoomNo), config.AppConfig.Username)
+	database.LogActivity("TENANT_REGISTERED", fmt.Sprintf("Registered %s for Unit %s", r.Name, r.RoomNo), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"id": id})
 }
 
@@ -74,13 +74,13 @@ func UpdateRenter(c *gin.Context) {
 		return
 	}
 
-	_, err = database.DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=?, pending_arrears=? WHERE id=?`, 
+	_, err = database.DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=?, pending_arrears=? WHERE id=?`,
 		r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
-	database.LogActivity("TENANT_UPDATED", fmt.Sprintf("Updated %s", r.Name), config.AppConfig.Username)
+	database.LogActivity("TENANT_UPDATED", fmt.Sprintf("Updated %s", r.Name), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -114,8 +114,8 @@ func MarkVacant(c *gin.Context) {
 	}
 
 	details := fmt.Sprintf("Tenant %s vacated. %s: %s (Deducted: Dues %.2f, Repairs %.2f). New Arrears: %.2f", name, req.RefundLabel, req.Refund, req.Dues, req.Repairs, newArrears)
-	database.LogActivity("UNIT_VACATED", details, config.AppConfig.Username)
-	
+	database.LogActivity("UNIT_VACATED", details, config.AppConfig.Username, 0)
+
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -128,7 +128,7 @@ func RestoreRenter(c *gin.Context) {
 		return
 	}
 	database.DB.Exec("UPDATE renters SET is_active = 1 WHERE id = ?", body.ID)
-	database.LogActivity("TENANT_RESTORED", "Tenant restored", config.AppConfig.Username)
+	database.LogActivity("TENANT_RESTORED", "Tenant restored", config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -156,7 +156,7 @@ func GetRenterHistory(c *gin.Context) {
 
 func DeleteRenter(c *gin.Context) {
 	database.DB.Exec("UPDATE renters SET is_active = -1 WHERE id = ?", c.Param("id"))
-	database.LogActivity("TENANT_REMOVED", "Tenant removed (Soft Delete) "+c.Param("id"), config.AppConfig.Username)
+	database.LogActivity("TENANT_REMOVED", "Tenant removed (Soft Delete) "+c.Param("id"), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -186,7 +186,7 @@ func ExportRentersCSV(c *gin.Context) {
 			r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI, r.EBRate, r.InitialEB, r.Arrears)
 	}
 
-	database.LogActivity("DATA_EXPORT", "Exported Unit Directory to CSV", config.AppConfig.Username)
+	database.LogActivity("DATA_EXPORT", "Exported Unit Directory to CSV", config.AppConfig.Username, 0)
 }
 
 func ImportRentersCSV(c *gin.Context) {
@@ -236,19 +236,19 @@ func ImportRentersCSV(c *gin.Context) {
 		moveIn := record[8]
 		job := record[9]
 		upi := record[10]
-		
+
 		ebRate := 9.0
 		if len(record) > 11 {
 			if val, err := strconv.ParseFloat(record[11], 64); err == nil && val > 0 {
 				ebRate = val
 			}
 		}
-		
+
 		initialEB := 0.0
 		if len(record) > 12 {
 			initialEB, _ = strconv.ParseFloat(record[12], 64)
 		}
-		
+
 		arrears := 0.0
 		if len(record) > 13 {
 			arrears, _ = strconv.ParseFloat(record[13], 64)
@@ -259,14 +259,14 @@ func ImportRentersCSV(c *gin.Context) {
 		}
 
 		_, err = database.DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears) 
-			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, 
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 			name, room, aadhar, rent, ebRate, water, advance, moveIn, mobile, email, initialEB, "", "", job, upi, arrears)
-		
+
 		if err == nil {
 			count++
 		}
 	}
 
-	database.LogActivity("DATA_IMPORT", fmt.Sprintf("Imported %d units from CSV", count), config.AppConfig.Username)
+	database.LogActivity("DATA_IMPORT", fmt.Sprintf("Imported %d units from CSV", count), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": fmt.Sprintf("Successfully imported %d records", count)})
 }

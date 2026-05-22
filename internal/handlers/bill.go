@@ -61,7 +61,7 @@ func CreateBill(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "A bill already exists for this tenant and month"})
 		return
 	}
-	
+
 	tx, err := database.DB.Begin()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed"})
@@ -75,18 +75,18 @@ func CreateBill(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Renter not found"})
 		return
 	}
-	
+
 	ebCost := (b.CurrEBReading - b.PrevEBReading) * r.EBUnitPrice
 	// Total amount represents the NET amount payable by the tenant
 	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + r.PendingArrears - b.DiscountAmount
-	
-	res, err := tx.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, 
+
+	res, err := tx.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 		b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, time.Now().Format(time.RFC3339), b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears, b.DiscountAmount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate bill"})
 		return
 	}
-	
+
 	// Reset pending arrears after they are billed
 	tx.Exec("UPDATE renters SET pending_arrears = 0 WHERE id = ?", b.RenterID)
 
@@ -96,7 +96,7 @@ func CreateBill(c *gin.Context) {
 	}
 
 	id, _ := res.LastInsertId()
-	database.LogActivity("BILL_GENERATED", fmt.Sprintf("Generated %s bill for %s (included %.2f arrears)", b.BillingMonth, r.Name, r.PendingArrears), config.AppConfig.Username)
+	database.LogActivity("BILL_GENERATED", fmt.Sprintf("Generated %s bill for %s (included %.2f arrears)", b.BillingMonth, r.Name, r.PendingArrears), config.AppConfig.Username, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
 }
 
@@ -142,9 +142,9 @@ func PayBill(c *gin.Context) {
 	// If additional adjustments are made now, we update the bill record to reflect them.
 	newTotal := total - req.DiscountAmount - req.WriteOffAmount - req.ArrearsAmount
 
-	_, err = tx.Exec("UPDATE bills SET is_paid = 1, payment_method = ?, payment_date = ?, payment_details = ?, paid_amount = ?, discount_amount = discount_amount + ?, write_off_amount = write_off_amount + ?, arrears_amount = ?, total_amount = ? WHERE id = ?", 
+	_, err = tx.Exec("UPDATE bills SET is_paid = 1, payment_method = ?, payment_date = ?, payment_details = ?, paid_amount = ?, discount_amount = discount_amount + ?, write_off_amount = write_off_amount + ?, arrears_amount = ?, total_amount = ? WHERE id = ?",
 		req.PaymentMethod, req.PaymentDate, req.PaymentDetails, req.PaidAmount, req.DiscountAmount, req.WriteOffAmount, req.ArrearsAmount, newTotal, c.Param("id"))
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Update failed"})
 		return
@@ -153,7 +153,7 @@ func PayBill(c *gin.Context) {
 	// Handle Carry Forward (Arrears)
 	if req.ArrearsAmount > 0 {
 		tx.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", req.ArrearsAmount, renterID)
-		database.LogActivity("ARREARS_CARRIED", fmt.Sprintf("Carried forward %.2f for %s", req.ArrearsAmount, name), config.AppConfig.Username)
+		database.LogActivity("ARREARS_CARRIED", fmt.Sprintf("Carried forward %.2f for %s", req.ArrearsAmount, name), config.AppConfig.Username, 0)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -161,7 +161,7 @@ func PayBill(c *gin.Context) {
 		return
 	}
 
-	database.LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Received %.2f from %s for %s via %s (Received by: %s)", req.PaidAmount, name, month, req.PaymentMethod, req.PaymentDetails), config.AppConfig.Username)
+	database.LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Received %.2f from %s for %s via %s (Received by: %s)", req.PaidAmount, name, month, req.PaymentMethod, req.PaymentDetails), config.AppConfig.Username, req.PaidAmount)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -188,7 +188,7 @@ func DeleteBill(c *gin.Context) {
 		}
 	}
 	tx.Exec("DELETE FROM bills WHERE id = ?", c.Param("id"))
-	
+
 	if err := tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Delete failed"})
 		return
@@ -252,18 +252,18 @@ func GetFinancialSummary(c *gin.Context) {
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included + discount_amount + write_off_amount + arrears_amount), 0), COUNT(*) FROM bills").Scan(&summary.TotalBilled, &summary.TotalCount)
 	database.DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0), COUNT(*) FROM bills WHERE is_paid = 1").Scan(&summary.TotalPaid, &summary.PaidCount)
 	database.DB.QueryRow("SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE is_paid = 0").Scan(&summary.TotalDues)
-	
+
 	// 2. Active-Only Totals (For Collection Check progress)
 	database.DB.QueryRow(`
 		SELECT COALESCE(SUM(b.total_amount - b.arrears_included + b.discount_amount + b.write_off_amount + b.arrears_amount), 0), COUNT(b.id) 
 		FROM bills b JOIN renters r ON b.renter_id = r.id 
 		WHERE r.is_active = 1`).Scan(&summary.ActiveBilled, &summary.ActiveTotalCnt)
-	
+
 	database.DB.QueryRow(`
 		SELECT COALESCE(SUM(b.paid_amount), 0), COUNT(b.id) 
 		FROM bills b JOIN renters r ON b.renter_id = r.id 
 		WHERE b.is_paid = 1 AND r.is_active = 1`).Scan(&summary.ActivePaid, &summary.ActivePaidCnt)
-	
+
 	database.DB.QueryRow(`
 		SELECT COALESCE(SUM(b.total_amount), 0) 
 		FROM bills b JOIN renters r ON b.renter_id = r.id 
@@ -274,7 +274,6 @@ func GetFinancialSummary(c *gin.Context) {
 
 	c.JSON(http.StatusOK, summary)
 }
-
 
 func GetTenantLedger(c *gin.Context) {
 	type Entry struct {
@@ -524,12 +523,20 @@ func GetAllPaidBills(c *gin.Context) {
 		var b PaidBill
 		var receivedBy, assignedOwner, payDate, payMethod *string
 		rows.Scan(&b.ID, &b.RenterID, &b.BillingMonth, &b.TotalAmount, &b.PaidAmount, &receivedBy, &payDate, &payMethod, &b.TenantName, &b.RoomNo, &assignedOwner)
-		
-		if receivedBy != nil { b.ReceivedBy = *receivedBy }
-		if assignedOwner != nil { b.AssignedOwner = *assignedOwner }
-		if payDate != nil { b.PaymentDate = *payDate }
-		if payMethod != nil { b.PaymentMethod = *payMethod }
-		
+
+		if receivedBy != nil {
+			b.ReceivedBy = *receivedBy
+		}
+		if assignedOwner != nil {
+			b.AssignedOwner = *assignedOwner
+		}
+		if payDate != nil {
+			b.PaymentDate = *payDate
+		}
+		if payMethod != nil {
+			b.PaymentMethod = *payMethod
+		}
+
 		bills = append(bills, b)
 	}
 	if bills == nil {
@@ -550,16 +557,16 @@ func GetTrendData(c *gin.Context) {
 	now := time.Now()
 	for i := 5; i >= 0; i-- {
 		t := now.AddDate(0, -i, 0)
-		
+
 		var income, expenses float64
 		// Income (Rent collected in this month)
 		database.DB.QueryRow(`SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND strftime('%Y-%m', payment_date) = ?`, t.Format("2006-01")).Scan(&income)
-		
+
 		// Expenses (Maintenance + Payouts in this month)
 		var maint, payouts float64
 		database.DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&maint)
 		database.DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM withdrawals WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&payouts)
-		
+
 		expenses = maint + payouts
 
 		trends = append(trends, MonthTrend{

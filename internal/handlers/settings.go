@@ -19,7 +19,7 @@ func GetLogs(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "30")
 	offset := c.DefaultQuery("offset", "0")
 
-	query := "SELECT id, action, details, username, timestamp FROM activity_logs "
+	query := "SELECT id, action, details, amount, username, timestamp FROM activity_logs "
 	switch filter {
 	case "PAYMENTS":
 		query += "WHERE action IN ('PAYMENT_RECORDED', 'ARREARS_CARRIED') "
@@ -33,7 +33,7 @@ func GetLogs(c *gin.Context) {
 		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED') "
 	}
 	query += "ORDER BY id DESC LIMIT ? OFFSET ?"
-	
+
 	rows, err := database.DB.Query(query, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
@@ -43,7 +43,7 @@ func GetLogs(c *gin.Context) {
 	var logs = []models.ActivityLog{}
 	for rows.Next() {
 		var l models.ActivityLog
-		if err := rows.Scan(&l.ID, &l.Action, &l.Details, &l.Username, &l.Timestamp); err == nil {
+		if err := rows.Scan(&l.ID, &l.Action, &l.Details, &l.Amount, &l.Username, &l.Timestamp); err == nil {
 			logs = append(logs, l)
 		}
 	}
@@ -85,13 +85,25 @@ func UpdateSettings(c *gin.Context) {
 		return
 	}
 
-	if req.PropertyName != nil { config.AppConfig.PropertyName = *req.PropertyName }
-	if req.PropertyAddress != nil { config.AppConfig.PropertyAddress = *req.PropertyAddress }
-	if req.AgreementTerms != nil { config.AppConfig.AgreementTerms = *req.AgreementTerms }
-	if req.EmailUser != nil { config.AppConfig.EmailUser = *req.EmailUser }
-	if req.EmailPass != nil { config.AppConfig.EmailPass = *req.EmailPass }
-	if req.EmailBCC != nil { config.AppConfig.EmailBCC = *req.EmailBCC }
-	
+	if req.PropertyName != nil {
+		config.AppConfig.PropertyName = *req.PropertyName
+	}
+	if req.PropertyAddress != nil {
+		config.AppConfig.PropertyAddress = *req.PropertyAddress
+	}
+	if req.AgreementTerms != nil {
+		config.AppConfig.AgreementTerms = *req.AgreementTerms
+	}
+	if req.EmailUser != nil {
+		config.AppConfig.EmailUser = *req.EmailUser
+	}
+	if req.EmailPass != nil {
+		config.AppConfig.EmailPass = *req.EmailPass
+	}
+	if req.EmailBCC != nil {
+		config.AppConfig.EmailBCC = *req.EmailBCC
+	}
+
 	portChanged := false
 	if req.ServerPort != nil && *req.ServerPort > 0 && *req.ServerPort != config.AppConfig.ServerPort {
 		config.AppConfig.ServerPort = *req.ServerPort
@@ -119,7 +131,7 @@ func UpdateSettings(c *gin.Context) {
 	config.SaveConfig()
 
 	if portChanged {
-		database.LogActivity("PORT_CHANGED", fmt.Sprintf("Server port changed to %d. Restarting system...", config.AppConfig.ServerPort), config.AppConfig.Username)
+		database.LogActivity("PORT_CHANGED", fmt.Sprintf("Server port changed to %d. Restarting system...", config.AppConfig.ServerPort), config.AppConfig.Username, 0)
 		go func() {
 			fmt.Printf("PORT CHANGE DETECTED. RESTARTING SYSTEM TO BIND TO %d...\n", config.AppConfig.ServerPort)
 			time.Sleep(2 * time.Second)
@@ -156,7 +168,7 @@ func CreateBackup(c *gin.Context) {
 		Filename string `json:"filename"`
 	}
 	c.ShouldBindJSON(&req)
-	
+
 	// Sanitize filename to prevent SQL injection and path traversal
 	cleanName := ""
 	if req.Filename != "" {
@@ -166,17 +178,17 @@ func CreateBackup(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	if cleanName == "" {
 		cleanName = "manual_backup"
 	}
-	
+
 	backupName := fmt.Sprintf("%s_%s.db", time.Now().Format("2006-01-02"), cleanName)
 	backupPath := filepath.Join(database.BackupsDir, backupName)
-	
+
 	// Remove if exists (VACUUM INTO fails if file exists)
 	os.Remove(backupPath)
-	
+
 	// Use a prepared-statement-like approach for the path is not possible with VACUUM INTO,
 	// so we MUST ensure backupPath is safe. Since we sanitized cleanName and BackupsDir is constant, it is safe.
 	_, err := database.DB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath))
@@ -184,9 +196,9 @@ func CreateBackup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create backup: " + err.Error()})
 		return
 	}
-	
-	database.LogActivity("DB_BACKUP", "Created manual backup: "+backupName, config.AppConfig.Username)
-	
+
+	database.LogActivity("DB_BACKUP", "Created manual backup: "+backupName, config.AppConfig.Username, 0)
+
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", backupName))
@@ -227,18 +239,18 @@ func RestoreDatabase(c *gin.Context) {
 	go func() {
 		fmt.Println("CRITICAL: PREPARING DATABASE RESTORE...")
 		time.Sleep(2 * time.Second)
-		
+
 		// 1. Close current DB
 		if database.DB != nil {
 			database.DB.Close()
 		}
-		
+
 		time.Sleep(1 * time.Second)
 
 		// 2. Swap files safely
 		backupOld := config.AppConfig.DbPath + ".bak"
 		os.Rename(config.AppConfig.DbPath, backupOld)
-		
+
 		if err := os.Rename(restorePath, config.AppConfig.DbPath); err != nil {
 			fmt.Printf("RESTORE FAILED AT SWAP: %v\n", err)
 			os.Rename(backupOld, config.AppConfig.DbPath) // Try to restore old
@@ -251,7 +263,7 @@ func RestoreDatabase(c *gin.Context) {
 			os.Rename(backupOld, config.AppConfig.DbPath)
 			return
 		}
-		
+
 		os.Remove(backupOld)
 		fmt.Println("RESTORE SUCCESSFUL. EXITING FOR RESTART.")
 		os.Exit(0)
@@ -268,22 +280,22 @@ func GetAuditReport(c *gin.Context) {
 	}
 
 	// Activity Logs for the period (Direct financial transactions only)
-	logQuery := "SELECT action, details, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp ASC"
+	logQuery := "SELECT action, details, amount, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp ASC"
 	rows, _ := database.DB.Query(logQuery, fromDate, toDate)
 	defer rows.Close()
 
 	type AuditLog struct {
-		Action    string `json:"action"`
-		Details   string `json:"details"`
-		Timestamp string `json:"timestamp"`
+		Action    string  `json:"action"`
+		Details   string  `json:"details"`
+		Amount    float64 `json:"amount"`
+		Timestamp string  `json:"timestamp"`
 	}
 	var logs []AuditLog
 	for rows.Next() {
 		var l AuditLog
-		rows.Scan(&l.Action, &l.Details, &l.Timestamp)
+		rows.Scan(&l.Action, &l.Details, &l.Amount, &l.Timestamp)
 		logs = append(logs, l)
 	}
-
 	// Financial Summary
 	var summary struct {
 		TotalBilled   float64 `json:"total_billed"`

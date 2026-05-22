@@ -56,7 +56,7 @@ func InitDB() error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS activity_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			action TEXT, details TEXT, username TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			action TEXT, details TEXT, amount REAL DEFAULT 0, username TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS owner_withdrawals (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,6 +90,8 @@ func InitDB() error {
 	// Simple migrations: ignore error if columns already exist
 	DB.Exec("ALTER TABLE bills ADD COLUMN arrears_included REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE expenses ADD COLUMN owner_name TEXT")
+	DB.Exec("ALTER TABLE activity_logs ADD COLUMN amount REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE maintenance_tasks ADD COLUMN photo_path TEXT")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
@@ -103,11 +105,14 @@ func InitDB() error {
 	if _, err := os.Stat("./uploads"); os.IsNotExist(err) {
 		os.Mkdir("./uploads", 0755)
 	}
+	if _, err := os.Stat("./uploads/maintenance"); os.IsNotExist(err) {
+		os.Mkdir("./uploads/maintenance", 0755)
+	}
 	return nil
 }
 
-func LogActivity(action, details, username string) {
-	DB.Exec("INSERT INTO activity_logs (action, details, username) VALUES (?, ?, ?)", action, details, username)
+func LogActivity(action, details, username string, amount float64) {
+	DB.Exec("INSERT INTO activity_logs (action, details, amount, username) VALUES (?, ?, ?, ?)", action, details, amount, username)
 }
 
 func StartAutoBackup() {
@@ -116,7 +121,7 @@ func StartAutoBackup() {
 		for range ticker.C {
 			backupPath := filepath.Join(BackupsDir, fmt.Sprintf("auto_%s_backup.db", time.Now().Format("2006-01-02_15-04-05")))
 			DB.Exec(fmt.Sprintf("VACUUM INTO '%s'", backupPath))
-			LogActivity("DB_BACKUP", "Auto Backup Created: "+filepath.Base(backupPath), "system")
+			LogActivity("DB_BACKUP", "Auto Backup Created: "+filepath.Base(backupPath), "system", 0)
 			fmt.Println("Automatic backup created:", backupPath)
 		}
 	}()
