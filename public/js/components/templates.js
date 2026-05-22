@@ -732,9 +732,17 @@ const Templates = {
                         <div class="input-group"><label>Actual Cost</label><input type="number" id="mTaskActualCost" value="0"></div>
                         <div class="input-group"><label>Date Resolved</label><input type="date" id="mTaskDateResolved"></div>
                     </div>
+                    <div class="input-group" style="margin-top: 1rem;">
+                        <label>Update Notes</label>
+                        <textarea id="mTaskNotes" rows="2" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea>
+                    </div>
+                    <div id="convertOption" class="hidden" style="margin-top: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="mTaskConvertToExpense">
+                        <label for="mTaskConvertToExpense" style="font-size: 0.75rem; font-weight: 700;">Record as Building Expense</label>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="updateTaskConfirm()" class="btn btn-primary" style="flex: 2;">Save</button>
+                    <button onclick="updateTaskConfirm()" class="btn btn-primary" style="flex: 2;">Update Status</button>
                     <button onclick="deleteTaskConfirm()" class="btn btn-danger" style="flex: 1;">Delete</button>
                 </div>
             </div>
@@ -743,7 +751,7 @@ const Templates = {
         <div id="uploadModal" class="modal-overlay hidden">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="modal-header">
-                    <h3 class="section-title"><i data-lucide="upload-cloud"></i> Upload</h3>
+                    <h3 class="section-title"><i data-lucide="upload-cloud"></i> Upload Document</h3>
                     <button onclick="toggleUploadForm()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
                 </div>
                 <div class="modal-body">
@@ -756,29 +764,8 @@ const Templates = {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button onclick="uploadDocument()" class="btn btn-primary" style="flex: 2;">Upload</button>
+                    <button onclick="uploadDocument()" class="btn btn-primary" style="flex: 2;">Start Upload</button>
                     <button onclick="toggleUploadForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <div id="createTaskModal" class="modal-overlay hidden">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3 class="section-title"><i data-lucide="wrench"></i> New Ticket</h3>
-                    <button onclick="toggleTaskForm()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
-                </div>
-                <div class="modal-body">
-                    <div class="grid-inputs">
-                        <div class="input-group"><label>Unit</label><select id="tTaskRenterId"></select></div>
-                        <div class="input-group"><label>Category</label><select id="tTaskCategory"><option value="Plumbing">Plumbing</option><option value="Electrical">Electrical</option><option value="Other">Other</option></select></div>
-                        <div class="input-group"><label>Owner</label><select id="tTaskOwner"></select></div>
-                        <div class="input-group" style="grid-column: 1/-1;"><label>Title *</label><input type="text" id="tTaskTitle"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button onclick="saveTask()" class="btn btn-primary" style="flex: 2;">Raise Ticket</button>
-                    <button onclick="toggleTaskForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
                 </div>
             </div>
         </div>

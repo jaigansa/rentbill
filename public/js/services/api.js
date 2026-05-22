@@ -4,28 +4,37 @@ const API = {
             console.error("API Aborted: Invalid endpoint", endpoint);
             return Promise.reject(new Error("Invalid request"));
         }
-        const response = await fetch(`/api${endpoint}`, {
-            headers: { 'Content-Type': 'application/json' },
-            ...options
-        });
-        
-        let data;
-        try {
-            data = await response.json();
-        } catch (e) {
-            data = { error: 'Invalid JSON response' };
+
+        const isBlob = options.responseType === 'blob';
+        const isFormData = options.body instanceof FormData;
+
+        const headers = options.headers || {};
+        if (!isFormData && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
         }
 
+        const response = await fetch(`/api${endpoint}`, {
+            ...options,
+            headers: headers
+        });
+        
         if (response.status === 401) {
             localStorage.removeItem('isLoggedIn');
-            window.location.reload(); // Force full reload to reset all states
+            window.location.reload();
             throw new Error('Session expired');
         }
 
         if (!response.ok) {
-            throw new Error(data.error || 'Network response was not ok');
+            let errorMsg = 'Network response was not ok';
+            try {
+                const data = await response.json();
+                errorMsg = data.error || errorMsg;
+            } catch (e) {}
+            throw new Error(errorMsg);
         }
-        return data;
+
+        if (isBlob) return response.blob();
+        return response.json().catch(() => ({ error: 'Invalid JSON response' }));
     },
 
     auth: {
@@ -83,7 +92,8 @@ const API = {
         getSettings: () => API.request('/settings'),
         updateSettings: (data) => API.request('/settings', { method: 'POST', body: JSON.stringify(data) }),
         testEmail: () => API.request('/settings/test-email', { method: 'POST' }),
-        backup: (filename) => API.request('/db/backup', { method: 'POST', body: JSON.stringify({ filename }) }),
+        backup: (filename) => API.request('/db/backup', { method: 'POST', body: JSON.stringify({ filename }), responseType: 'blob' }),
+        restore: (formData) => API.request('/db/restore', { method: 'POST', body: formData }),
         getAuditReport: (from, to) => API.request(`/reports/audit?from=${from}&to=${to}`)
     }
 };

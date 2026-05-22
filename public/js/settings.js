@@ -219,7 +219,7 @@ async function backupDatabase() {
     const prefix = filenameEl ? (filenameEl.value || 'manual_backup') : 'dashboard_backup';
     showNotification("Preparing backup...", "info");
     try {
-        const blob = await API.system.createBackup(prefix);
+        const blob = await API.system.backup(prefix);
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -239,27 +239,17 @@ async function restoreDatabase() {
     if (!pin) return showNotification("PIN required for restore", "error");
 
     if (!confirm("CRITICAL: This will replace your entire database. Continue?")) return;
-
     try {
         const formData = new FormData();
         formData.append('backup_file', fileInput.files[0]);
         formData.append('pin', pin);
 
-        const response = await fetch('/api/system/restore', {
-            method: 'POST',
-            body: formData
-        });
+        const result = await API.system.restore(formData);
 
-        if (response.ok) {
-            showNotification("Database restored! Reloading...", "success");
-            setTimeout(() => window.location.reload(), 2000);
-        } else {
-            const err = await response.json();
-            showNotification(err.error || "Restore failed", "error");
-        }
+        showNotification(result.message || "Database restored! Reloading...", "success");
+        setTimeout(() => window.location.reload(), 2000);
     } catch (e) {
-        showNotification("System error during restore", "error");
-        console.error(e);
+        showNotification(e.message || "Restore failed", "error");
     }
 }
 
