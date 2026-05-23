@@ -689,16 +689,51 @@ func GetTrendData(c *gin.Context) {
 }
 
 func GetAuditReport(c *gin.Context) {
-	from, to := c.Query("from"), c.Query("to")
-	rows, _ := DB.Query("SELECT action, details, amount, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp ASC", from, to)
+	fromDate := c.Query("from")
+	toDate := c.Query("to")
+
+	if fromDate == "" || toDate == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Start and End dates required"})
+		return
+	}
+
+	logQuery := "SELECT action, details, amount, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp ASC"
+	rows, _ := DB.Query(logQuery, fromDate, toDate)
 	defer rows.Close()
-	var logs []interface{}
+
+	type AuditLog struct {
+		Action    string  `json:"action"`
+		Details   string  `json:"details"`
+		Amount    float64 `json:"amount"`
+		Timestamp string  `json:"timestamp"`
+	}
+	var logs []AuditLog
 	for rows.Next() {
-		var l struct { Act, Det string; Amt float64; Ts string }
-		rows.Scan(&l.Act, &l.Ts, &l.Amt, &l.Ts) // Adjusted for query
+		var l AuditLog
+		rows.Scan(&l.Action, &l.Details, &l.Amount, &l.Timestamp)
 		logs = append(logs, l)
 	}
-	c.JSON(http.StatusOK, gin.H{ "from": from, "to": to, "logs": logs })
+	
+	var summary struct {
+		TotalBilled   float64 `json:"total_billed"`
+		TotalPaid     float64 `json:"total_paid"`
+		TotalExpenses float64 `json:"total_expenses"`
+		TotalPayouts  float64 `json:"total_payouts"`
+		TotalAdvances float64 `json:"total_advances"`
+	}
+
+	DB.QueryRow("SELECT COALESCE(SUM(total_amount - arrears_included), 0) FROM bills WHERE DATE(date_generated) >= ? AND DATE(date_generated) <= ?", fromDate, toDate).Scan(&summary.TotalBilled)
+	DB.QueryRow("SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND DATE(payment_date) >= ? AND DATE(payment_date) <= ?", fromDate, toDate).Scan(&summary.TotalPaid)
+	DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE date >= ? AND date <= ?", fromDate, toDate).Scan(&summary.TotalExpenses)
+	DB.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE date >= ? AND date <= ?", fromDate, toDate).Scan(&summary.TotalPayouts)
+	DB.QueryRow("SELECT COALESCE(SUM(advance_amount), 0) FROM renters WHERE move_in_date >= ? AND move_in_date <= ?", fromDate, toDate).Scan(&summary.TotalAdvances)
+
+	c.JSON(http.StatusOK, gin.H{
+		"from":    fromDate,
+		"to":      toDate,
+		"logs":    logs,
+		"summary": summary,
+	})
 }
 
 func GetMonthlyReport(c *gin.Context) {

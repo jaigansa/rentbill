@@ -131,9 +131,9 @@ function quickAddExpense() {
 function quickGenerateAudit() {
     showSection('settings-section');
     switchSubSection('settings-section', 'settings-audit');
-    const auditCard = document.querySelector('#auditMonth').closest('.card');
-    if (auditCard) {
-        auditCard.scrollIntoView({ behavior: 'smooth' });
+    const auditSection = document.getElementById('settings-audit');
+    if (auditSection) {
+        auditSection.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
