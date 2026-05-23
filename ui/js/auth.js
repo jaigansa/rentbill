@@ -1,0 +1,78 @@
+let currentPin = "";
+
+async function checkAuth() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn');
+    if (!isLoggedIn) {
+        showOverlay(true);
+        return false;
+    } else {
+        showOverlay(false);
+        const hash = window.location.hash.replace('#', '');
+        const validSections = ['dashboard-section', 'tenants-section', 'owners-section', 'settings-section'];
+        if (hash && validSections.includes(hash)) {
+            showSection(hash);
+        } else {
+            showSection('dashboard-section');
+        }
+        return true;
+    }
+}
+
+function showOverlay(show) {
+    const overlay = document.getElementById('pinOverlay');
+    const mainApp = document.getElementById('mainApp');
+    if (!overlay || !mainApp) return;
+    if (show) {
+        overlay.classList.remove('hidden');
+        mainApp.classList.add('hidden');
+    } else {
+        overlay.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function pressKey(key) {
+    if (key === 'back') currentPin = currentPin.slice(0, -1);
+    else if (currentPin.length < 4) currentPin += key;
+    updatePinDots();
+    if (currentPin.length === 4) setTimeout(verifyPin, 200);
+}
+
+function updatePinDots() {
+    document.querySelectorAll('.pin-dots .dot').forEach((dot, i) => dot.classList.toggle('active', i < currentPin.length));
+}
+
+async function verifyPin() {
+    try {
+        const res = await API.auth.verify(currentPin);
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userRole', res.role || 'owner');
+        location.reload(); // Hard reload after login to ensure session cookie is sent correctly
+    } catch (e) {
+        showNotification("Wrong PIN", "error");
+    }
+    currentPin = "";
+    updatePinDots();
+}
+
+async function forgotPin() {
+    if (!confirm("Reset PIN and send to email?")) return;
+    showNotification("Processing...", "info");
+    try {
+        await API.auth.forgotPin();
+        showNotification("Temporary PIN sent", "success");
+    } catch (e) {
+        showNotification(e.message, "error");
+    }
+}
+
+async function logout() {
+    try {
+        await API.auth.logout();
+    } catch (e) {
+        console.warn("Server logout failed", e);
+    }
+    localStorage.removeItem('isLoggedIn');
+    location.reload();
+}

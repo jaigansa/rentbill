@@ -17,7 +17,7 @@ echo "Cleaning dependencies..."
 go mod tidy
 
 echo "Hamster Building Go application..."
-go build -o rentbill ./cmd/rentbill
+go build -o rentbill .
 if [ $? -ne 0 ]; then
     echo "❌ Go Build failed!"
     exit 1
@@ -30,9 +30,8 @@ if [ "$PACK_ONLY" = true ]; then
     rm -rf $DIST_DIR
     mkdir -p $DIST_DIR/backups
 
-    # Copy Files
+    # Copy Files (Note: UI is embedded in the binary, so we only need the binary)
     cp rentbill $DIST_DIR/
-    cp -r public $DIST_DIR/
     
     if [ -f "config.json" ]; then
         cp config.json $DIST_DIR/config.json.template

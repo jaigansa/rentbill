@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rent Bill Pro</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Local Libraries -->
+    <script src="/libs/lucide.min.js"></script>
+    <script src="/libs/qrcode.min.js"></script>
+    <script src="/libs/chart.min.js"></script>
+</head>
+<body>
+
+    <div id="pinOverlay" class="modal-overlay hidden"></div>
+    <div id="mainApp" class="hidden"></div>
+    <div id="modalContainer"></div>
+    <div id="notification-container"></div>
+    
+    <!-- UI Templates -->
+    <template id="tpl-authOverlay">
+        <div class="modal-content" style="max-width: 360px; text-align: center; border: none; box-shadow: var(--shadow-xl);">
+            <div class="modal-body" style="padding: 3rem 2rem;">
+                <form onsubmit="event.preventDefault(); verifyPin();">
+                <input type="text" value="admin" autocomplete="username" style="display:none;">
+                <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--primary); color: white; border-radius: 20px;">
+                    <i data-lucide="building-2" style="width: 32px; height: 32px;"></i>
+                </div>
+                <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">RentBill Pro</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Authorized Access Only</p>
+                
+                <div class="pin-dots" style="display: flex; justify-content: center; gap: 1.25rem; margin-bottom: 2.5rem;">
+                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                </div>
+
+                <div class="pin-keypad" id="pinKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 240px; margin: 0 auto;">
+                    <button type="button" onclick="pressKey('1')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">1</button>
+                    <button type="button" onclick="pressKey('2')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">2</button>
+                    <button type="button" onclick="pressKey('3')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">3</button>
+                    <button type="button" onclick="pressKey('4')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">4</button>
+                    <button type="button" onclick="pressKey('5')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">5</button>
+                    <button type="button" onclick="pressKey('6')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">6</button>
+                    <button type="button" onclick="pressKey('7')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">7</button>
+                    <button type="button" onclick="pressKey('8')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">8</button>
+                    <button type="button" onclick="pressKey('9')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">9</button>
+                    <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot PIN" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
+                    <button type="button" onclick="pressKey('0')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">0</button>
+                    <button type="button" onclick="pressKey('back')" class="btn btn-secondary" title="Backspace" style="height: 64px; border-radius: 16px; font-size: 0.8rem; font-weight: 800;">DEL</button>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Confirm PIN</button>
+                </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <template id="tpl-navigation">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand">
+                    <i data-lucide="building-2"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; overflow: hidden;" class="sidebar-text">
+                    <span style="font-weight: 800; font-size: 1rem; color: var(--text-main); white-space: nowrap;">RentBill</span>
+                    <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Pro Manager</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button onclick="showSection('dashboard-section')" class="nav-btn active" title="Dashboard">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="showSection('tenants-section')" class="nav-btn" title="Tenants">
+                    <i data-lucide="users"></i>
+                    <span>Tenants</span>
+                </button>
+                <button onclick="showSection('owners-section')" class="nav-btn" title="Owners">
+                    <i data-lucide="wallet"></i>
+                    <span>Owners</span>
+                </button>
+                <button onclick="showSection('settings-section')" class="nav-btn" title="Settings">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button onclick="toggleDarkMode()" id="darkModeToggle" class="btn btn-secondary" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem;" title="Toggle Theme">
+                    <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
+                    <span style="margin-left: 0.75rem; font-size: 0.85rem;" class="sidebar-text">Appearance</span>
+                </button>
+                <button onclick="logout()" class="btn btn-danger" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem; margin-top: 0.5rem;" title="Logout">
+                    <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+                    <span style="margin-left: 0.75rem; font-size: 0.85rem;" class="sidebar-text">Logout</span>
+                </button>
+            </div>
+        </aside>
+    </template>
+
+    </template>
+
+    <template id="tpl-dashboard">
+        <section id="dashboard-section" class="app-section">
+            <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem;">
+                
+                <!-- 1. Status Header -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-end; padding: 0 0.5rem;">
+                    <div>
+                        <h2 style="font-size: 1.5rem; font-weight: 950; color: var(--text-main); margin: 0;">Dashboard</h2>
+                        <p style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Building Overview</p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <div id="liveStatus" class="badge" style="background: var(--bg-success-light); color: var(--success); font-size: 0.6rem; border: 1.5px solid var(--success);">
+                            LIVE
+                        </div>
+                        <div id="offlineIndicator" class="badge badge-warning hidden" style="font-size: 0.6rem;">OFFLINE</div>
+                    </div>
+                </div>
+
+                <!-- 2. Main Stats Stack (The Bottom Line) -->
+                <div class="card" style="padding: 1.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; border-bottom: 4px solid var(--primary);">
+                    <div>
+                        <span style="font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase;">Occupancy</span>
+                        <div id="statActive" style="font-size: 1.5rem; font-weight: 950; color: var(--text-main);">0</div>
+                    </div>
+                    <div style="border-left: 1px solid var(--border); border-right: 1px solid var(--border);">
+                        <span style="font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase;">Collected</span>
+                        <div id="statTotalIncome" style="font-size: 1.5rem; font-weight: 950; color: var(--success);">₹0</div>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase;">Expenses</span>
+                        <div id="statTotalExpenses" style="font-size: 1.5rem; font-weight: 950; color: var(--danger);">₹0</div>
+                    </div>
+                </div>
+
+                <!-- 3. Action Queue: Needs Billing -->
+                <div class="card" style="padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--warning);"><i data-lucide="zap"></i> Needs Billing</h3>
+                        <span id="countBilling" class="badge badge-warning">0</span>
+                    </div>
+                    <div id="queueBilling" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <!-- 4. Action Queue: Pending Collections -->
+                <div class="card" style="padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--danger);"><i data-lucide="alert-circle"></i> Pending Dues</h3>
+                        <span id="countCollection" class="badge badge-danger">0</span>
+                    </div>
+                    <div id="queueCollection" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <!-- 5. Action Queue: Open Tasks -->
+                <div class="card" style="padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--primary);"><i data-lucide="wrench"></i> Open Tasks</h3>
+                        <span id="countTasks" class="badge badge-info">0</span>
+                    </div>
+                    <div id="queueTasks" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <!-- 7. Visual Trend Chart -->
+                <div class="card" style="padding: 1.5rem;">
+                    <h3 class="section-title" style="font-size: 0.75rem; margin-bottom: 1.5rem;"><i data-lucide="line-chart"></i> Cash Flow Trend</h3>
+                    <div style="height: 200px;"><canvas id="trendChart"></canvas></div>
+                </div>
+
+                <!-- 8. Activity Log -->
+                <div class="card" style="padding: 1.25rem;">
+                    <h3 class="section-title" style="font-size: 0.75rem; margin-bottom: 1rem;"><i data-lucide="history"></i> Live Activity Feed</h3>
+                    <div id="activityLog" class="activity-feed"></div>
+                </div>
+
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-tenants">
+        <section id="tenants-section" class="app-section hidden">
+            <div class="sub-nav no-print">
+                <button onclick="switchSubSection('tenants-section', 'tenants-billing')" class="sub-nav-btn active">
+                    <i data-lucide="zap"></i> Billing
+                </button>
+                <button onclick="switchSubSection('tenants-section', 'tenants-ledger')" class="sub-nav-btn">
+                    <i data-lucide="receipt"></i> Ledger
+                </button>
+                <button onclick="switchSubSection('tenants-section', 'tenants-registry')" class="sub-nav-btn">
+                    <i data-lucide="book-open"></i> Registry
+                </button>
+                <button onclick="switchSubSection('tenants-section', 'tenants-archived')" class="sub-nav-btn">
+                    <i data-lucide="archive"></i> Archive
+                </button>
+            </div>
+
+            <div id="tenants-billing" class="sub-section hidden">
+                <div class="card no-print" style="padding: 1.5rem; margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 0.8rem; font-weight: 900; text-transform: uppercase; color: var(--primary); letter-spacing: 1px;">
+                            <i data-lucide="zap" style="width: 16px;"></i> Generate Bills
+                        </h4>
+                        <div style="display: flex; gap: 6px; background: var(--bg-input); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
+                            <button onclick="filterBilling('all')" id="filterBillAll" class="btn btn-sm active" style="font-size: 0.65rem; border: none; padding: 4px 12px;">All</button>
+                            <button onclick="filterBilling('pending')" id="filterBillPending" class="btn btn-sm" style="font-size: 0.65rem; border: none; padding: 4px 12px;">Not Billed</button>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 0 1rem; display: flex; align-items: center; gap: 0.75rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: 12px; height: 44px; margin-bottom: 1.5rem;">
+                        <i data-lucide="search" style="width: 16px; color: var(--text-muted);"></i>
+                        <input type="text" id="searchBar" placeholder="Search unit to bill..." onkeyup="searchTenants()" style="border: none; background: transparent; width: 100%; font-size: 0.9rem; outline: none; font-weight: 500;">
+                    </div>
+
+                    <div id="tenantList"></div>
+                </div>
+            </div>
+
+            <div id="tenants-ledger" class="sub-section hidden">
+                <div id="historyTenantsContent">
+                    <div class="card no-print" style="margin-bottom: 1.5rem;">
+                        <div class="input-group" style="margin:0;">
+                            <label style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block;">Select Unit for Detailed Ledger</label>
+                            <select id="historyTenantSelect" onchange="loadTenantHistory(this.value)" style="font-weight: 900; color: var(--primary); border: 2px solid var(--primary); border-radius: 12px; height: 50px; font-size: 1rem; padding: 0 1rem; background: var(--bg-card);">
+                                <option value="">-- Select Unit for History --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="historyResults" class="hidden">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid var(--border);">
+                            <div>
+                                <h3 id="historySelectedName" class="section-title" style="font-size: 1.25rem; margin-bottom: 4px; color: var(--text-main); font-weight: 950;">Tenant Name</h3>
+                                <div style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.75px;">Comprehensive Payment History & Ledger</div>
+                            </div>
+                            <button onclick="printTenantStatement()" class="btn btn-secondary btn-sm" title="Print Ledger" style="border: 1px solid var(--border); height: 40px; padding: 0 1.25rem; font-weight: 800;">
+                                <i data-lucide="printer"></i> <span class="sm:hidden">Print Statement</span>
+                            </button>
+                        </div>
+
+                        <div id="historyTenantSummary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;" class="no-print">
+                            <div style="background: var(--bg-danger-light); padding: 1rem; border: 1.5px solid var(--danger); border-radius: 12px; text-align: left;">
+                                <div style="font-size: 0.6rem; font-weight: 900; color: var(--danger); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; opacity: 0.8;">Outstanding Arrears</div>
+                                <div id="histStatBalance" style="font-weight: 950; font-size: 1.25rem; color: var(--danger); line-height: 1.2;">₹0</div>
+                            </div>
+                            <div style="background: var(--bg-success-light); padding: 1rem; border: 1.5px solid var(--success); border-radius: 12px; text-align: left;">
+                                <div style="font-size: 0.6rem; font-weight: 900; color: var(--success); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; opacity: 0.8;">Total Paid</div>
+                                <div id="histStatPaid" style="font-weight: 950; font-size: 1.25rem; color: var(--success); line-height: 1.2;">₹0</div>
+                            </div>
+                            <div style="background: var(--bg-info-light); padding: 1rem; border: 1.5px solid var(--info); border-radius: 12px; text-align: left;">
+                                <div style="font-size: 0.6rem; font-weight: 900; color: var(--info); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; opacity: 0.8;">Security Advance</div>
+                                <div id="histStatAdvance" style="font-weight: 950; font-size: 1.25rem; color: var(--info); line-height: 1.2;">₹0</div>
+                            </div>
+                        </div>
+
+                        <div class="card-header no-print" style="margin-bottom: 1rem; padding: 0;">
+                             <h4 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px;">Recent Transactions</h4>
+                        </div>
+
+                        <div id="historyBody" class="history-list"></div>
+                        <div id="historyLoadMoreContainer" style="margin-top: 1.5rem; text-align: center;" class="hidden no-print">
+                            <button onclick="loadMoreTenantHistory()" class="btn btn-secondary btn-sm" style="width: 100%; border-style: dashed; font-weight: 900; height: 44px; letter-spacing: 0.5px;">LOAD OLDER RECORDS</button>
+                        </div>
+                    </div>
+                    <div id="historyEmptyState" class="empty-state no-print" style="padding: 4rem 2rem; background: var(--bg-input); border: 2px dashed var(--border); border-radius: 20px;">
+                        <i data-lucide="file-text" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p style="font-weight: 800; color: var(--text-muted); font-size: 1.1rem;">Select a unit above to view the full ledger</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.7; margin-top: 8px;">You can track payments, generate statements, and manage dues here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tenants-registry" class="sub-section hidden">
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="users"></i> Unit Directory</h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <input type="file" id="importCsvInput" accept=".csv" class="hidden" onchange="importTenantsCSV(this)">
+                            <button onclick="document.getElementById('importCsvInput').click()" class="btn btn-secondary btn-icon-sm" title="Import CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="upload"></i></button>
+                            <button onclick="exportTenantsCSV()" class="btn btn-secondary btn-icon-sm" title="Download CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="download"></i></button>
+                            <button onclick="toggleRegForm()" id="regToggleBtn" class="btn btn-primary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Register</button>
+                        </div>
+                    </div>
+                    <div id="entrance-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                        <h4 id="form-title" style="font-size: 0.9rem; margin-bottom: 1.5rem; color: var(--primary); text-transform: uppercase; font-weight: 900;">New Registration</h4>
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Full Name *</label><input type="text" id="tName"></div>
+                            <div class="input-group"><label>Mobile *</label><input type="text" id="tMobile"></div>
+                            <div class="input-group"><label>Email Address</label><input type="email" id="tEmail"></div>
+                            <div class="input-group"><label>Unit / Room *</label><input type="text" id="tRoom"></div>
+                            <div class="input-group"><label>Monthly Rent *</label><input type="number" id="tRent"></div>
+                            <div class="input-group"><label>Security Advance</label><input type="number" id="tAdvance" value="0"></div>
+                            <div class="input-group"><label>Move-in Date</label><input type="date" id="tMoveIn"></div>
+                            <div class="input-group"><label>Initial EB Reading</label><input type="number" id="tInitialEb" step="0.01" value="0"></div>
+                            <div class="input-group"><label>EB Unit Rate *</label><input type="number" id="tEbRate" step="0.01" value="9.00"></div>
+                            <div class="input-group"><label>Water/Maint</label><input type="number" id="tWater" value="0"></div>
+                            <div class="input-group"><label>Arrears (OB)</label><input type="number" id="tArrears" value="0"></div>
+                            <div class="input-group"><label>Receiving Account *</label><select id="tAssignedUpi"><option value="">-- Select --</option></select></div>
+                            <div class="input-group" style="grid-column: span 2;"><label>Permanent Address</label><input type="text" id="tPermAddr"></div>
+                            <div class="input-group"><label>Emergency Contact</label><input type="text" id="tEmerg"></div>
+                            <div class="input-group"><label>Occupation</label><input type="text" id="tJob"></div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                            <button onclick="addTenant()" id="mainSubmitBtn" class="btn btn-primary" style="flex: 2;">Save Record</button>
+                            <button onclick="toggleRegForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                            <button id="formDeleteBtn" class="btn btn-danger btn-icon-sm hidden" title="Delete Permanent"><i data-lucide="trash-2"></i></button>
+                            <button id="formAgreementBtn" class="btn btn-secondary btn-icon-sm hidden" title="Print Agreement"><i data-lucide="file-text"></i></button>
+                        </div>
+                    </div>
+                    <div id="manageTenantList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="folder-lock"></i> Document Vault</h3>
+                        <button onclick="toggleUploadForm()" id="uploadToggleBtn" class="btn btn-secondary btn-sm">New Upload</button>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <input type="text" id="vaultSearch" placeholder="Search files..." oninput="searchVault()" class="input-sm" style="flex: 2;">
+                        <select id="vaultFilter" onchange="loadVault()" class="input-sm" style="flex: 1;">
+                            <option value="">All Types</option>
+                            <option value="ID Proof">ID Proof</option>
+                            <option value="Lease Agreement">Lease</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div id="vaultList" style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;"></div>
+                </div>
+            </div>
+
+            <div id="tenants-archived" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="archive"></i> Archive & History</h3>
+                    </div>
+                    <div id="archivedTenantList" style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem;"></div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-owners">
+        <section id="owners-section" class="app-section hidden">
+            <div class="sub-nav no-print">
+                <button onclick="switchSubSection('owners-section', 'owners-received')" class="sub-nav-btn active">
+                    <i data-lucide="receipt"></i> Received
+                </button>
+                <button onclick="switchSubSection('owners-section', 'owners-payouts')" class="sub-nav-btn">
+                    <i data-lucide="banknote"></i> Payouts
+                </button>
+                <button onclick="switchSubSection('owners-section', 'owners-accounts')" class="sub-nav-btn">
+                    <i data-lucide="wallet"></i> Accounts
+                </button>
+            </div>
+
+            <div id="owners-received" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header no-print">
+                        <h3 class="section-title"><i data-lucide="receipt"></i> Income Records</h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select id="receivedOwnerFilter" onchange="loadReceivedPayments(this.value)" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase; cursor: pointer; min-width: 140px;">
+                                <option value="">All Owners</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="receivedPaymentsList" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="owners-payouts" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header no-print" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="banknote"></i> Owner Payouts</h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <select id="payoutOwnerFilter" onchange="loadWithdrawals(this.value)" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase; cursor: pointer; min-width: 140px;">
+                                <option value="">All Owners</option>
+                            </select>
+                            <button onclick="toggleWithdrawalForm()" id="witToggleBtn" class="btn btn-primary btn-sm" style="height: 34px; border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Record Payout</button>
+                            <button onclick="printPayoutHistory()" class="btn btn-secondary btn-icon-sm" title="Print History" style="height: 34px; width: 34px; border-radius: 8px; border: 1.5px solid var(--border);"><i data-lucide="printer"></i></button>
+                        </div>
+                    </div>
+                    <div id="withdrawal-form" class="hidden no-print" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Owner *</label><select id="wOwnerName"><option value="">-- Select --</option></select></div>
+                            <div class="input-group"><label>Amount *</label><input type="number" id="wAmount"></div>
+                            <div class="input-group"><label>Date</label><input type="date" id="wDate"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Note</label><input type="text" id="wNotes"></div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="addWithdrawal()" class="btn btn-primary">Save Record</button>
+                            <button onclick="toggleWithdrawalForm()" class="btn btn-secondary">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="withdrawalList" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+            </div>
+
+            <div id="owners-accounts" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="wallet"></i> Receiving Accounts</h3>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Owner / Payee Name *</label><input type="text" id="acc_name" placeholder="Full Name"></div>
+                            <div class="input-group"><label>Account Label</label><input type="text" id="acc_label" placeholder="e.g. Primary"></div>
+                            <div class="input-group"><label>UPI ID</label><input type="text" id="acc_upi" placeholder="name@bank"></div>
+                            <div class="input-group"><label>Bank Name</label><input type="text" id="acc_bank"></div>
+                            <div class="input-group"><label>Acc Number</label><input type="text" id="acc_num"></div>
+                            <div class="input-group"><label>IFSC Code</label><input type="text" id="acc_ifsc"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Branding (Optional)</label><input type="text" id="acc_prop_name" placeholder="Overridden Property Name"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Address (Optional)</label><input type="text" id="acc_prop_addr" placeholder="Overridden Address"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Terms (Optional)</label><textarea id="acc_terms" rows="3" placeholder="Specific terms for this building" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea></div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                            <button onclick="saveReceivingAccount()" id="addAccBtn" class="btn btn-primary" style="flex: 2;">Add Account Record</button>
+                            <button onclick="cancelAccountEdit()" id="cancelAccEditBtn" class="btn btn-secondary hidden" style="flex: 1;">Cancel</button>
+                        </div>
+                        <div id="unifiedAccountList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-settings">
+        <section id="settings-section" class="app-section hidden">
+            <div class="sub-nav no-print">
+                <button onclick="switchSubSection('settings-section', 'settings-config')" class="sub-nav-btn active">
+                    <i data-lucide="server"></i> Config
+                </button>
+                <button onclick="switchSubSection('settings-section', 'settings-expenses')" class="sub-nav-btn">
+                    <i data-lucide="trending-down"></i> Expenses
+                </button>
+                <button onclick="switchSubSection('settings-section', 'settings-maintenance')" class="sub-nav-btn">
+                    <i data-lucide="wrench"></i> Tasks
+                </button>
+                <button onclick="switchSubSection('settings-section', 'settings-audit')" class="sub-nav-btn">
+                    <i data-lucide="file-check"></i> Audit
+                </button>
+                <button onclick="switchSubSection('settings-section', 'settings-database')" class="sub-nav-btn">
+                    <i data-lucide="database"></i> DB
+                </button>
+            </div>
+
+            <div id="settings-config" class="sub-section hidden">
+                <!-- 1. Property Identity -->
+                <form onsubmit="event.preventDefault(); saveSystemSettings();">
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h3 class="section-title" style="font-size: 0.85rem;"><i data-lucide="building"></i> Property Details</h3>
+                    </div>
+                    <div class="grid-inputs" style="margin-top: 1.25rem;">
+                        <div class="input-group"><label>Property Name</label><input type="text" id="prop_name" placeholder="e.g. Blue Heavens"></div>
+                        <div class="input-group" style="grid-column: span 2;"><label>Property Address</label><input type="text" id="prop_addr" placeholder="Full street address..."></div>
+                        <div class="input-group" style="grid-column: 1/-1;">
+                            <label>Rental Agreement Terms</label>
+                            <textarea id="agreement_terms" rows="4" style="width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 0.75rem; font-family: inherit; font-size: 0.85rem; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Update Details</button>
+                    </div>
+                </div>
+                </form>
+
+                <!-- 2. Email & Alerts -->
+                <form onsubmit="event.preventDefault(); saveSystemSettings();">
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h3 class="section-title" style="font-size: 0.85rem;"><i data-lucide="mail"></i> Email Configuration</h3>
+                    </div>
+                    <div class="grid-inputs" style="margin-top: 1.25rem;">
+                        <input type="text" autocomplete="username" style="display:none;">
+                        <div class="input-group"><label>Admin Email</label><input type="email" id="email_user" autocomplete="username"></div>
+                        <div class="input-group"><label>SMTP App Pass</label><input type="password" id="email_pass" autocomplete="current-password"></div>
+                        <div class="input-group"><label>Auto-BCC</label><input type="text" id="email_bcc"></div>
+                        <div class="input-group"><label>Server Port</label><input type="number" id="server_port"></div>
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm" style="flex: 1;">Save Email Config</button>
+                        <button type="button" onclick="testSMTPSettings()" class="btn btn-secondary btn-sm" style="flex: 1;">Test Connection</button>
+                    </div>
+                </div>
+                </form>
+
+                <!-- 3. Security & Access -->
+                <form onsubmit="event.preventDefault(); saveSystemSettings();">
+                <div class="card" style="margin-bottom: 1.5rem;">
+                    <div class="card-header">
+                        <h3 class="section-title" style="font-size: 0.85rem;"><i data-lucide="shield-check"></i> Security & Access</h3>
+                    </div>
+                    <div class="grid-inputs" style="margin-top: 1.25rem;">
+                        <input type="text" value="admin" autocomplete="username" style="display:none;">
+                        <div class="input-group"><label>New Master PIN</label><input type="password" id="new_master_pin" maxlength="4" placeholder="4 digits" autocomplete="new-password"></div>
+                        <div class="input-group"><label>New Staff PIN</label><input type="password" id="new_staff_pin" maxlength="4" placeholder="4 digits" autocomplete="new-password"></div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary btn-sm">Update Access PINs</button>
+                    </div>
+                </div>
+                </form>
+
+                <!-- System Maintenance -->
+                <div style="margin-bottom: 2rem;">
+                    <button type="button" onclick="forceRefreshApp()" class="btn btn-secondary" style="width: 100%; border-style: dashed; font-size: 0.7rem; height: 40px;">Clear App Cache & Hard Reload</button>
+                </div>
+
+                <div style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-top: 2px solid var(--border); padding-top: 2rem;">
+                    <button onclick="toggleDarkMode()" class="btn btn-secondary"><i data-lucide="moon"></i> Dark Mode</button>
+                    <button onclick="logout()" class="btn btn-danger"><i data-lucide="log-out"></i> Logout</button>
+                </div>
+            </div>
+
+            <div id="settings-expenses" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="trending-down"></i> Expenses</h3>
+                        <button onclick="toggleExpenseForm()" id="expToggleBtn" class="btn btn-secondary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Record Outflow</button>
+                    </div>
+                    <div id="expense-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Category</label><select id="eCategory"><option value="Maintenance">Repair</option><option value="Taxes">Taxes</option><option value="Utility">Utility</option><option value="Salary">Staff</option><option value="Other">Other</option></select></div>
+                            <div class="input-group"><label>Owner *</label><select id="eOwnerName"><option value="">-- Select --</option></select></div>
+                            <div class="input-group"><label>Amount</label><input type="number" id="eAmount"></div>
+                            <div class="input-group"><label>Date</label><input type="date" id="eDate"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Note</label><input type="text" id="eNotes"></div>
+                        </div>
+                        <button onclick="addExpense()" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Save Expense</button>
+                    </div>
+                    <div id="expenseList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+            </div>
+
+            <div id="settings-maintenance" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+                        <h3 class="section-title"><i data-lucide="wrench"></i> Task Board</h3>
+                        <button onclick="toggleTaskForm()" id="taskToggleBtn" class="btn btn-primary btn-sm" style="border-radius: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">New Ticket</button>
+                    </div>
+                    <div id="maintenance-form" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border);">
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>Unit/Room</label><select id="tTaskRenter"><option value="">-- Common Area --</option></select></div>
+                            <div class="input-group"><label>Task Title *</label><input type="text" id="tTaskTitle" placeholder="Repair leaky tap..."></div>
+                            <div class="input-group"><label>Category</label><select id="tTaskCat"><option>Plumbing</option><option>Electrical</option><option>Structural</option><option>Painting</option><option>Cleaning</option><option>Other</option></select></div>
+                            <div class="input-group"><label>Priority</label><select id="tTaskPrio"><option value="3">High</option><option value="2" selected>Medium</option><option value="1">Low</option></select></div>
+                            <div class="input-group"><label>Owner / Assigned To</label><select id="tTaskOwner"></select></div>
+                            <div class="input-group"><label>Est. Cost</label><input type="number" id="tTaskEst" value="0"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Task Photo</label><input type="file" id="tTaskPhoto" accept="image/*" style="padding: 8px;"></div>
+                            <div class="input-group" style="grid-column: 1/-1;"><label>Description</label><textarea id="tTaskDesc" rows="2" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea></div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button onclick="addTask()" class="btn btn-primary" style="flex: 2;">Create Ticket</button>
+                            <button onclick="toggleTaskForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                        </div>
+                    </div>
+                    <div id="taskList" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                </div>
+            </div>
+
+            <div id="settings-audit" class="sub-section hidden no-print">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="section-title"><i data-lucide="file-check"></i> Financial Audit</h3>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1rem;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;">
+                            <button onclick="setAuditPeriod('current')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">This Month</button>
+                            <button onclick="setAuditPeriod('last')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">Last Month</button>
+                            <button onclick="setAuditPeriod('fy')" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; padding: 10px 5px;">This FY</button>
+                        </div>
+                        <div class="grid-inputs">
+                            <div class="input-group"><label>From Date</label><input type="date" id="auditFromDate"></div>
+                            <div class="input-group"><label>To Date</label><input type="date" id="auditToDate"></div>
+                        </div>
+                        <div style="border-top: 1px dashed var(--border); padding-top: 1rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;" onclick="document.getElementById('advancedTaxOptions').classList.toggle('hidden')">
+                                <div style="font-size: 0.8rem; font-weight: 800; color: var(--primary);">Tax Options</div>
+                                <i data-lucide="chevron-down" style="width: 14px;"></i>
+                            </div>
+                            <div id="advancedTaxOptions" class="hidden" style="margin-top: 1rem; background: var(--bg-main); padding: 1rem; border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 700;">Show Tax Projection</span>
+                                    <input type="checkbox" id="auditIncludeTax">
+                                </div>
+                                <div class="input-group" style="margin: 0;"><label>Municipal Taxes</label><input type="number" id="auditMunicipalTax" value="0"></div>
+                            </div>
+                        </div>
+                        <button onclick="viewAuditReport()" class="btn btn-primary" style="width: 100%; height: 50px; font-weight: 900;">Generate Audit <i data-lucide="sparkles"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings-database" class="sub-section hidden">
+                <div class="card">
+                    <div class="card-header"><h3 class="section-title"><i data-lucide="database"></i> Data Integrity</h3></div>
+                    <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 1rem;">
+                        <div>
+                            <p style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Backup</p>
+                            <input type="text" id="backupFilename" placeholder="manual_backup" style="margin: 1rem 0;">
+                            <button onclick="backupDatabase()" class="btn btn-primary btn-sm" style="width: 100%;">Download .db</button>
+                        </div>
+                        <div>
+                            <p style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Restore</p>
+                            <form onsubmit="event.preventDefault(); restoreDatabase();">
+                            <input type="text" value="admin" autocomplete="username" style="display:none;">
+                            <div class="grid-inputs" style="margin-top: 1rem;">
+                                <div class="input-group"><label>File</label><input type="file" id="restoreFile" accept=".db"></div>
+                                <div class="input-group"><label>PIN</label><input type="password" id="restorePin" maxlength="4" autocomplete="current-password"></div>
+                            </div>
+                            <button type="submit" class="btn btn-danger btn-sm" style="width: 100%; margin-top: 1rem;">Execute Restore</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tpl-modals">
+        <div id="shareModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="send"></i> Dispatch Center</h3>
+                    <button onclick="closeShareModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <button onclick="shareTo('show')" class="btn" style="background: var(--info); color: white; width: 100%; border: none;">
+                            <i data-lucide="eye"></i> View Document
+                        </button>
+                        <button onclick="shareTo('wa')" class="btn" style="background: #25D366; color: white; width: 100%; border: none;">
+                            <i data-lucide="message-circle"></i> WhatsApp
+                        </button>
+                        <button onclick="shareTo('email')" class="btn" style="background: #ea4335; color: white; width: 100%; border: none;">
+                            <i data-lucide="mail"></i> Email
+                        </button>
+                        <button onclick="shareTo('print')" class="btn" style="background: #1e293b; color: white; width: 100%; border: none;">
+                            <i data-lucide="printer"></i> Print / PDF
+                        </button>
+                        <button onclick="shareTo('copy')" class="btn btn-secondary" style="width: 100%;">
+                            <i data-lucide="copy"></i> Copy Text
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="previewModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 800px; background: var(--bg-main);">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="file-text"></i> Document Preview</h3>
+                    <button onclick="closePreviewModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body" id="previewContent" style="padding: 1rem; background: var(--bg-main);">
+                </div>
+                <div class="modal-footer">
+                    <button onclick="shareTo('print')" class="btn btn-primary" style="flex: 2;"><i data-lucide="printer"></i> Print Document</button>
+                    <button onclick="closePreviewModal()" class="btn btn-secondary" style="flex: 1;">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="print-area" class="hidden"></div>
+
+        <div id="settlementModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="door-open"></i> Settlement</h3>
+                    <button onclick="closeSettlementModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Advance</label><input type="number" id="sAdvance" readonly></div>
+                        <div class="input-group"><label>Final EB</label><input type="number" id="sEbReading" oninput="calcSettlement('reading')"></div>
+                        <div class="input-group"><label>Rent Due</label><input type="number" id="sRentDue" value="0" oninput="calcSettlement('manual')"></div>
+                        <div class="input-group"><label>EB Due</label><input type="number" id="sEbDue" value="0" oninput="calcSettlement('manual')"></div>
+                        <div class="input-group"><label>Damages</label><input type="number" id="sRepairs" value="0" oninput="calcSettlement('manual')"></div>
+                    </div>
+                    <div style="background: var(--primary-light); padding: 1rem; text-align: center; margin: 1rem 0; border-radius: 8px;">
+                        <div id="settlementLabel" style="font-size: 0.6rem; font-weight: 800; color: var(--secondary);">TOTAL REFUND</div>
+                        <div id="settlementTotal" style="font-size: 1.5rem; font-weight: 900; color: var(--primary);">₹0.00</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="processSettlementAndVacant()" class="btn btn-primary" style="flex: 2;">Execute Exit</button>
+                    <button onclick="closeSettlementModal()" class="btn btn-secondary" style="flex: 1;">Abort</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="deletePinModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 360px;">
+                <form onsubmit="event.preventDefault(); confirmActionWithPin();">
+                <input type="text" value="admin" autocomplete="username" style="display:none;">
+                <div class="modal-body" style="text-align: center; padding-top: 2rem;">
+                    <h3 id="confirmationTitle" class="section-title" style="justify-content: center;">Authorize</h3>
+                    <p id="confirmationMessage" style="font-size: 0.8rem; color: var(--text-muted); margin: 1rem 0;">Enter Master PIN.</p>
+                    <input type="password" id="deletePinInput" maxlength="4" style="width: 100%; text-align: center; font-size: 2rem; padding: 1rem; border: 2px solid var(--border); border-radius: 12px; background: var(--bg-input);" autocomplete="current-password">
+                </div>
+                <div class="modal-footer" style="background: transparent; border: none;">
+                    <button type="submit" class="btn btn-danger" style="flex: 1;">Confirm</button>
+                    <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="paymentModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="credit-card"></i> Payment</h3>
+                    <button onclick="closePaymentModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="paySummary" style="background: var(--primary-light); padding: 1rem; margin-bottom: 1rem; border-radius: 8px; text-align: center;">
+                        <div id="payTotalLabel" style="font-size: 1.5rem; font-weight: 900; color: var(--primary);">₹0</div>
+                    </div>
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Method</label><select id="payMethodInput"><option value="UPI">UPI</option><option value="Cash">Cash</option><option value="Bank">Bank</option></select></div>
+                        <div class="input-group"><label>Received By</label><select id="payReceiverInput"></select></div>
+                        <div class="input-group"><label>Date</label><input type="date" id="payDateInput"></div>
+                        <div class="input-group"><label>Amount *</label><input type="number" id="payAmountInput" oninput="calculateAdjustments()"></div>
+                    </div>
+                    <div id="adjustmentSection" class="hidden" style="margin-top: 1rem; padding: 1rem; background: var(--bg-input); border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span id="payBalanceLabel" style="color: var(--danger); font-weight: 800;">₹0</span>
+                            <select id="adjType" onchange="calculateAdjustments()"><option value="CARRY">Carry Forward</option><option value="DISCOUNT">Discount</option><option value="WRITEOFF">Write-Off</option></select>
+                        </div>
+                        <p id="adjDescription" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 600; line-height: 1.3; margin: 0;"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="confirmPaymentRecord()" class="btn btn-primary" style="flex: 2;">Save</button>
+                    <button onclick="closePaymentModal()" class="btn btn-secondary" style="flex: 1;">Abort</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="billDetailsModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 450px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="receipt"></i> Breakdown</h3>
+                    <button onclick="document.getElementById('billDetailsModal').classList.add('hidden')" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body"><div id="billBreakdownContent"></div></div>
+            </div>
+        </div>
+
+        <div id="taskModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="wrench"></i> Update Ticket</h3>
+                    <button onclick="closeTaskModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Status</label><select id="mTaskStatus"><option value="Pending">Pending</option><option value="In Progress">In Progress</option><option value="Resolved">Resolved</option></select></div>
+                        <div class="input-group"><label>Priority</label><select id="mTaskPriority"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option></select></div>
+                        <div class="input-group"><label>Actual Cost</label><input type="number" id="mTaskActualCost" value="0"></div>
+                        <div class="input-group"><label>Date Resolved</label><input type="date" id="mTaskDateResolved"></div>
+                    </div>
+                    <div class="input-group" style="margin-top: 1rem;">
+                        <label>Update Notes</label>
+                        <textarea id="mTaskNotes" rows="2" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea>
+                    </div>
+                    <div id="convertOption" class="hidden" style="margin-top: 1rem; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="mTaskConvertToExpense">
+                        <label for="mTaskConvertToExpense" style="font-size: 0.75rem; font-weight: 700;">Record as Building Expense</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="updateTaskConfirm()" class="btn btn-primary" style="flex: 2;">Update Status</button>
+                    <button onclick="deleteTaskConfirm()" class="btn btn-danger" style="flex: 1;">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="uploadModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="section-title"><i data-lucide="upload-cloud"></i> Upload Document</h3>
+                    <button onclick="toggleUploadForm()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div class="grid-inputs">
+                        <div class="input-group"><label>Unit</label><select id="docRenterId"></select></div>
+                        <div class="input-group"><label>Type</label><select id="docType"><option value="ID Proof">ID Proof</option><option value="Lease Agreement">Lease</option><option value="Other">Other</option></select></div>
+                        <div class="input-group"><label>Expiry</label><input type="date" id="docExpiry"></div>
+                        <div class="input-group" style="grid-column: 1/-1;"><label>File</label><input type="file" id="docFile"></div>
+                        <div class="input-group" style="grid-column: 1/-1;"><label>Notes</label><input type="text" id="docNotes" placeholder="Optional notes..."></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button onclick="uploadDocument()" class="btn btn-primary" style="flex: 2;">Start Upload</button>
+                    <button onclick="toggleUploadForm()" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="ownerTimelineModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 600px; display: flex; flex-direction: column;">
+                <div class="modal-header no-print">
+                    <h3 class="section-title"><i data-lucide="list-tree"></i> Timeline</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button onclick="printOwnerTimeline()" class="btn btn-secondary btn-icon-sm"><i data-lucide="printer"></i></button>
+                        <button onclick="closeOwnerTimeline()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                    </div>
+                </div>
+                <div class="modal-body" style="overflow-y: auto; flex: 1;">
+                    <div id="timelineOwnerName" style="font-weight: 900; font-size: 1.2rem; margin-bottom: 1.5rem; border-left: 5px solid var(--primary); padding-left: 10px; color: var(--primary);"></div>
+                    <div id="ownerTimelineContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="auditModal" class="modal-overlay hidden">
+            <div class="modal-content" style="max-width: 800px; display: flex; flex-direction: column;">
+                <div class="modal-header no-print">
+                    <h3 class="section-title"><i data-lucide="file-check"></i> Audit</h3>
+                    <button onclick="closeAuditModal()" class="btn-icon" style="border: none; background: none;"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body" style="background: var(--bg-main); padding: 0; overflow-y: auto; flex: 1;">
+                    <div id="auditContent"></div>
+                </div>
+                <div class="modal-footer no-print">
+                    <button onclick="printAudit()" class="btn btn-primary" style="flex: 2;">Print</button>
+                    <button onclick="closeAuditModal()" class="btn btn-secondary" style="flex: 1;">Close</button>
+                </div>
+            </div>
+        </div>
+    </template>
+    
+    <script>
+        // AGGRESSIVE CACHE RESET (Ensures latest fixes)
+        async function resetAppCache() {
+            if ('serviceWorker' in navigator) {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (let reg of regs) { await reg.unregister(); }
+            }
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                for (let key of keys) { await caches.delete(key); }
+            }
+            // Clear local storage if stuck
+            if (!localStorage.getItem('v18_cleared')) {
+                localStorage.clear();
+                localStorage.setItem('v18_cleared', 'true');
+                window.location.reload(true);
+            }
+        }
+        resetAppCache();
+    </script>
+    <!-- Modular UI Templates -->
+    <script src="/js/components/templates.js"></script>
+
+    <!-- Core Services -->
+    <script src="/js/services/api.js"></script>
+    <script src="/js/services/sync.js"></script>
+    <script src="/js/components/ui.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/tenants.js"></script>
+    <script src="/js/billing.js"></script>
+    <script src="/js/history.js"></script>
+    <script src="/js/expenses.js"></script>
+    <script src="/js/withdrawals.js"></script>
+    <script src="/js/received.js"></script>
+    <script src="/js/maintenance.js"></script>
+    <script src="/js/vault.js"></script>
+    <script src="/js/settings.js"></script>
+    <script src="/js/sharing.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
