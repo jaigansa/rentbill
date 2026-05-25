@@ -16,7 +16,7 @@ echo "🚀 Starting build process..."
 echo "Cleaning dependencies..."
 go mod tidy
 
-echo "Hamster Building Go application..."
+echo "🔨 Building Go application..."
 go build -o rentbill .
 if [ $? -ne 0 ]; then
     echo "❌ Go Build failed!"

@@ -269,7 +269,10 @@ function loadActivityLogs() {
                     <div style="color: ${color};"><i data-lucide="${icon}" style="width: 14px; height: 14px;"></i></div>
                     <div style="min-width: 0; flex: 1;">
                         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${l.details}</div>
-                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 600;">${new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                            <i data-lucide="calendar" style="width: 10px; height: 10px;"></i>
+                            <span>${new Date(l.timestamp).toLocaleDateString([], {day: '2-digit', month: 'short'})} • ${new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>
                     </div>
                 </div>
             `;

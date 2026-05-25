@@ -29,15 +29,14 @@ if [ "$1" == "--remove" ]; then
     rm -f /etc/systemd/system/$SERVICE_NAME
     systemctl daemon-reload
     
-    echo "❓ Do you want to delete all data (database and backups) as well? (y/N)"
+    echo "❓ Do you want to delete all data (database, backups, and uploads) as well? (y/N)"
     read -r response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
         rm -rf $INSTALL_DIR
         echo "✅ Application and ALL data removed."
     else
-        rm -rf $INSTALL_DIR/public
         rm -f $INSTALL_DIR/$BINARY_NAME
-        echo "✅ Application removed. Database and backups preserved at $INSTALL_DIR"
+        echo "✅ Application removed. Database, backups, and uploads preserved at $INSTALL_DIR"
     fi
     exit 0
 fi
@@ -45,7 +44,7 @@ fi
 if [ "$1" == "--update" ]; then
     echo "🔄 Preparing to update RentBill Pro..."
     systemctl stop $SERVICE_NAME 2>/dev/null
-    # We don't remove INSTALL_DIR here to preserve DB and config
+    # We don't remove INSTALL_DIR here to preserve DB, config, and uploads
     echo "✅ Ready for update."
 fi
 
@@ -68,10 +67,10 @@ fi
 echo "📂 Preparing installation directory at $INSTALL_DIR..."
 mkdir -p $INSTALL_DIR
 mkdir -p $INSTALL_DIR/backups
+mkdir -p $INSTALL_DIR/uploads
 
 # 6. Copy application files
 echo "📦 Copying files..."
-cp -r public $INSTALL_DIR/
 cp $BINARY_NAME $INSTALL_DIR/
 
 # 7. Handle configuration
