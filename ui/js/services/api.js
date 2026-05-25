@@ -94,6 +94,7 @@ const API = {
     system: {
         getSettings: () => API.request('/settings'),
         updateSettings: (data) => API.request('/settings', { method: 'POST', body: JSON.stringify(data) }),
+        testEmail: () => API.request('/settings/test-email', { method: 'POST' }),
         getLogs: (filter) => API.request(`/logs?filter=${filter || 'ALL'}`),
         backup: (filename) => API.request('/db/backup', { method: 'POST', body: JSON.stringify({ filename }), responseType: 'blob' }),
         restore: (formData) => API.request('/db/restore', { method: 'POST', body: formData }),
