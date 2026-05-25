@@ -49,18 +49,35 @@ async function populateActionQueues(tenants, ledger) {
     // --- Queue 1: Needs Billing ---
     const qBilling = document.getElementById('queueBilling');
     if (qBilling) {
+        const day = now.getDate();
+        const countEl = document.getElementById('countBilling');
+        
         const report = await API.bills.getMonthlyReport(currentMonth) || [];
         const unbilled = report.filter(u => !u.is_billed);
         
-        const countEl = document.getElementById('countBilling');
         if (countEl) countEl.innerText = unbilled.length;
         
-        qBilling.innerHTML = unbilled.length ? unbilled.map(u => `
-            <div onclick="draftBillNow(${u.renter_id}, '${currentMonth}')" class="tenant-row" style="padding: 0.75rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid var(--border); border-radius: 10px;">
-                <div style="font-weight: 800; font-size: 0.85rem;">Unit ${u.room_no}</div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: var(--warning);">CREATE BILL</div>
-            </div>
-        `).join('') : '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 1rem;">All units billed.</p>';
+        if (unbilled.length > 0) {
+            const isOverdue = day > 3;
+            qBilling.innerHTML = unbilled.map(u => `
+                <div onclick="draftBillNow(${u.renter_id}, '${currentMonth}')" class="tenant-row" style="padding: 0.75rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid ${isOverdue ? 'var(--danger)' : 'var(--border)'}; border-radius: 10px; background: ${isOverdue ? 'var(--bg-danger-light)' : 'transparent'};">
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="font-weight: 800; font-size: 0.85rem; color: ${isOverdue ? 'var(--danger)' : 'var(--text-main)'};">${u.name}</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Unit ${u.room_no}</div>
+                    </div>
+                    <div style="font-size: 0.7rem; font-weight: 900; color: ${isOverdue ? 'var(--danger)' : 'var(--warning)'}; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ${isOverdue ? '⚠️ OVERDUE' : 'Create Bill'}
+                    </div>
+                </div>
+            `).join('');
+            
+            if (isOverdue) {
+                const warningHeader = `<div style="padding: 0.5rem; background: var(--danger); color: white; border-radius: 8px; font-size: 0.65rem; font-weight: 900; text-align: center; margin-bottom: 0.5rem; letter-spacing: 1px;">BIG WARNING: MONTHLY BILLING OVERDUE</div>`;
+                qBilling.insertAdjacentHTML('afterbegin', warningHeader);
+            }
+        } else {
+            qBilling.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 1rem;">All units billed.</p>';
+        }
     }
 
     // --- Queue 2: Pending Collections ---

@@ -251,9 +251,16 @@ async function loadSpecificBilling(renterId, monthName) {
     
     const monthInput = document.getElementById(`month-${renterId}`);
     if (monthInput) {
+        // Convert "Month Year" (e.g., "May 2026") to "YYYY-MM"
         const date = new Date(monthName + ' 1');
-        const yyyymm = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
-        monthInput.value = yyyymm;
+        if (!isNaN(date.getTime())) {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            monthInput.value = `${yyyy}-${mm}`;
+        }
+        
+        // Always fetch last EB when loading specific billing
+        await fetchLastEB(renterId);
         
         const billingControls = document.getElementById(`billing-${renterId}`);
         if (billingControls && billingControls.classList.contains('hidden')) {
