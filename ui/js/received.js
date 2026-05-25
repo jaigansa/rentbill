@@ -2,6 +2,8 @@
  * Income Service: Handles display of paid bills and income records
  */
 
+let currentReceivedOwnerFilter = '';
+
 async function loadReceivedPayments(owner = null) {
     const listDiv = document.getElementById('receivedPaymentsList');
     const filterSelect = document.getElementById('receivedOwnerFilter');
@@ -10,6 +12,8 @@ async function loadReceivedPayments(owner = null) {
     if (owner === null) {
         owner = filterSelect ? filterSelect.value : '';
     }
+
+    currentReceivedOwnerFilter = owner;
 
     // Refresh Owner Filter if empty
     if (filterSelect && filterSelect.options.length <= 1) {
@@ -59,6 +63,87 @@ async function loadReceivedPayments(owner = null) {
         console.error("Failed to load income", e);
         listDiv.innerHTML = '<p style="text-align:center; color:var(--danger); font-size: 0.75rem;">Failed to load records.</p>';
     }
+}
+
+async function printIncomeHistory() {
+    const propName = (typeof appSettings !== 'undefined' && appSettings.property_name) || 'RENTBILL PRO';
+    const propAddr = (typeof appSettings !== 'undefined' && appSettings.property_address) || '';
+    
+    const listDiv = document.getElementById('owners-received');
+    if (!listDiv) return;
+    
+    const existingBranding = listDiv.querySelector('.print-branding');
+    if (existingBranding) existingBranding.remove();
+
+    // Calculate Total for the current view
+    let totalAmount = 0;
+    const items = listDiv.querySelectorAll('.tenant-row');
+    items.forEach(item => {
+        const text = item.innerText || '';
+        const match = text.match(/₹\s?([0-9,.]+)/);
+        if (match) {
+            totalAmount += parseFloat(match[1].replace(/,/g, ''));
+        }
+    });
+
+    const brandingHtml = `
+        <div class="print-branding print-only" style="text-align: center; border-bottom: 2px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2rem; width: 100%; font-family: var(--font-main), sans-serif; background: white;">
+            <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
+            <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
+            <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">INCOME COLLECTION STATEMENT</div>
+            
+            <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; border: 1.5px solid var(--border); padding: 15px; border-radius: 8px;">
+                <div>
+                    <p style="margin: 0; font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Statement For</p>
+                    <p style="margin: 4px 0 0 0; font-size: 1.1rem; font-weight: 900; color: var(--primary); text-transform: uppercase;">${currentReceivedOwnerFilter ? currentReceivedOwnerFilter : 'ALL OWNERS'}</p>
+                </div>
+                <div style="text-align: right;">
+                    <p style="margin: 0; font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Total Received</p>
+                    <p style="margin: 4px 0 0 0; font-size: 1.1rem; font-weight: 900; color: var(--success);">${currencyFormatter.format(totalAmount)}</p>
+                </div>
+            </div>
+
+            <p style="margin: 15px 0 0 0; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; text-align: left;">Generated on: ${new Date().toLocaleString('en-IN')}</p>
+        </div>
+    `;
+
+    listDiv.insertAdjacentHTML('afterbegin', brandingHtml);
+
+    const style = document.createElement('style');
+    style.id = 'print-hide-income-actions';
+    style.innerHTML = `
+        @media print { 
+            body { background: white !important; color: black !important; }
+            .no-print, .sub-nav { display: none !important; } 
+            #owners-received { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            .tenant-row { 
+                border: 1px solid #eee !important; 
+                margin-bottom: 8px !important; 
+                padding: 12px !important; 
+                break-inside: avoid; 
+                flex-direction: row !important; 
+                align-items: center !important; 
+                background: white !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            } 
+            .tenant-row > div:first-child { 
+                background: transparent !important; 
+                border: none !important; 
+            }
+            @page { margin: 1.5cm; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    window.print();
+
+    setTimeout(() => {
+        const branding = listDiv.querySelector('.print-branding');
+        if (branding) branding.remove();
+        const styleEl = document.getElementById('print-hide-income-actions');
+        if (styleEl) styleEl.remove();
+    }, 500);
 }
 
 function populateReceivedFilters() {
