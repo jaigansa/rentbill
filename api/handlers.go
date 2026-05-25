@@ -739,15 +739,15 @@ func GetAuditReport(c *gin.Context) {
 func GetMonthlyReport(c *gin.Context) {
 	month := c.Param("month") // e.g. "May 2026"
 	
-	// Convert "Month Year" to "YYYY-MM-01" for comparison
+	// Convert "Month Year" to find the last day of that month
 	t, _ := time.Parse("January 2006", month)
-	reportMonthFirstDay := t.Format("2006-01-02")
+	reportMonthLastDay := t.AddDate(0, 1, -1).Format("2006-01-02")
 
 	rows, _ := DB.Query(`
 		SELECT r.id, r.name, r.room_no, COALESCE(b.id, 0), COALESCE(b.is_paid, 0), COALESCE(b.total_amount, 0), r.move_in_date
 		FROM renters r
 		LEFT JOIN bills b ON r.id = b.renter_id AND b.billing_month = ?
-		WHERE r.is_active = 1 AND r.move_in_date <= ?`, month, reportMonthFirstDay)
+		WHERE r.is_active = 1 AND r.move_in_date <= ?`, month, reportMonthLastDay)
 	defer rows.Close()
 	
 	var report = []interface{}{}
