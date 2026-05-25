@@ -125,6 +125,12 @@ func InitConfig() {
 		if AppConfig.EmailPass != "" {
 			AppConfig.EmailPass, _ = decrypt(AppConfig.EmailPass, AppConfig.SessionSecret)
 		}
+		if AppConfig.EmailHost == "" {
+			AppConfig.EmailHost = "smtp.gmail.com"
+		}
+		if AppConfig.EmailPort == 0 {
+			AppConfig.EmailPort = 587
+		}
 	}
 	if len(AppConfig.SessionSecret) < 16 {
 		AppConfig.SessionSecret = "rentbill-secure-session-fallback-secret-2024"

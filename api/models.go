@@ -13,6 +13,8 @@ type Config struct {
 	EmailUser         string             `json:"email_user"`
 	EmailPass         string             `json:"email_pass"`
 	EmailBCC          string             `json:"email_bcc"`
+	EmailHost         string             `json:"email_host"`
+	EmailPort         int                `json:"email_port"`
 	SessionSecret     string             `json:"session_secret"`
 	ServerPort        int                `json:"server_port"`
 	ReceivingAccounts []ReceivingAccount `json:"receiving_accounts"`

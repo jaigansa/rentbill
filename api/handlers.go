@@ -61,7 +61,7 @@ func ForgotPin(c *gin.Context) {
 	}
 	tempPin := fmt.Sprintf("%04d", (uint32(b[0])<<8|uint32(b[1]))%10000)
 
-	auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, "smtp.gmail.com")
+	auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, AppConfig.EmailHost)
 	htmlMsg := fmt.Sprintf("<h1>PIN Recovery</h1><p>Temporary PIN: <b>%s</b></p>", tempPin)
 	header := fmt.Sprintf("Subject: RentBill - PIN Recovery\r\nTo: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n", AppConfig.EmailUser)
 	msg := []byte(header + htmlMsg)
@@ -76,7 +76,7 @@ func ForgotPin(c *gin.Context) {
 			}
 		}
 	}
-	err := smtp.SendMail("smtp.gmail.com:587", auth, AppConfig.EmailUser, recipients, msg)
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", AppConfig.EmailHost, AppConfig.EmailPort), auth, AppConfig.EmailUser, recipients, msg)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
 		return
@@ -162,6 +162,8 @@ func GetSettings(c *gin.Context) {
 		"property_address":   AppConfig.PropertyAddress,
 		"agreement_terms":    AppConfig.AgreementTerms,
 		"email_user":         AppConfig.EmailUser,
+		"email_host":         AppConfig.EmailHost,
+		"email_port":         AppConfig.EmailPort,
 		"email_bcc":          AppConfig.EmailBCC,
 		"server_port":        AppConfig.ServerPort,
 		"receiving_accounts": AppConfig.ReceivingAccounts,
@@ -176,6 +178,8 @@ func UpdateSettings(c *gin.Context) {
 		EmailUser         *string            `json:"email_user"`
 		EmailPass         *string            `json:"email_pass"`
 		EmailBCC          *string            `json:"email_bcc"`
+		EmailHost         *string            `json:"email_host"`
+		EmailPort         *int               `json:"email_port"`
 		NewPin            *string            `json:"new_pin"`
 		NewStaffPin       *string            `json:"new_staff_pin"`
 		ServerPort        *int               `json:"server_port"`
@@ -192,6 +196,8 @@ func UpdateSettings(c *gin.Context) {
 	if req.EmailUser != nil { AppConfig.EmailUser = *req.EmailUser }
 	if req.EmailPass != nil { AppConfig.EmailPass = *req.EmailPass }
 	if req.EmailBCC != nil { AppConfig.EmailBCC = *req.EmailBCC }
+	if req.EmailHost != nil { AppConfig.EmailHost = *req.EmailHost }
+	if req.EmailPort != nil { AppConfig.EmailPort = *req.EmailPort }
 	if req.ReceivingAccounts != nil { AppConfig.ReceivingAccounts = req.ReceivingAccounts }
 
 	portChanged := false
@@ -233,12 +239,12 @@ func TestEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "SMTP not configured"})
 		return
 	}
-	auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, "smtp.gmail.com")
+	auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, AppConfig.EmailHost)
 	header := fmt.Sprintf("Subject: RentBill Test\r\nTo: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n", AppConfig.EmailUser)
 	msg := []byte(header + "<h1>SMTP Test Success</h1>")
-	err := smtp.SendMail("smtp.gmail.com:587", auth, AppConfig.EmailUser, []string{AppConfig.EmailUser}, msg)
+	err := smtp.SendMail(fmt.Sprintf("%s:%d", AppConfig.EmailHost, AppConfig.EmailPort), auth, AppConfig.EmailUser, []string{AppConfig.EmailUser}, msg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Connection failed: " + err.Error() + ". If using Gmail, ensure you use an App Password."})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true})

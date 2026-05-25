@@ -8,6 +8,8 @@ async function loadSettings() {
         const propAddr = document.getElementById('prop_addr');
         const agTerms = document.getElementById('agreement_terms');
         const emailUser = document.getElementById('email_user');
+        const emailHost = document.getElementById('email_host');
+        const emailPort = document.getElementById('email_port');
         const emailBcc = document.getElementById('email_bcc');
         const srvPort = document.getElementById('server_port');
         
@@ -15,6 +17,8 @@ async function loadSettings() {
         if (propAddr) propAddr.value = data.property_address || '';
         if (agTerms) agTerms.value = data.agreement_terms || '';
         if (emailUser) emailUser.value = data.email_user || '';
+        if (emailHost) emailHost.value = data.email_host || 'smtp.gmail.com';
+        if (emailPort) emailPort.value = data.email_port || 587;
         if (emailBcc) emailBcc.value = data.email_bcc || '';
         if (srvPort) srvPort.value = data.server_port || 8080;
 
@@ -186,6 +190,8 @@ async function saveSystemSettings() {
         agreement_terms: document.getElementById('agreement_terms')?.value.trim() || '',
         email_user: document.getElementById('email_user').value.trim(),
         email_pass: document.getElementById('email_pass').value,
+        email_host: document.getElementById('email_host').value.trim(),
+        email_port: parseInt(document.getElementById('email_port').value) || 587,
         email_bcc: document.getElementById('email_bcc').value.trim(),
         server_port: parseInt(document.getElementById('server_port').value) || 8080,
         new_pin: document.getElementById('new_master_pin').value.trim(),
@@ -211,7 +217,10 @@ async function testSMTPSettings() {
     try {
         await API.system.testEmail();
         showNotification("Test email sent successfully!", "success");
-    } catch (e) { showNotification("SMTP Test failed. Check credentials.", "error"); }
+    } catch (e) { 
+        console.error(e);
+        showNotification("SMTP Test failed: " + (e.message || "Check credentials"), "error"); 
+    }
 }
 
 async function backupDatabase() {
