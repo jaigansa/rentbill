@@ -747,7 +747,7 @@ func GetMonthlyReport(c *gin.Context) {
 		SELECT r.id, r.name, r.room_no, COALESCE(b.id, 0), COALESCE(b.is_paid, 0), COALESCE(b.total_amount, 0), r.move_in_date
 		FROM renters r
 		LEFT JOIN bills b ON r.id = b.renter_id AND b.billing_month = ?
-		WHERE r.is_active = 1 AND r.move_in_date < ?`, month, reportMonthFirstDay)
+		WHERE r.is_active = 1 AND r.move_in_date <= ?`, month, reportMonthFirstDay)
 	defer rows.Close()
 	
 	var report = []interface{}{}
