@@ -39,7 +39,7 @@ const API = {
 
     auth: {
         verify: (pin) => API.request('/auth/verify', { method: 'POST', body: JSON.stringify({ pin }) }),
-        forgotPin: () => API.request('/forgot-pin', { method: 'POST' }), // Note: forgot-pin path check
+        forgotPin: () => API.request('/auth/forgot-pin', { method: 'POST' }), // Note: forgot-pin path check
         logout: () => API.request('/auth/logout', { method: 'POST' }),
         checkPin: (pin) => API.request('/auth/check-pin', { method: 'POST', body: JSON.stringify({ pin }) })
     },

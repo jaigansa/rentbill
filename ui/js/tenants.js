@@ -125,6 +125,7 @@ async function editTenant(id) {
         // Populate fields
         const mapping = { 
             'tName': 'name', 'tMobile': 'mobile_number', 'tEmail': 'email', 
+            'tAadhar': 'aadhar_no',
             'tRoom': 'room_no', 'tRent': 'base_rent', 
             'tEbRate': 'eb_unit_price', 'tInitialEb': 'initial_eb', 
             'tWater': 'water_maint', 'tAdvance': 'advance_amount', 
@@ -162,7 +163,7 @@ function resetForm() {
     if (deleteBtn) deleteBtn.classList.add('hidden');
     if (agreementBtn) agreementBtn.classList.add('hidden');
 
-    const fields = ['tName', 'tMobile', 'tEmail', 'tRoom', 'tRent', 'tEbRate', 'tInitialEb', 'tWater', 'tAdvance', 'tMoveIn', 'tPermAddr', 'tEmerg', 'tJob', 'tAssignedUpi', 'tArrears'];
+    const fields = ['tName', 'tMobile', 'tEmail', 'tAadhar', 'tRoom', 'tRent', 'tEbRate', 'tInitialEb', 'tWater', 'tAdvance', 'tMoveIn', 'tPermAddr', 'tEmerg', 'tJob', 'tAssignedUpi', 'tArrears'];
     fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 }
 
