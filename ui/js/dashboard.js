@@ -16,15 +16,14 @@ async function loadDashboardStats() {
 
         // 1. Update Core Stats
         const statActive = document.getElementById('statActive');
-        const statIncome = document.getElementById('statTotalIncome');
-        const statExpenses = document.getElementById('statTotalExpenses');
+        const statAdvance = document.getElementById('statTotalAdvance');
+        const statRent = document.getElementById('statTotalRent');
 
         if (statActive) statActive.innerText = tenants.filter(t => t.is_active === 1).length;
-        if (statIncome) statIncome.innerText = currencyFormatter.format(finSummary.total_paid || 0);
+        if (statAdvance) statAdvance.innerText = currencyFormatter.format(finSummary.total_advances || 0);
         
-        const combinedExpenses = (Array.isArray(expenses) ? expenses.reduce((sum, e) => sum + e.amount, 0) : 0) + 
-                                 (Array.isArray(withdrawals) ? withdrawals.reduce((sum, w) => sum + w.amount, 0) : 0);
-        if (statExpenses) statExpenses.innerText = currencyFormatter.format(combinedExpenses);
+        const totalRent = tenants.filter(t => t.is_active === 1).reduce((sum, t) => sum + (t.base_rent || 0), 0);
+        if (statRent) statRent.innerText = currencyFormatter.format(totalRent);
 
         // 2. Populate Action Queues
         await populateActionQueues(tenants, tenantLedger);
