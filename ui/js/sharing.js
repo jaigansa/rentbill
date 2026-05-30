@@ -547,6 +547,29 @@ async function shareTo(channel) {
                 printArea.innerHTML = '';
             }, 500);
         }
+    } else if (channel === 'copy') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareData.message)
+                .then(() => showNotification("Text copied to clipboard", "success"))
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showNotification("Failed to copy text", "error");
+                });
+        } else {
+            // Fallback for older browsers or non-secure contexts
+            const textArea = document.createElement("textarea");
+            textArea.value = shareData.message;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showNotification("Text copied to clipboard", "success");
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+                showNotification("Failed to copy text", "error");
+            }
+            document.body.removeChild(textArea);
+        }
     }
     closeShareModal();
 }
