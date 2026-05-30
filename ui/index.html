@@ -177,7 +177,13 @@
 
                 <!-- 8. Activity Log -->
                 <div class="card" style="padding: 1.25rem;">
-                    <h3 class="section-title" style="font-size: 0.75rem; margin-bottom: 1rem;"><i data-lucide="history"></i> Live Activity Feed</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+                        <h3 class="section-title" style="font-size: 0.75rem; margin: 0;"><i data-lucide="history"></i> Live Activity Feed</h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <input type="date" id="activityFromDate" onchange="loadActivityLogs()" style="height: 28px; font-size: 0.65rem; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); font-weight: 700;">
+                            <input type="date" id="activityToDate" onchange="loadActivityLogs()" style="height: 28px; font-size: 0.65rem; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); font-weight: 700;">
+                        </div>
+                    </div>
                     <div id="activityLog" class="activity-feed"></div>
                 </div>
 
@@ -364,7 +370,9 @@
                 <div class="card">
                     <div class="card-header no-print">
                         <h3 class="section-title"><i data-lucide="receipt"></i> Income Records</h3>
-                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <input type="date" id="receivedFromDate" onchange="loadReceivedPayments()" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 700; width: 120px;">
+                            <input type="date" id="receivedToDate" onchange="loadReceivedPayments()" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 700; width: 120px;">
                             <select id="receivedOwnerFilter" onchange="loadReceivedPayments(this.value)" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase; cursor: pointer; min-width: 140px;">
                                 <option value="">All Owners</option>
                             </select>
@@ -382,6 +390,8 @@
                     <div class="card-header no-print" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
                         <h3 class="section-title"><i data-lucide="banknote"></i> Owner Payouts</h3>
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <input type="date" id="payoutFromDate" onchange="loadWithdrawals()" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 700; width: 120px;">
+                            <input type="date" id="payoutToDate" onchange="loadWithdrawals()" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 700; width: 120px;">
                             <select id="payoutOwnerFilter" onchange="loadWithdrawals(this.value)" style="height: 34px; font-size: 0.7rem; padding: 0 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--bg-input); font-weight: 800; text-transform: uppercase; cursor: pointer; min-width: 140px;">
                                 <option value="">All Owners</option>
                             </select>

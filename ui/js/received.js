@@ -7,6 +7,9 @@ let currentReceivedOwnerFilter = '';
 async function loadReceivedPayments(owner = null) {
     const listDiv = document.getElementById('receivedPaymentsList');
     const filterSelect = document.getElementById('receivedOwnerFilter');
+    const fromDate = document.getElementById('receivedFromDate')?.value || '';
+    const toDate = document.getElementById('receivedToDate')?.value || '';
+    
     if (!listDiv) return;
 
     if (owner === null) {
@@ -23,7 +26,7 @@ async function loadReceivedPayments(owner = null) {
     listDiv.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted); font-weight: 800;">Syncing income records...</div>';
 
     try {
-        const allPaid = await API.bills.getAllPaidBills();
+        const allPaid = await API.bills.getAllPaidBills(fromDate, toDate);
         const filtered = owner ? allPaid.filter(b => b.assigned_owner === owner) : allPaid;
 
         if (filtered.length === 0) {
@@ -75,6 +78,10 @@ async function printIncomeHistory() {
     const existingBranding = listDiv.querySelector('.print-branding');
     if (existingBranding) existingBranding.remove();
 
+    const fromDate = document.getElementById('receivedFromDate')?.value;
+    const toDate = document.getElementById('receivedToDate')?.value;
+    const periodInfo = (fromDate || toDate) ? `PERIOD: ${fromDate || '...'} to ${toDate || '...'}` : '';
+
     // Calculate Total for the current view
     let totalAmount = 0;
     const items = listDiv.querySelectorAll('.tenant-row');
@@ -91,7 +98,8 @@ async function printIncomeHistory() {
             <h2 style="margin: 0; font-size: 1.6rem; text-transform: uppercase; font-weight: 900; color: var(--primary); letter-spacing: 1px;">${propName}</h2>
             <p style="margin: 6px 0; font-size: 0.95rem; color: var(--text-muted); font-weight: 600;">${propAddr}</p>
             <div style="margin-top: 20px; font-weight: 900; background: var(--primary); color: #fff !important; display: inline-block; padding: 6px 25px; font-size: 1rem; border-radius: 6px; text-transform: uppercase; letter-spacing: 1.5px;">INCOME COLLECTION STATEMENT</div>
-            
+            ${periodInfo ? `<p style="margin: 15px 0 0 0; font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${periodInfo}</p>` : ''}
+
             <div style="margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; border: 1.5px solid var(--border); padding: 15px; border-radius: 8px;">
                 <div>
                     <p style="margin: 0; font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">Statement For</p>

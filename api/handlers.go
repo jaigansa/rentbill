@@ -119,25 +119,56 @@ func Logout(c *gin.Context) {
 
 func GetLogs(c *gin.Context) {
 	filter := c.DefaultQuery("filter", "ALL")
-	limit := c.DefaultQuery("limit", "30")
+	limit := c.DefaultQuery("limit", "50")
 	offset := c.DefaultQuery("offset", "0")
+	from := c.Query("from")
+	to := c.Query("to")
 
-	query := "SELECT id, action, details, amount, username, timestamp FROM activity_logs "
+	query := "SELECT id, action, details, amount, username, timestamp FROM activity_logs"
+	var args []interface{}
+	whereAdded := false
+
 	switch filter {
 	case "PAYMENTS":
-		query += "WHERE action IN ('PAYMENT_RECORDED', 'ARREARS_CARRIED') "
+		query += " WHERE action IN ('PAYMENT_RECORDED', 'ARREARS_CARRIED')"
+		whereAdded = true
 	case "BILLS":
-		query += "WHERE action IN ('BILL_GENERATED', 'BILL_DELETED') "
+		query += " WHERE action IN ('BILL_GENERATED', 'BILL_DELETED')"
+		whereAdded = true
 	case "TENANTS":
-		query += "WHERE action IN ('TENANT_REGISTERED', 'TENANT_UPDATED', 'TENANT_DELETED', 'UNIT_VACATED', 'TENANT_RESTORED', 'TENANT_REMOVED') "
+		query += " WHERE action IN ('TENANT_REGISTERED', 'TENANT_UPDATED', 'TENANT_DELETED', 'UNIT_VACATED', 'TENANT_RESTORED', 'TENANT_REMOVED')"
+		whereAdded = true
 	case "MAINTENANCE":
-		query += "WHERE action IN ('EXPENSE_RECORDED', 'EXPENSE_REMOVED', 'OWNER_PAYOUT', 'OWNER_PAYOUT_DELETED') "
+		query += " WHERE action IN ('EXPENSE_RECORDED', 'EXPENSE_REMOVED', 'OWNER_PAYOUT', 'OWNER_PAYOUT_DELETED')"
+		whereAdded = true
 	case "SYSTEM":
-		query += "WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED') "
+		query += " WHERE action IN ('DB_BACKUP', 'FORGOT_PIN', 'PORT_CHANGED')"
+		whereAdded = true
 	}
-	query += "ORDER BY id DESC LIMIT ? OFFSET ?"
 
-	rows, err := DB.Query(query, limit, offset)
+	if from != "" {
+		if whereAdded {
+			query += " AND DATE(timestamp) >= ?"
+		} else {
+			query += " WHERE DATE(timestamp) >= ?"
+			whereAdded = true
+		}
+		args = append(args, from)
+	}
+	if to != "" {
+		if whereAdded {
+			query += " AND DATE(timestamp) <= ?"
+		} else {
+			query += " WHERE DATE(timestamp) <= ?"
+			whereAdded = true
+		}
+		args = append(args, to)
+	}
+
+	query += " ORDER BY id DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := DB.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -150,7 +181,9 @@ func GetLogs(c *gin.Context) {
 			logs = append(logs, l)
 		}
 	}
-	if logs == nil { logs = []ActivityLog{} }
+	if logs == nil {
+		logs = []ActivityLog{}
+	}
 	c.JSON(http.StatusOK, logs)
 }
 
@@ -512,7 +545,9 @@ func DeleteBill(c *gin.Context) {
 // --- OPERATIONS (EXPENSES, TASKS, DOCS) ---
 
 func GetExpenses(c *gin.Context) {
-	rows, _ := DB.Query("SELECT id, category, amount, date, notes, COALESCE(owner_name, '') FROM expenses ORDER BY date DESC LIMIT 50")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	rows, _ := DB.Query("SELECT id, category, amount, date, notes, COALESCE(owner_name, '') FROM expenses ORDER BY date DESC LIMIT ? OFFSET ?", limit, offset)
 	defer rows.Close()
 	var expenses []Expense
 	for rows.Next() {
@@ -520,7 +555,9 @@ func GetExpenses(c *gin.Context) {
 		rows.Scan(&e.ID, &e.Category, &e.Amount, &e.Date, &e.Notes, &e.OwnerName)
 		expenses = append(expenses, e)
 	}
-	if expenses == nil { expenses = []Expense{} }
+	if expenses == nil {
+		expenses = []Expense{}
+	}
 	c.JSON(http.StatusOK, expenses)
 }
 
@@ -590,7 +627,43 @@ func DeleteMaintenanceTask(c *gin.Context) {
 }
 
 func GetOwnerWithdrawals(c *gin.Context) {
-	rows, _ := DB.Query("SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals ORDER BY date DESC")
+	owner := c.Query("owner")
+	from := c.Query("from")
+	to := c.Query("to")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	query := "SELECT id, owner_name, amount, date, notes, timestamp FROM owner_withdrawals"
+	var args []interface{}
+	whereAdded := false
+	if owner != "" {
+		query += " WHERE owner_name = ?"
+		args = append(args, owner)
+		whereAdded = true
+	}
+	if from != "" {
+		if whereAdded {
+			query += " AND date >= ?"
+		} else {
+			query += " WHERE date >= ?"
+			whereAdded = true
+		}
+		args = append(args, from)
+	}
+	if to != "" {
+		if whereAdded {
+			query += " AND date <= ?"
+		} else {
+			query += " WHERE date <= ?"
+			whereAdded = true
+		}
+		args = append(args, to)
+	}
+
+	query += " ORDER BY date DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, _ := DB.Query(query, args...)
 	defer rows.Close()
 	var withdrawals []OwnerWithdrawal
 	for rows.Next() {
@@ -598,7 +671,9 @@ func GetOwnerWithdrawals(c *gin.Context) {
 		rows.Scan(&w.ID, &w.OwnerName, &w.Amount, &w.Date, &w.Notes, &w.Timestamp)
 		withdrawals = append(withdrawals, w)
 	}
-	if withdrawals == nil { withdrawals = []OwnerWithdrawal{} }
+	if withdrawals == nil {
+		withdrawals = []OwnerWithdrawal{}
+	}
 	c.JSON(http.StatusOK, withdrawals)
 }
 
@@ -703,15 +778,15 @@ func GetAuditReport(c *gin.Context) {
 		return
 	}
 
-	logQuery := "SELECT action, details, amount, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp ASC"
+	logQuery := "SELECT action, details, amount, timestamp FROM activity_logs WHERE DATE(timestamp) >= ? AND DATE(timestamp) <= ? AND action IN ('PAYMENT_RECORDED', 'EXPENSE_ADDED', 'EXPENSE_RECORDED', 'OWNER_PAYOUT') ORDER BY timestamp DESC"
 	rows, _ := DB.Query(logQuery, fromDate, toDate)
 	defer rows.Close()
 
 	type AuditLog struct {
-		Action    string  `json:"action"`
-		Details   string  `json:"details"`
-		Amount    float64 `json:"amount"`
-		Timestamp string  `json:"timestamp"`
+		Action    string    `json:"action"`
+		Details   string    `json:"details"`
+		Amount    float64   `json:"amount"`
+		Timestamp time.Time `json:"timestamp"`
 	}
 	var logs []AuditLog
 	for rows.Next() {
@@ -782,27 +857,45 @@ func GetAllPendingBills(c *gin.Context) {
 }
 
 func GetAllPaidBills(c *gin.Context) {
-	rows, _ := DB.Query(`SELECT b.id, b.renter_id, b.billing_month, b.total_amount, b.paid_amount, b.payment_details, b.payment_date, b.payment_method, r.name, r.room_no, r.assigned_upi FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.is_paid = 1`)
+	from := c.Query("from")
+	to := c.Query("to")
+
+	query := `SELECT b.id, b.renter_id, b.billing_month, b.total_amount, b.paid_amount, b.payment_details, b.payment_date, b.payment_method, r.name, r.room_no, r.assigned_upi 
+	          FROM bills b JOIN renters r ON b.renter_id = r.id 
+	          WHERE b.is_paid = 1`
+	var args []interface{}
+	if from != "" {
+		query += " AND b.payment_date >= ?"
+		args = append(args, from)
+	}
+	if to != "" {
+		query += " AND b.payment_date <= ?"
+		args = append(args, to)
+	}
+
+	rows, _ := DB.Query(query, args...)
 	defer rows.Close()
 	var bills = []interface{}{}
 	for rows.Next() {
-		var b struct { 
-			ID, RID int; Month string; Total, Paid float64; 
-			ReceivedBy, Date, Method, TenantName, Room, AssignedOwner string 
+		var b struct {
+			ID, RID                                                   int
+			Month                                                     string
+			Total, Paid                                               float64
+			ReceivedBy, Date, Method, TenantName, Room, AssignedOwner string
 		}
 		rows.Scan(&b.ID, &b.RID, &b.Month, &b.Total, &b.Paid, &b.ReceivedBy, &b.Date, &b.Method, &b.TenantName, &b.Room, &b.AssignedOwner)
-		
+
 		bills = append(bills, gin.H{
-			"id": b.ID,
-			"renter_id": b.RID,
-			"billing_month": b.Month,
-			"total_amount": b.Total,
-			"paid_amount": b.Paid,
-			"received_by": b.ReceivedBy,
-			"payment_date": b.Date,
+			"id":             b.ID,
+			"renter_id":      b.RID,
+			"billing_month":  b.Month,
+			"total_amount":   b.Total,
+			"paid_amount":    b.Paid,
+			"received_by":    b.ReceivedBy,
+			"payment_date":   b.Date,
 			"payment_method": b.Method,
-			"tenant_name": b.TenantName,
-			"room_no": b.Room,
+			"tenant_name":    b.TenantName,
+			"room_no":        b.Room,
 			"assigned_owner": b.AssignedOwner,
 		})
 	}

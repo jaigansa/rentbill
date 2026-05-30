@@ -269,6 +269,12 @@ async function viewAuditReport() {
     const municipalTax = parseFloat(document.getElementById('auditMunicipalTax')?.value || 0);
     
     if (!fromDate || !toDate) return showNotification("Please select both Start and End dates", "error");
+
+    const formatDateString = (ds) => {
+        if (!ds) return '...';
+        const [y, m, d] = ds.split('-');
+        return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    };
     
     showNotification("Compiling financial data...", "info");
     try {
@@ -276,11 +282,13 @@ async function viewAuditReport() {
         const auditContent = document.getElementById('auditContent');
         if (!auditContent) return;
 
-        // SEPARATION: Income vs. Advances
+        // SEPARATION: Income vs. Expenses
         const totalRentIncome = data.summary.total_paid;
-        const totalCashOut = data.summary.total_expenses + data.summary.total_payouts;
-        const netOperatingProfit = totalRentIncome - totalCashOut;
-        const totalAdvances = data.summary.total_advances;
+        const totalExpenses = data.summary.total_expenses;
+        const totalPayouts = data.summary.total_payouts;
+        
+        const netOperatingProfit = totalRentIncome - totalExpenses;
+        const settledBalance = netOperatingProfit - totalPayouts;
 
         // Transaction Ledger
         const filteredLogs = (data.logs || []).filter(l => 
@@ -304,10 +312,10 @@ async function viewAuditReport() {
                         if (l.action.includes('PAYMENT')) color = 'var(--success)';
                         if (l.action.includes('EXPENSE')) color = 'var(--danger)';
                         if (l.action.includes('PAYOUT')) color = 'var(--warning)';
-                        const logDate = new Date(l.timestamp).toLocaleDateString('en-IN', {day:'2-digit', month:'short'});
+                        const logDate = new Date(l.timestamp).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                         return `
                         <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 10px; font-weight: 700; color: var(--text-muted); width: 60px;">${logDate}</td>
+                            <td style="padding: 10px; font-weight: 700; color: var(--text-muted); width: 100px;">${logDate}</td>
                             <td style="padding: 10px; font-weight: 900; color: ${color}; white-space: nowrap; text-transform: uppercase; font-size: 0.65rem;">
                                 ${l.action.replace(/_/g, ' ')}
                             </td>
@@ -346,45 +354,41 @@ async function viewAuditReport() {
                 <div style="text-align: center; border-bottom: 3px solid var(--primary); padding-bottom: 2rem; margin-bottom: 2.5rem;">
                     <h1 style="margin: 0; font-size: 2rem; font-weight: 900; color: var(--primary); text-transform: uppercase; letter-spacing: 1px;">Period Financial Audit</h1>
                     <p style="margin: 10px 0 0 0; font-weight: 800; color: var(--text-muted); font-size: 1rem;">
-                        ${new Date(fromDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase()} 
+                        ${formatDateString(fromDate)} 
                         — 
-                        ${new Date(toDate).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase()}
+                        ${formatDateString(toDate)}
                     </p>
                 </div>
 
-                <!-- Main Profitability Summary (Excluding Advances) -->
-                <div style="margin-bottom: 3rem; background: var(--primary-light); border: 2px solid var(--primary); border-radius: 16px; padding: 25px; text-align: center;">
-                    <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">Net Operating Profit for Period</div>
-                    <div style="font-size: 2.8rem; font-weight: 900; color: var(--text-main); margin-bottom: 15px;">${currencyFormatter.format(netOperatingProfit)}</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; border-top: 1.5px dashed var(--primary); padding-top: 20px;">
+                <!-- Minimal Profitability Summary -->
+                <div style="margin-bottom: 3rem; background: var(--bg-main); border: 2px solid var(--border); border-radius: 16px; padding: 30px; text-align: center;">
+                    <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 10px; margin-bottom: 25px;">
                         <div>
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--success); text-transform: uppercase;">Collected Rent</div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--success); text-transform: uppercase; margin-bottom: 5px;">Rent Collected</div>
                             <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalRentIncome)}</div>
                         </div>
+                        <div style="font-size: 1.5rem; font-weight: 300; color: var(--text-muted);">&minus;</div>
                         <div>
-                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--danger); text-transform: uppercase;">Total Expenses</div>
-                            <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalCashOut)}</div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--danger); text-transform: uppercase; margin-bottom: 5px;">Maint. Expenses</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: var(--text-main);">${currencyFormatter.format(totalExpenses)}</div>
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 300; color: var(--text-muted);">&equals;</div>
+                        <div>
+                            <div style="font-size: 0.65rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 5px;">Net Profit</div>
+                            <div style="font-size: 1.5rem; font-weight: 950; color: var(--primary);">${currencyFormatter.format(netOperatingProfit)}</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Secondary Financial Metrics -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 3rem;">
-                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; background: var(--bg-main);">
-                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Security Deposits</div>
-                        <div style="font-size: 1rem; font-weight: 900; color: var(--primary);">${currencyFormatter.format(totalAdvances)}</div>
-                    </div>
-                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Billed</div>
-                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_billed)}</div>
-                    </div>
-                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Maintenance</div>
-                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_expenses)}</div>
-                    </div>
-                    <div style="border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; text-align: center;">
-                        <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Withdrawals</div>
-                        <div style="font-size: 1rem; font-weight: 900;">${currencyFormatter.format(data.summary.total_payouts)}</div>
+                    
+                    <div style="border-top: 1.5px dashed var(--border); padding-top: 20px; display: flex; justify-content: space-around; align-items: center;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Owner Payouts</div>
+                            <div style="font-size: 1.1rem; font-weight: 900; color: var(--warning);">${currencyFormatter.format(totalPayouts)}</div>
+                        </div>
+                        <div style="height: 30px; border-left: 1.5px solid var(--border);"></div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Closing Balance</div>
+                            <div style="font-size: 1.1rem; font-weight: 950; color: var(--text-main);">${currencyFormatter.format(settledBalance)}</div>
+                        </div>
                     </div>
                 </div>
 

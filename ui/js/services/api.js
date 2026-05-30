@@ -66,19 +66,19 @@ const API = {
         getFinancialSummary: () => API.request('/reports/financial-summary'),
         getPendingBills: () => API.request('/reports/pending-bills'),
         getTenantLedger: () => API.request('/reports/tenant-ledger'),
-        getAllPaidBills: () => API.request('/reports/all-paid-bills'),
+        getAllPaidBills: (from, to) => API.request(`/reports/all-paid-bills?from=${from || ''}&to=${to || ''}`),
         getTrends: () => API.request('/reports/trends'),
         getLastEB: (renterId) => API.request(`/last-eb/${renterId}`)
     },
 
     expenses: {
-        getAll: () => API.request('/expenses'),
+        getAll: (limit, offset) => API.request(`/expenses?limit=${limit || 20}&offset=${offset || 0}`),
         create: (data) => API.request('/expenses', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/expenses/${id}`, { method: 'DELETE' })
     },
 
     withdrawals: {
-        getAll: () => API.request('/withdrawals'),
+        getAll: (limit, offset, owner, from, to) => API.request(`/withdrawals?limit=${limit || 20}&offset=${offset || 0}&owner=${owner || ''}&from=${from || ''}&to=${to || ''}`),
         create: (data) => API.request('/withdrawals', { method: 'POST', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/withdrawals/${id}`, { method: 'DELETE' })
     },
@@ -95,7 +95,7 @@ const API = {
         getSettings: () => API.request('/settings'),
         updateSettings: (data) => API.request('/settings', { method: 'POST', body: JSON.stringify(data) }),
         testEmail: () => API.request('/settings/test-email', { method: 'POST' }),
-        getLogs: (filter) => API.request(`/logs?filter=${filter || 'ALL'}`),
+        getLogs: (filter, from, to) => API.request(`/logs?filter=${filter || 'ALL'}&from=${from || ''}&to=${to || ''}`),
         backup: (filename) => API.request('/db/backup', { method: 'POST', body: JSON.stringify({ filename }), responseType: 'blob' }),
         restore: (formData) => API.request('/db/restore', { method: 'POST', body: formData }),
         getAuditReport: (from, to) => API.request(`/reports/audit?from=${from}&to=${to}`)

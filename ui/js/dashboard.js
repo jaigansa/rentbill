@@ -269,29 +269,48 @@ function loadTrendChart() {
 
 function loadActivityLogs() {
     const container = document.getElementById('activityLog');
+    const fromDate = document.getElementById('activityFromDate')?.value || '';
+    const toDate = document.getElementById('activityToDate')?.value || '';
     if (!container) return;
 
-    API.system.getLogs('ALL').then(logs => {
+    API.system.getLogs('ALL', fromDate, toDate).then(logs => {
         if (!logs || logs.length === 0) {
             container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--text-muted); font-size: 0.7rem;">No logs found.</p>';
             return;
         }
 
-        container.innerHTML = logs.slice(0, 15).map(l => {
+        container.innerHTML = logs.map(l => {
             let icon = 'info';
             let color = 'var(--text-muted)';
-            if (l.action.includes('PAYMENT')) { icon = 'check-circle'; color = 'var(--success)'; }
-            if (l.action.includes('BILL')) { icon = 'zap'; color = 'var(--warning)'; }
-            if (l.action.includes('EXPENSE')) { icon = 'trending-down'; color = 'var(--danger)'; }
+            let bgColor = 'var(--bg-main)';
+            if (l.action.includes('PAYMENT')) { icon = 'check-circle'; color = 'var(--success)'; bgColor = 'var(--bg-success-light)'; }
+            if (l.action.includes('BILL')) { icon = 'zap'; color = 'var(--warning)'; bgColor = 'var(--primary-light)'; }
+            if (l.action.includes('EXPENSE')) { icon = 'trending-down'; color = 'var(--danger)'; bgColor = 'rgba(239, 68, 68, 0.1)'; }
+            if (l.action.includes('OWNER_PAYOUT')) { icon = 'banknote'; color = 'var(--primary)'; bgColor = 'var(--primary-light)'; }
+            if (l.action.includes('TENANT')) { icon = 'user'; color = 'var(--primary)'; }
+
+            const dateObj = new Date(l.timestamp);
+            const day = dateObj.getDate();
+            const month = dateObj.toLocaleString('default', { month: 'short' }).toUpperCase();
+            const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
             return `
-                <div style="display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: center;">
-                    <div style="color: ${color};"><i data-lucide="${icon}" style="width: 14px; height: 14px;"></i></div>
-                    <div style="min-width: 0; flex: 1;">
-                        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${l.details}</div>
-                        <div style="font-size: 0.6rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                            <i data-lucide="calendar" style="width: 10px; height: 10px;"></i>
-                            <span>${new Date(l.timestamp).toLocaleDateString([], {day: '2-digit', month: 'short'})} • ${new Date(l.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <div style="display: flex; gap: 15px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start;">
+                    <!-- Date Box Icon Style -->
+                    <div style="width: 40px; height: 40px; background: ${bgColor}; color: ${color}; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.05);">
+                        <span style="font-size: 0.5rem; font-weight: 900; line-height: 1;">${month}</span>
+                        <span style="font-size: 0.9rem; font-weight: 950; line-height: 1.1;">${day}</span>
+                    </div>
+                    
+                    <div style="min-width: 0; flex: 1; padding-top: 2px;">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.3; margin-bottom: 4px;">${l.details}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
+                                <i data-lucide="clock" style="width: 10px; height: 10px;"></i> ${time}
+                            </span>
+                            <span style="font-size: 0.55rem; color: ${color}; font-weight: 900; background: ${bgColor}; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                ${l.action.replace(/_/g, ' ')}
+                            </span>
                         </div>
                     </div>
                 </div>
