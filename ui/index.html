@@ -34,11 +34,11 @@
                     <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">RentBill Pro</h2>
                     <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Authorized Access Only</p>
                     
-                    <div class="pin-dots" style="display: flex; justify-content: center; gap: 1.25rem; margin-bottom: 2.5rem;">
-                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                    <div style="position: relative; margin-bottom: 2rem;">
+                        <input type="password" id="adminPasswordInput" placeholder="Enter PIN or Password" required autocomplete="current-password" style="width: 100%; height: 50px; border-radius: 12px; padding: 0 3.5rem 0 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 800; font-size: 1rem; text-align: center; outline: none; letter-spacing: 1px;">
+                        <button type="button" onclick="toggleAdminPasswordVisibility()" style="position: absolute; right: 12px; top: 13px; background: none; border: none; color: var(--text-muted); cursor: pointer; outline: none;">
+                            <i id="adminEyeIcon" data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                        </button>
                     </div>
 
                     <div class="pin-keypad" id="pinKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 240px; margin: 0 auto;">
@@ -51,13 +51,13 @@
                         <button type="button" onclick="pressKey('7')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">7</button>
                         <button type="button" onclick="pressKey('8')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">8</button>
                         <button type="button" onclick="pressKey('9')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">9</button>
-                        <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot PIN" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
+                        <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot Password" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
                         <button type="button" onclick="pressKey('0')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">0</button>
                         <button type="button" onclick="pressKey('back')" class="btn btn-secondary" title="Backspace" style="height: 64px; border-radius: 16px; font-size: 0.8rem; font-weight: 800;">DEL</button>
                     </div>
 
                     <div style="margin-top: 2rem;">
-                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Confirm PIN</button>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Sign In</button>
                     </div>
                     </form>
                     <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">

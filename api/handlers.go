@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -19,12 +20,34 @@ import (
 
 // --- AUTH HANDLERS ---
 
+type blockInfo struct {
+	Attempts     int
+	BlockedUntil time.Time
+}
+
+var (
+	loginTrackerMutex sync.Mutex
+	loginBlocks       = make(map[string]*blockInfo)
+)
+
 func VerifyPin(c *gin.Context) {
+	ip := c.ClientIP()
+
+	loginTrackerMutex.Lock()
+	block, exists := loginBlocks[ip]
+	if exists && time.Now().Before(block.BlockedUntil) {
+		loginTrackerMutex.Unlock()
+		remaining := time.Until(block.BlockedUntil).Round(time.Second)
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": fmt.Sprintf("Too many failed attempts. Try again in %v.", remaining)})
+		return
+	}
+	loginTrackerMutex.Unlock()
+
 	var req struct {
 		Pin string `json:"pin"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "PIN required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "PIN/Password required"})
 		return
 	}
 
@@ -36,6 +59,11 @@ func VerifyPin(c *gin.Context) {
 	}
 
 	if role != "" {
+		// Reset tracking on successful login
+		loginTrackerMutex.Lock()
+		delete(loginBlocks, ip)
+		loginTrackerMutex.Unlock()
+
 		session := sessions.Default(c)
 		session.Set("user", AppConfig.Username)
 		session.Set("role", role)
@@ -45,7 +73,21 @@ func VerifyPin(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{"success": true, "role": role})
 	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid PIN"})
+		// Track failure
+		loginTrackerMutex.Lock()
+		if !exists {
+			block = &blockInfo{}
+			loginBlocks[ip] = block
+		}
+		block.Attempts++
+		if block.Attempts >= 5 {
+			block.BlockedUntil = time.Now().Add(5 * time.Minute)
+			loginTrackerMutex.Unlock()
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Too many failed attempts. Login locked for 5 minutes."})
+			return
+		}
+		loginTrackerMutex.Unlock()
+		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Invalid password. %d attempts remaining.", 5-block.Attempts)})
 	}
 }
 

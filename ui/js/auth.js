@@ -33,27 +33,45 @@ function showOverlay(show) {
 }
 
 function pressKey(key) {
-    if (key === 'back') currentPin = currentPin.slice(0, -1);
-    else if (currentPin.length < 4) currentPin += key;
-    updatePinDots();
-    if (currentPin.length === 4) setTimeout(verifyPin, 200);
+    const input = document.getElementById('adminPasswordInput');
+    if (!input) return;
+    if (key === 'back') {
+        input.value = input.value.slice(0, -1);
+    } else {
+        input.value += key;
+    }
 }
 
-function updatePinDots() {
-    document.querySelectorAll('.pin-dots .dot').forEach((dot, i) => dot.classList.toggle('active', i < currentPin.length));
+function toggleAdminPasswordVisibility() {
+    const input = document.getElementById('adminPasswordInput');
+    const eyeIcon = document.getElementById('adminEyeIcon');
+    if (!input || !eyeIcon) return;
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeIcon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        input.type = 'password';
+        eyeIcon.setAttribute('data-lucide', 'eye');
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 async function verifyPin() {
+    const input = document.getElementById('adminPasswordInput');
+    if (!input) return;
+    const password = input.value;
+    if (!password) return showNotification("PIN or Password required", "error");
+
     try {
-        const res = await API.auth.verify(currentPin);
+        const res = await API.auth.verify(password);
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userRole', res.role || 'owner');
         location.reload(); // Hard reload after login to ensure session cookie is sent correctly
     } catch (e) {
-        showNotification("Wrong PIN", "error");
+        showNotification(e.message || "Invalid credentials", "error");
+        input.value = "";
     }
-    currentPin = "";
-    updatePinDots();
 }
 
 async function forgotPin() {
