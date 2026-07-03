@@ -67,7 +67,7 @@ const API = {
         getPendingBills: () => API.request('/reports/pending-bills'),
         getTenantLedger: () => API.request('/reports/tenant-ledger'),
         getAllPaidBills: (from, to) => API.request(`/reports/all-paid-bills?from=${from || ''}&to=${to || ''}`),
-        getTrends: () => API.request('/reports/trends'),
+        getTrends: (owner) => API.request('/reports/trends?owner=' + encodeURIComponent(owner || '')),
         getLastEB: (renterId) => API.request(`/last-eb/${renterId}`)
     },
 

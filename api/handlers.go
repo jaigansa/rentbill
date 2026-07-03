@@ -505,11 +505,17 @@ func CreateBill(c *gin.Context) {
 	if err := c.ShouldBindJSON(&b); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"}); return }
 	var r Renter
 	DB.QueryRow("SELECT name, base_rent, water_maint, eb_unit_price, pending_arrears FROM renters WHERE id = ?", b.RenterID).Scan(&r.Name, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.PendingArrears)
-	ebCost := (b.CurrEBReading - b.PrevEBReading) * r.EBUnitPrice
-	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + r.PendingArrears - b.DiscountAmount
-	res, err := DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, b.DateGenerated, b.Notes, r.BaseRent, r.WaterMaint, r.PendingArrears, b.DiscountAmount)
+	
+	ebUnits := b.CurrEBReading - b.PrevEBReading
+	if ebUnits < 0 {
+		ebUnits = 0
+	}
+	ebCost := ebUnits * r.EBUnitPrice
+	
+	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + b.ArrearsIncluded - b.DiscountAmount
+	res, err := DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, b.DateGenerated, b.Notes, r.BaseRent, r.WaterMaint, b.ArrearsIncluded, b.DiscountAmount)
 	if err == nil {
-		DB.Exec("UPDATE renters SET pending_arrears = 0 WHERE id = ?", b.RenterID)
+		DB.Exec("UPDATE renters SET pending_arrears = MAX(0, pending_arrears - ?) WHERE id = ?", b.ArrearsIncluded, b.RenterID)
 		id, _ := res.LastInsertId()
 		LogActivity("BILL_GENERATED", fmt.Sprintf("Bill for %s: %.2f", r.Name, total), AppConfig.Username, 0)
 		TriggerRefresh("BILL_GENERATED")
@@ -756,14 +762,22 @@ func GetTenantLedger(c *gin.Context) {
 }
 
 func GetTrendData(c *gin.Context) {
+	owner := c.Query("owner")
 	var trends []interface{}
 	now := time.Now()
 	for i := 5; i >= 0; i-- {
 		t := now.AddDate(0, -i, 0)
+		monthStr := t.Format("2006-01")
 		var inc, maint, payout float64
-		DB.QueryRow(`SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND strftime('%Y-%m', payment_date) = ?`, t.Format("2006-01")).Scan(&inc)
-		DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&maint)
-		DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE strftime('%Y-%m', date) = ?`, t.Format("2006-01")).Scan(&payout)
+		if owner != "" {
+			DB.QueryRow(`SELECT COALESCE(SUM(b.paid_amount), 0) FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.is_paid = 1 AND strftime('%Y-%m', b.payment_date) = ? AND (b.payment_details = ? OR r.assigned_upi = ?)`, monthStr, owner, owner).Scan(&inc)
+			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ? AND owner_name = ?`, monthStr, owner).Scan(&maint)
+			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE strftime('%Y-%m', date) = ? AND owner_name = ?`, monthStr, owner).Scan(&payout)
+		} else {
+			DB.QueryRow(`SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND strftime('%Y-%m', payment_date) = ?`, monthStr).Scan(&inc)
+			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ?`, monthStr).Scan(&maint)
+			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE strftime('%Y-%m', date) = ?`, monthStr).Scan(&payout)
+		}
 		trends = append(trends, gin.H{ "month": t.Format("Jan"), "income": inc, "expenses": maint + payout })
 	}
 	c.JSON(http.StatusOK, trends)
@@ -852,8 +866,36 @@ func GetMonthlyReport(c *gin.Context) {
 }
 
 func GetAllPendingBills(c *gin.Context) {
-	// Simplified version for easier understand
-	c.JSON(http.StatusOK, []interface{}{}) 
+	query := `SELECT b.id, b.renter_id, b.billing_month, b.total_amount, b.paid_amount, COALESCE(b.payment_details, ''), COALESCE(b.payment_date, ''), COALESCE(b.payment_method, ''), r.name, r.room_no, COALESCE(r.assigned_upi, '') 
+	          FROM bills b JOIN renters r ON b.renter_id = r.id 
+	          WHERE b.is_paid = 0`
+	rows, _ := DB.Query(query)
+	defer rows.Close()
+	var bills = []interface{}{}
+	for rows.Next() {
+		var b struct {
+			ID, RID                                                   int
+			Month                                                     string
+			Total, Paid                                               float64
+			ReceivedBy, Date, Method, TenantName, Room, AssignedOwner string
+		}
+		rows.Scan(&b.ID, &b.RID, &b.Month, &b.Total, &b.Paid, &b.ReceivedBy, &b.Date, &b.Method, &b.TenantName, &b.Room, &b.AssignedOwner)
+
+		bills = append(bills, gin.H{
+			"id":             b.ID,
+			"renter_id":      b.RID,
+			"billing_month":  b.Month,
+			"total_amount":   b.Total,
+			"paid_amount":    b.Paid,
+			"received_by":    b.ReceivedBy,
+			"payment_date":   b.Date,
+			"payment_method": b.Method,
+			"tenant_name":    b.TenantName,
+			"room_no":        b.Room,
+			"assigned_owner": b.AssignedOwner,
+		})
+	}
+	c.JSON(http.StatusOK, bills)
 }
 
 func GetAllPaidBills(c *gin.Context) {
@@ -910,5 +952,134 @@ func GetLastEB(c *gin.Context) {
 
 func SendBillEmail(c *gin.Context) {
 	// Minimal stub
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// --- TENANT PORTAL HANDLERS ---
+
+func authenticateTenantRequest(c *gin.Context) (int, string, error) {
+	room := c.GetHeader("X-Room-No")
+	mobile := c.GetHeader("X-Mobile-No")
+	if room == "" || mobile == "" {
+		return 0, "", fmt.Errorf("missing room or mobile credentials")
+	}
+	var id int
+	var name string
+	err := DB.QueryRow("SELECT id, name FROM renters WHERE room_no = ? AND mobile_number = ? AND is_active = 1", room, mobile).Scan(&id, &name)
+	if err != nil {
+		return 0, "", fmt.Errorf("invalid tenant credentials or inactive account")
+	}
+	return id, name, nil
+}
+
+func TenantLogin(c *gin.Context) {
+	var req struct {
+		Room   string `json:"room_no"`
+		Mobile string `json:"mobile_number"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+	var r Renter
+	err := DB.QueryRow("SELECT id, name, room_no, mobile_number, base_rent, pending_arrears FROM renters WHERE room_no = ? AND mobile_number = ? AND is_active = 1", req.Room, req.Mobile).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.BaseRent, &r.PendingArrears)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Unit Number or Mobile Number"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"id":              r.ID,
+		"name":            r.Name,
+		"room_no":         r.RoomNo,
+		"mobile_number":   r.MobileNumber,
+		"base_rent":       r.BaseRent,
+		"pending_arrears": r.PendingArrears,
+	})
+}
+
+func TenantGetBills(c *gin.Context) {
+	renterID, _, err := authenticateTenantRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, err := DB.Query(`SELECT id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, COALESCE(payment_method, ''), COALESCE(payment_details, ''), COALESCE(payment_date, ''), date_generated, notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE renter_id = ? ORDER BY date_generated DESC`, renterID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error"})
+		return
+	}
+	defer rows.Close()
+
+	var bills = []Bill{}
+	for rows.Next() {
+		var b Bill
+		rows.Scan(&b.ID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded)
+		bills = append(bills, b)
+	}
+	c.JSON(http.StatusOK, bills)
+}
+
+func TenantGetMaintenance(c *gin.Context) {
+	renterID, _, err := authenticateTenantRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	rows, err := DB.Query(`SELECT id, renter_id, title, description, category, priority, status, date_reported FROM maintenance_tasks WHERE renter_id = ? ORDER BY date_reported DESC`, renterID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error"})
+		return
+	}
+	defer rows.Close()
+
+	var tasks = []interface{}{}
+	for rows.Next() {
+		var t struct {
+			ID, RID                                      int
+			Title, Description, Category, Priority, Status, Date string
+		}
+		rows.Scan(&t.ID, &t.RID, &t.Title, &t.Description, &t.Category, &t.Priority, &t.Status, &t.Date)
+		tasks = append(tasks, gin.H{
+			"id":            t.ID,
+			"renter_id":     t.RID,
+			"title":         t.Title,
+			"description":   t.Description,
+			"category":      t.Category,
+			"priority":      t.Priority,
+			"status":        t.Status,
+			"date_reported": t.Date,
+		})
+	}
+	c.JSON(http.StatusOK, tasks)
+}
+
+func TenantCreateMaintenance(c *gin.Context) {
+	renterID, name, err := authenticateTenantRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req struct {
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Category    string `json:"category"`
+		Priority    string `json:"priority"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	_, err = DB.Exec(`INSERT INTO maintenance_tasks (renter_id, title, description, category, priority, date_reported, status, owner_name) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?)`, renterID, req.Title, req.Description, req.Category, req.Priority, today, "Tenant: "+name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
+		return
+	}
+
+	TriggerRefresh("MAINTENANCE_UPDATED")
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

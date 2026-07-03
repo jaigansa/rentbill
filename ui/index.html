@@ -24,42 +24,65 @@
     <template id="tpl-authOverlay">
         <div class="modal-content" style="max-width: 360px; text-align: center; border: none; box-shadow: var(--shadow-xl);">
             <div class="modal-body" style="padding: 3rem 2rem;">
-                <form onsubmit="event.preventDefault(); verifyPin();">
-                <input type="text" value="admin" autocomplete="username" style="display:none;">
-                <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--primary); color: white; border-radius: 20px;">
-                    <i data-lucide="building-2" style="width: 32px; height: 32px;"></i>
-                </div>
-                <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">RentBill Pro</h2>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Authorized Access Only</p>
-                
-                <div class="pin-dots" style="display: flex; justify-content: center; gap: 1.25rem; margin-bottom: 2.5rem;">
-                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
-                    <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                <!-- 1. Admin PIN Sign-in -->
+                <div id="adminPinLoginForm">
+                    <form onsubmit="event.preventDefault(); verifyPin();">
+                    <input type="text" value="admin" autocomplete="username" style="display:none;">
+                    <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--primary); color: white; border-radius: 20px;">
+                        <i data-lucide="building-2" style="width: 32px; height: 32px;"></i>
+                    </div>
+                    <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">RentBill Pro</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Authorized Access Only</p>
+                    
+                    <div class="pin-dots" style="display: flex; justify-content: center; gap: 1.25rem; margin-bottom: 2.5rem;">
+                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                        <div class="dot" style="width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); transition: all 0.2s ease;"></div>
+                    </div>
+
+                    <div class="pin-keypad" id="pinKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 240px; margin: 0 auto;">
+                        <button type="button" onclick="pressKey('1')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">1</button>
+                        <button type="button" onclick="pressKey('2')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">2</button>
+                        <button type="button" onclick="pressKey('3')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">3</button>
+                        <button type="button" onclick="pressKey('4')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">4</button>
+                        <button type="button" onclick="pressKey('5')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">5</button>
+                        <button type="button" onclick="pressKey('6')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">6</button>
+                        <button type="button" onclick="pressKey('7')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">7</button>
+                        <button type="button" onclick="pressKey('8')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">8</button>
+                        <button type="button" onclick="pressKey('9')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">9</button>
+                        <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot PIN" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
+                        <button type="button" onclick="pressKey('0')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">0</button>
+                        <button type="button" onclick="pressKey('back')" class="btn btn-secondary" title="Backspace" style="height: 64px; border-radius: 16px; font-size: 0.8rem; font-weight: 800;">DEL</button>
+                    </div>
+
+                    <div style="margin-top: 2rem;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Confirm PIN</button>
+                    </div>
+                    </form>
+                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <a href="javascript:void(0)" onclick="toggleTenantPortalForm()" style="font-size: 0.75rem; font-weight: 800; color: var(--primary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px;">Tenant Access Portal</a>
+                    </div>
                 </div>
 
-                <div class="pin-keypad" id="pinKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 240px; margin: 0 auto;">
-                    <button type="button" onclick="pressKey('1')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">1</button>
-                    <button type="button" onclick="pressKey('2')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">2</button>
-                    <button type="button" onclick="pressKey('3')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">3</button>
-                    <button type="button" onclick="pressKey('4')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">4</button>
-                    <button type="button" onclick="pressKey('5')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">5</button>
-                    <button type="button" onclick="pressKey('6')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">6</button>
-                    <button type="button" onclick="pressKey('7')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">7</button>
-                    <button type="button" onclick="pressKey('8')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">8</button>
-                    <button type="button" onclick="pressKey('9')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">9</button>
-                    <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot PIN" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
-                    <button type="button" onclick="pressKey('0')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">0</button>
-                    <button type="button" onclick="pressKey('back')" class="btn btn-secondary" title="Backspace" style="height: 64px; border-radius: 16px; font-size: 0.8rem; font-weight: 800;">DEL</button>
+                <!-- 2. Tenant Portal Login Form -->
+                <div id="tenantLoginForm" class="hidden">
+                    <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--success); color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="key" style="width: 32px; height: 32px;"></i>
+                    </div>
+                    <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">Tenant Portal</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">View ledger & report tasks</p>
+                    
+                    <form onsubmit="event.preventDefault(); submitTenantLogin();" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+                        <div class="input-group" style="margin:0;"><label style="font-size: 0.65rem;">Unit / Room Number *</label><input type="text" id="tenantRoomInput" placeholder="e.g. 101" required style="height: 48px; border-radius: 12px; padding: 0.5rem 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700;"></div>
+                        <div class="input-group" style="margin:0;"><label style="font-size: 0.65rem;">Registered Mobile *</label><input type="text" id="tenantMobileInput" placeholder="e.g. 9876543210" required style="height: 48px; border-radius: 12px; padding: 0.5rem 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700;"></div>
+                        <button type="submit" class="btn btn-success" style="width: 100%; height: 50px; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-top: 1rem; background: var(--success); border-color: var(--success); color: white;">Login to Portal</button>
+                        <button type="button" onclick="toggleTenantPortalForm()" class="btn btn-secondary" style="width: 100%; height: 44px; border-radius: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Admin Sign-in</button>
+                    </form>
                 </div>
-
-                <div style="margin-top: 2rem;">
-                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Confirm PIN</button>
-                </div>
-                </form>
             </div>
         </div>
+    </template>
     </template>
 
     <template id="tpl-navigation">
@@ -119,6 +142,9 @@
                         <p style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Building Overview</p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="dashboardPropertyFilter" onchange="filterDashboardByProperty()" style="font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; outline: none; text-transform: uppercase;">
+                            <option value="">All Buildings</option>
+                        </select>
                         <div id="liveStatus" class="badge" style="background: var(--bg-success-light); color: var(--success); font-size: 0.6rem; border: 1.5px solid var(--success);">
                             LIVE
                         </div>
@@ -175,6 +201,38 @@
                     <div style="height: 200px;"><canvas id="trendChart"></canvas></div>
                 </div>
 
+                <!-- Collections & Expenses Charts Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;" class="no-print">
+                    <!-- Collections Progress Card -->
+                    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px;">
+                        <h3 class="section-title" style="font-size: 0.75rem; margin-bottom: 1rem; align-self: flex-start; width: 100%;"><i data-lucide="percent"></i> Collections Progress</h3>
+                        <div style="position: relative; width: 160px; height: 160px;">
+                            <canvas id="collectionsChart" style="z-index: 2;"></canvas>
+                            <div id="collectionsChartCenterText" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                <div id="collectionsPercent" style="font-size: 1.5rem; font-weight: 950; color: var(--text-main);">0%</div>
+                                <div style="font-size: 0.55rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Collected</div>
+                            </div>
+                        </div>
+                        <div id="collectionsLegendText" style="margin-top: 1.25rem; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; text-align: center; letter-spacing: 0.3px;">
+                            Collected: ₹0 / Billed: ₹0
+                        </div>
+                    </div>
+
+                    <!-- Expense Breakdown Card -->
+                    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px;">
+                        <h3 class="section-title" style="font-size: 0.75rem; margin-bottom: 1rem; align-self: flex-start; width: 100%;"><i data-lucide="pie-chart"></i> Expense Breakdown</h3>
+                        <div style="position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="expenseCategoryChart" style="z-index: 2; width: 100%; height: 100%;"></canvas>
+                            <div id="expenseChartEmptyState" class="hidden" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 100%;">
+                                <i data-lucide="piggy-bank" style="width: 32px; height: 32px; margin-bottom: 0.25rem; opacity: 0.5; color: var(--success); display: inline-block;"></i>
+                                <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">No expenses logged</div>
+                            </div>
+                        </div>
+                        <div id="expenseCategoryLegend" style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 12px; font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 8. Activity Log -->
                 <div class="card" style="padding: 1.25rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
@@ -210,13 +268,18 @@
 
             <div id="tenants-billing" class="sub-section hidden">
                 <div class="card no-print" style="padding: 1.5rem; margin-bottom: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h4 style="font-size: 0.8rem; font-weight: 900; text-transform: uppercase; color: var(--primary); letter-spacing: 1px;">
                             <i data-lucide="zap" style="width: 16px;"></i> Generate Bills
                         </h4>
-                        <div style="display: flex; gap: 6px; background: var(--bg-input); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
-                            <button onclick="filterBilling('all')" id="filterBillAll" class="btn btn-sm active" style="font-size: 0.65rem; border: none; padding: 4px 12px;">All</button>
-                            <button onclick="filterBilling('pending')" id="filterBillPending" class="btn btn-sm" style="font-size: 0.65rem; border: none; padding: 4px 12px;">Not Billed</button>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <select id="billingPropertyFilter" onchange="renderBillingList()" style="font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; outline: none; text-transform: uppercase;">
+                                <option value="">All Buildings</option>
+                            </select>
+                            <div style="display: flex; gap: 6px; background: var(--bg-input); padding: 4px; border-radius: 8px; border: 1px solid var(--border);">
+                                <button onclick="filterBilling('all')" id="filterBillAll" class="btn btn-sm active" style="font-size: 0.65rem; border: none; padding: 4px 12px;">All</button>
+                                <button onclick="filterBilling('pending')" id="filterBillPending" class="btn btn-sm" style="font-size: 0.65rem; border: none; padding: 4px 12px;">Not Billed</button>
+                            </div>
                         </div>
                     </div>
                     
@@ -287,6 +350,9 @@
                     <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
                         <h3 class="section-title"><i data-lucide="users"></i> Unit Directory</h3>
                         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                            <select id="registryPropertyFilter" onchange="loadManageTenants()" style="font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; outline: none; text-transform: uppercase;">
+                                <option value="">All Buildings</option>
+                            </select>
                             <input type="file" id="importCsvInput" accept=".csv" class="hidden" onchange="importTenantsCSV(this)">
                             <button onclick="document.getElementById('importCsvInput').click()" class="btn btn-secondary btn-icon-sm" title="Import CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="upload"></i></button>
                             <button onclick="exportTenantsCSV()" class="btn btn-secondary btn-icon-sm" title="Download CSV" style="height: 32px; width: 32px; border-radius: 8px;"><i data-lucide="download"></i></button>
@@ -421,16 +487,38 @@
                         <h3 class="section-title"><i data-lucide="wallet"></i> Receiving Accounts</h3>
                     </div>
                     <div style="margin-top: 1rem;">
-                        <div class="grid-inputs">
-                            <div class="input-group"><label>Owner / Payee Name *</label><input type="text" id="acc_name" placeholder="Full Name"></div>
-                            <div class="input-group"><label>Account Label</label><input type="text" id="acc_label" placeholder="e.g. Primary"></div>
-                            <div class="input-group"><label>UPI ID</label><input type="text" id="acc_upi" placeholder="name@bank"></div>
-                            <div class="input-group"><label>Bank Name</label><input type="text" id="acc_bank"></div>
-                            <div class="input-group"><label>Acc Number</label><input type="text" id="acc_num"></div>
-                            <div class="input-group"><label>IFSC Code</label><input type="text" id="acc_ifsc"></div>
-                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Branding (Optional)</label><input type="text" id="acc_prop_name" placeholder="Overridden Property Name"></div>
-                            <div class="input-group" style="grid-column: 1/-1;"><label>Property Address (Optional)</label><input type="text" id="acc_prop_addr" placeholder="Overridden Address"></div>
-                            <div class="input-group" style="grid-column: 1/-1;"><label>Terms (Optional)</label><textarea id="acc_terms" rows="3" placeholder="Specific terms for this building" style="width:100%; border-radius:8px; border:1.5px solid var(--border); padding:0.5rem;"></textarea></div>
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <!-- Section 1: Payee Info -->
+                            <fieldset style="border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin: 0;">
+                                <legend style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 6px;">Payee Information</legend>
+                                <div class="grid-inputs" style="margin-top: 0.5rem;">
+                                    <div class="input-group" style="margin: 0;"><label>Owner / Payee Name *</label><input type="text" id="acc_name" placeholder="Full Name"></div>
+                                    <div class="input-group" style="margin: 0;"><label>Account Label</label><input type="text" id="acc_label" placeholder="e.g. Primary"></div>
+                                    <div class="input-group" style="margin: 0;"><label>UPI ID</label><input type="text" id="acc_upi" placeholder="name@bank"></div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Section 2: Bank Details -->
+                            <fieldset style="border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin: 0;">
+                                <legend style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 6px;">Bank Details</legend>
+                                <div class="grid-inputs" style="margin-top: 0.5rem;">
+                                    <div class="input-group" style="margin: 0;"><label>Bank Name</label><input type="text" id="acc_bank"></div>
+                                    <div class="input-group" style="margin: 0;"><label>Acc Number</label><input type="text" id="acc_num"></div>
+                                    <div class="input-group" style="margin: 0;"><label>IFSC Code</label><input type="text" id="acc_ifsc"></div>
+                                </div>
+                            </fieldset>
+
+                            <!-- Section 3: Branding Details -->
+                            <fieldset style="border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin: 0;">
+                                <legend style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 6px;">Branding Customization (Optional)</legend>
+                                <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 0.5rem;">
+                                    <div class="grid-inputs">
+                                        <div class="input-group" style="margin: 0;"><label>Property Branding</label><input type="text" id="acc_prop_name" placeholder="Overridden Property Name"></div>
+                                        <div class="input-group" style="margin: 0;"><label>Property Address</label><input type="text" id="acc_prop_addr" placeholder="Overridden Address"></div>
+                                    </div>
+                                    <div class="input-group" style="margin: 0;"><label>Agreement Terms</label><textarea id="acc_terms" rows="3" placeholder="Specific terms for this building" style="width:100%; border-radius:8px; border:1px solid var(--border); padding:0.5rem; background: var(--bg-input); color: var(--text-main); font-weight: 500; font-family: inherit; font-size: 0.95rem; outline: none;"></textarea></div>
+                                </div>
+                            </fieldset>
                         </div>
                         <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
                             <button onclick="saveReceivingAccount()" id="addAccBtn" class="btn btn-primary" style="flex: 2;">Add Account Record</button>
@@ -528,10 +616,7 @@
                     <button type="button" onclick="forceRefreshApp()" class="btn btn-secondary" style="width: 100%; border-style: dashed; font-size: 0.7rem; height: 40px;">Clear App Cache & Hard Reload</button>
                 </div>
 
-                <div style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; border-top: 2px solid var(--border); padding-top: 2rem;">
-                    <button onclick="toggleDarkMode()" class="btn btn-secondary"><i data-lucide="moon"></i> Dark Mode</button>
-                    <button onclick="logout()" class="btn btn-danger"><i data-lucide="log-out"></i> Logout</button>
-                </div>
+
             </div>
 
             <div id="settings-expenses" class="sub-section hidden">
@@ -852,6 +937,74 @@
             </div>
         </div>
     </template>
+
+    <template id="tpl-tenantPortal">
+        <section id="tenant-portal-section" class="app-section">
+            <div style="max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem;">
+                
+                <!-- Header -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.5rem 0;">
+                    <div>
+                        <h2 id="tenantPortalWelcome" style="font-size: 1.4rem; font-weight: 950; color: var(--text-main); margin: 0;">Hello, Tenant</h2>
+                        <p id="tenantPortalSub" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Room 101 • RentBill Tenant Portal</p>
+                    </div>
+                    <button onclick="tenantLogout()" class="btn btn-danger btn-sm" style="border-radius: 8px;"><i data-lucide="log-out"></i> Sign Out</button>
+                </div>
+
+                <!-- Balance / Stats Card -->
+                <div class="card" style="padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; text-align: center; border-bottom: 4px solid var(--success);">
+                    <div>
+                        <span style="font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase;">Outstanding Balance</span>
+                        <div id="tenantOutstandingBalance" style="font-weight: 950; font-size: 1.6rem; color: var(--danger); margin-top: 4px;">₹0</div>
+                    </div>
+                    <div style="border-left: 1px solid var(--border);">
+                        <span style="font-size: 0.6rem; font-weight: 900; color: var(--text-muted); text-transform: uppercase;">Monthly Rent</span>
+                        <div id="tenantMonthlyRent" style="font-weight: 950; font-size: 1.6rem; color: var(--text-main); margin-top: 4px;">₹0</div>
+                    </div>
+                </div>
+
+                <!-- Sub-sections navigation -->
+                <div class="sub-nav no-print">
+                    <button id="btnTenantLedger" onclick="switchTenantSubView('ledger')" class="sub-nav-btn active">
+                        <i data-lucide="receipt"></i> Ledger
+                    </button>
+                    <button id="btnTenantMaintenance" onclick="switchTenantSubView('maintenance')" class="sub-nav-btn">
+                        <i data-lucide="wrench"></i> Repairs & Tasks
+                    </button>
+                </div>
+
+                <!-- 1. Tenant Ledger View -->
+                <div id="tenantSubView-ledger" class="tenant-sub-view">
+                    <div class="card" style="padding: 1.25rem;">
+                        <h3 class="section-title" style="font-size: 0.8rem; margin-bottom: 1rem;"><i data-lucide="history"></i> Payment History</h3>
+                        <div id="tenantLedgerList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                    </div>
+                </div>
+
+                <!-- 2. Tenant Maintenance View -->
+                <div id="tenantSubView-maintenance" class="tenant-sub-view hidden">
+                    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+                        <h3 class="section-title" style="font-size: 0.8rem; margin-bottom: 1rem;"><i data-lucide="plus-circle"></i> File a Repair Ticket</h3>
+                        <form onsubmit="event.preventDefault(); submitTenantMaintenanceTask();" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="grid-inputs">
+                                <div class="input-group" style="margin: 0;"><label>Category *</label><select id="tenantTaskCat" required><option value="Plumbing">Plumbing</option><option value="Electrical">Electrical</option><option value="Carpentry">Carpentry</option><option value="Appliance">Appliance</option><option value="Other">Other</option></select></div>
+                                <div class="input-group" style="margin: 0;"><label>Priority</label><select id="tenantTaskPriority"><option value="Low">Low</option><option value="Medium" selected>Medium</option><option value="High">High</option></select></div>
+                                <div class="input-group" style="grid-column: span 2; margin: 0;"><label>Issue Title *</label><input type="text" id="tenantTaskTitle" placeholder="e.g. Bathroom pipe leak" required></div>
+                            </div>
+                            <div class="input-group" style="margin: 0;"><label>Description / Details</label><textarea id="tenantTaskDesc" rows="3" placeholder="Provide details (e.g. pipe under sink is leaking since morning)"></textarea></div>
+                            <button type="submit" class="btn btn-primary" style="height: 48px; border-radius: 8px; font-weight: 800; text-transform: uppercase;">Submit Ticket</button>
+                        </form>
+                    </div>
+
+                    <div class="card" style="padding: 1.25rem;">
+                        <h3 class="section-title" style="font-size: 0.8rem; margin-bottom: 1rem;"><i data-lucide="wrench"></i> Active Tickets</h3>
+                        <div id="tenantMaintenanceList" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </template>
     
     <script>
         // AGGRESSIVE CACHE RESET (Ensures latest fixes)
@@ -894,6 +1047,7 @@
     <script src="/js/sharing.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="/js/dashboard.js"></script>
+    <script src="/js/tenant_portal.js"></script>
     <script src="/js/app.js"></script>
 </body>
 </html>

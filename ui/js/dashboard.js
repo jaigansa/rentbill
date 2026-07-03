@@ -3,16 +3,17 @@ async function loadDashboardStats() {
     if (refreshBtn) refreshBtn.classList.add('loading-spin');
 
     try {
-        const [tenants, expenses, finSummary, withdrawals, tenantLedger, paidBills] = await Promise.all([ 
+        const [tenants, expenses, finSummary, withdrawals, tenantLedger, paidBills, pendingBills] = await Promise.all([ 
             API.tenants.getAll(), 
             API.expenses.getAll(),
             API.bills.getFinancialSummary(),
             API.withdrawals.getAll(),
             API.bills.getTenantLedger(),
-            API.bills.getAllPaidBills()
+            API.bills.getAllPaidBills(),
+            API.bills.getPendingBills()
         ]);
         
-        window.dashboardState = { tenants, expenses, finSummary, withdrawals, tenantLedger, allPaidBills: paidBills };
+        window.dashboardState = { tenants, expenses, finSummary, withdrawals, tenantLedger, allPaidBills: paidBills, allPendingBills: pendingBills };
 
         // 1. Update Core Stats
         const statActive = document.getElementById('statActive');
@@ -25,13 +26,11 @@ async function loadDashboardStats() {
         const totalRent = tenants.filter(t => t.is_active === 1).reduce((sum, t) => sum + (t.base_rent || 0), 0);
         if (statRent) statRent.innerText = currencyFormatter.format(totalRent);
 
-        // 2. Populate Action Queues
-        await populateActionQueues(tenants, tenantLedger);
+        // 2. Populate Property Dropdown
+        populateDashboardPropertyFilter();
 
-        // 3. Update Visuals
-        updateMonthlyTracker(tenants);
-        updateOwnerSettlements(paidBills, expenses, withdrawals);
-        loadTrendChart();
+        // 3. Update Visuals using current property filter
+        filterDashboardByProperty();
         loadActivityLogs();
 
         if (refreshBtn) refreshBtn.classList.remove('loading-spin');
@@ -210,11 +209,11 @@ function updateOwnerSettlements(paidBills, expenses, withdrawals) {
     if (detailedList) detailedList.innerHTML = html;
 }
 
-function loadTrendChart() {
+function loadTrendChart(owner) {
     const ctx = document.getElementById('trendChart');
     if (!ctx) return;
 
-    API.bills.getTrends().then(data => {
+    API.bills.getTrends(owner).then(data => {
         if (!data || data.length === 0) return;
 
         const isDark = document.body.classList.contains('dark-mode');
@@ -329,4 +328,190 @@ function draftBillNow(renterId, monthName) {
 function quickPay(renterId) {
     showSection('tenants-section');
     switchSubSection('tenants-section', 'tenants-ledger');
+}
+
+function loadCollectionsChart(pendingBills, paidBills) {
+    const ctx = document.getElementById('collectionsChart');
+    if (!ctx) return;
+
+    let targetMonth = '';
+    const now = new Date();
+    const allBills = [...(pendingBills || []), ...(paidBills || [])];
+    if (allBills.length > 0) {
+        const sorted = allBills.sort((a, b) => new Date(b.date_generated || b.payment_date || Date.now()) - new Date(a.date_generated || a.payment_date || Date.now()));
+        targetMonth = sorted[0].billing_month;
+    } else {
+        const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        targetMonth = prevMonthDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    const targetPaid = (paidBills || []).filter(b => b.billing_month === targetMonth);
+    const targetPending = (pendingBills || []).filter(b => b.billing_month === targetMonth);
+
+    const collected = targetPaid.reduce((sum, b) => sum + (b.paid_amount || 0), 0);
+    const pending = targetPending.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    const totalBilled = collected + pending;
+
+    const percent = totalBilled > 0 ? Math.round((collected / totalBilled) * 100) : 0;
+
+    const percentEl = document.getElementById('collectionsPercent');
+    if (percentEl) percentEl.innerText = `${percent}%`;
+
+    const legendEl = document.getElementById('collectionsLegendText');
+    if (legendEl) {
+        legendEl.innerText = `${targetMonth.toUpperCase()}: ${currencyFormatter.format(collected)} / ${currencyFormatter.format(totalBilled)}`;
+    }
+
+    if (window.myCollectionsChart) window.myCollectionsChart.destroy();
+
+    window.myCollectionsChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Collected', 'Pending'],
+            datasets: [{
+                data: [collected, pending],
+                backgroundColor: ['#10b981', '#f59e0b'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.label}: ${currencyFormatter.format(context.raw)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function loadExpenseCategoryChart(expenses) {
+    const ctx = document.getElementById('expenseCategoryChart');
+    const emptyState = document.getElementById('expenseChartEmptyState');
+    const legendEl = document.getElementById('expenseCategoryLegend');
+    if (!ctx) return;
+
+    const activeExpenses = expenses || [];
+
+    if (activeExpenses.length === 0) {
+        ctx.style.display = 'none';
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (legendEl) legendEl.innerHTML = '';
+        return;
+    } else {
+        ctx.style.display = 'block';
+        if (emptyState) emptyState.classList.add('hidden');
+    }
+
+    const categories = {};
+    activeExpenses.forEach(e => {
+        const cat = e.category || 'Other';
+        categories[cat] = (categories[cat] || 0) + (e.amount || 0);
+    });
+
+    const labels = Object.keys(categories);
+    const data = Object.values(categories);
+
+    const colors = ['#4f46e5', '#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#64748b'];
+
+    if (legendEl) {
+        legendEl.innerHTML = labels.map((l, idx) => `
+            <span style="display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colors[idx % colors.length]}; display: inline-block;"></span>
+                <span>${l}: ${currencyFormatter.format(categories[l])}</span>
+            </span>
+        `).join('');
+    }
+
+    if (window.myExpenseChart) window.myExpenseChart.destroy();
+
+    window.myExpenseChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.label}: ${currencyFormatter.format(context.raw)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+let currentDashboardOwnerFilter = '';
+
+function filterDashboardByProperty() {
+    const filter = document.getElementById('dashboardPropertyFilter')?.value || '';
+    currentDashboardOwnerFilter = filter;
+    
+    if (!window.dashboardState) return;
+    const { tenants, expenses, finSummary, withdrawals, tenantLedger, allPaidBills, allPendingBills } = window.dashboardState;
+    
+    const filteredTenants = filter ? tenants.filter(t => t.assigned_upi === filter) : tenants;
+    const filteredLedger = filter ? tenantLedger.filter(t => t.assigned_owner === filter) : tenantLedger;
+    const filteredPaidBills = filter ? allPaidBills.filter(b => (b.received_by || b.assigned_owner) === filter) : allPaidBills;
+    const filteredPendingBills = filter ? allPendingBills.filter(b => (b.received_by || b.assigned_owner) === filter) : allPendingBills;
+    const filteredExpenses = filter ? expenses.filter(e => e.owner_name === filter) : expenses;
+    const filteredWithdrawals = filter ? withdrawals.filter(w => w.owner_name === filter) : withdrawals;
+
+    const statActive = document.getElementById('statActive');
+    const statAdvance = document.getElementById('statTotalAdvance');
+    const statRent = document.getElementById('statTotalRent');
+
+    if (statActive) statActive.innerText = filteredTenants.filter(t => t.is_active === 1).length;
+    
+    const totalAdvance = filteredTenants.filter(t => t.is_active === 1).reduce((sum, t) => sum + (t.advance_amount || 0), 0);
+    if (statAdvance) statAdvance.innerText = currencyFormatter.format(totalAdvance);
+    
+    const totalRent = filteredTenants.filter(t => t.is_active === 1).reduce((sum, t) => sum + (t.base_rent || 0), 0);
+    if (statRent) statRent.innerText = currencyFormatter.format(totalRent);
+
+    populateActionQueues(filteredTenants, filteredLedger);
+
+    updateMonthlyTracker(filteredTenants);
+    updateOwnerSettlements(filteredPaidBills, filteredExpenses, filteredWithdrawals);
+    loadTrendChart(filter);
+    loadCollectionsChart(filteredPendingBills, filteredPaidBills);
+    loadExpenseCategoryChart(filteredExpenses);
+}
+
+function populateDashboardPropertyFilter() {
+    const filterSelect = document.getElementById('dashboardPropertyFilter');
+    if (!filterSelect || !appSettings.receiving_accounts) return;
+    
+    const currentVal = filterSelect.value;
+    
+    filterSelect.innerHTML = '<option value="">All Buildings</option>';
+    appSettings.receiving_accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.owner_name;
+        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
+        filterSelect.appendChild(opt);
+    });
+    
+    filterSelect.value = currentVal;
 }

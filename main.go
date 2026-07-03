@@ -71,6 +71,12 @@ func main() {
 		v1.POST("/auth/verify", api.VerifyPin)
 		v1.POST("/auth/forgot-pin", api.ForgotPin)
 
+		// Tenant Portal Group
+		v1.POST("/tenant/login", api.TenantLogin)
+		v1.GET("/tenant/bills", api.TenantGetBills)
+		v1.GET("/tenant/maintenance", api.TenantGetMaintenance)
+		v1.POST("/tenant/maintenance", api.TenantCreateMaintenance)
+
 		// Real-time Event Stream (Public for connection, but session-checked inside if needed)
 		v1.GET("/events/stream", api.SSEHandler)
 

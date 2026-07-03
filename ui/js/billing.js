@@ -44,8 +44,14 @@ async function renderBillingList() {
     const listDiv = document.getElementById('tenantList');
     if (!listDiv) return;
 
+    populateBillingPropertyFilter();
+    const filter = document.getElementById('billingPropertyFilter')?.value || '';
+
     // 1. Start with all tenants from global cache
     let data = window.allTenants || [];
+    if (filter) {
+        data = data.filter(t => t.assigned_upi === filter);
+    }
 
     // 2. Apply "Dues" Filter
     if (currentBillingFilter === 'pending') {
@@ -81,6 +87,22 @@ async function renderBillingList() {
     listDiv.appendChild(fragment);
     
     lucide.createIcons();
+}
+
+function populateBillingPropertyFilter() {
+    const select = document.getElementById('billingPropertyFilter');
+    if (!select || !appSettings.receiving_accounts) return;
+    if (select.children.length > 1) return; // Already populated
+    
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">All Buildings</option>';
+    appSettings.receiving_accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.owner_name;
+        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
+        select.appendChild(opt);
+    });
+    select.value = currentVal;
 }
 
 function createTenantCard(t) {

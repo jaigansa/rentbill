@@ -279,6 +279,14 @@ function closePaymentModal() {
 function calculateAdjustments() {
     const total = parseFloat(document.getElementById('payTotalLabel').innerText.replace(/[^\d.]/g, '')) || 0;
     const paid = parseFloat(document.getElementById('payAmountInput').value) || 0;
+    
+    if (paid > total) {
+        showNotification("Paid amount cannot exceed total amount", "error");
+        document.getElementById('payAmountInput').value = total;
+        calculateAdjustments();
+        return;
+    }
+    
     const balance = total - paid;
     
     const adjSection = document.getElementById('adjustmentSection');

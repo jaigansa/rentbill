@@ -837,3 +837,32 @@
         display: none !important;
     }
 }
+
+/* --- PIN KEYPAD MODERN UX --- */
+.pin-keypad button.btn {
+    height: 64px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin-keypad button.btn:hover {
+    background: var(--primary-light) !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: var(--shadow);
+}
+
+.pin-keypad button.btn:active {
+    transform: translateY(0) scale(0.96) !important;
+    background: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+    box-shadow: none;
+}

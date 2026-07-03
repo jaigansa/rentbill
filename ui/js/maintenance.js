@@ -21,7 +21,13 @@ function renderTaskList(tasks) {
     listDiv.innerHTML = '';
 
     if (!tasks || tasks.length === 0) {
-        listDiv.innerHTML = '<div class="empty-state"><i data-lucide="wrench"></i><p>No maintenance tasks found</p></div>';
+        listDiv.innerHTML = `
+            <div class="empty-state" style="padding: 4rem 2rem; background: var(--bg-input); border: 2px dashed var(--border); border-radius: 20px; width: 100%;">
+                <i data-lucide="wrench" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p style="font-weight: 800; color: var(--text-muted); font-size: 1.1rem; margin-bottom: 8px;">No pending tasks</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 1.5rem;">All clear! Create a new ticket if there is a repair or issue.</p>
+                <button class="btn btn-primary btn-sm" onclick="toggleTaskForm()" style="border-radius: 8px;">Create Ticket</button>
+            </div>`;
         lucide.createIcons();
         return;
     }

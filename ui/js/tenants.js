@@ -2,14 +2,22 @@ async function loadManageTenants() {
     const listDiv = document.getElementById('manageTenantList');
     if (!listDiv) return;
     
+    populateRegistryPropertyFilter();
+    const filter = document.getElementById('registryPropertyFilter')?.value || '';
+    
     // Use global cache
-    const tenants = window.allTenants || [];
+    let tenants = window.allTenants || [];
+    if (filter) {
+        tenants = tenants.filter(t => t.assigned_upi === filter);
+    }
     
     if (tenants.length === 0) {
         listDiv.innerHTML = `
-            <div class="empty-state">
-                <i data-lucide="users"></i>
-                <p>No active units found</p>
+            <div class="empty-state" style="padding: 4rem 2rem; background: var(--bg-input); border: 2px dashed var(--border); border-radius: 20px; width: 100%;">
+                <i data-lucide="users" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                <p style="font-weight: 800; color: var(--text-muted); font-size: 1.1rem; margin-bottom: 8px;">No active units found</p>
+                <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.7; margin-bottom: 1.5rem;">To get started, register your first tenant unit.</p>
+                <button class="btn btn-primary btn-sm" onclick="toggleRegForm()" style="border-radius: 8px;">Register First Unit</button>
             </div>`;
         lucide.createIcons();
         return;
@@ -18,6 +26,22 @@ async function loadManageTenants() {
     listDiv.innerHTML = '<h4 class="card-subtitle" style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem; letter-spacing: 1px;">Active Units</h4>';
     tenants.forEach(t => listDiv.appendChild(UI.renderTenantCard(t, editTenant, markAsVacant)));
     lucide.createIcons();
+}
+
+function populateRegistryPropertyFilter() {
+    const select = document.getElementById('registryPropertyFilter');
+    if (!select || !appSettings.receiving_accounts) return;
+    if (select.children.length > 1) return; // Already populated
+    
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">All Buildings</option>';
+    appSettings.receiving_accounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.owner_name;
+        opt.innerText = `${acc.owner_name.toUpperCase()} • ${acc.label.toUpperCase()}`;
+        select.appendChild(opt);
+    });
+    select.value = currentVal;
 }
 
 async function addTenant() {

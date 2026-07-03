@@ -30,7 +30,13 @@ async function loadReceivedPayments(owner = null) {
         const filtered = owner ? allPaid.filter(b => (b.received_by || b.assigned_owner) === owner) : allPaid;
 
         if (filtered.length === 0) {
-            listDiv.innerHTML = '<p style="text-align:center; font-size:0.75rem; color:var(--text-muted); padding: 2rem;">No paid records found for this selection.</p>';
+            listDiv.innerHTML = `
+                <div class="empty-state" style="padding: 4rem 2rem; background: var(--bg-input); border: 2px dashed var(--border); border-radius: 20px; width: 100%;">
+                    <i data-lucide="banknote" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                    <p style="font-weight: 800; color: var(--text-muted); font-size: 1.1rem; margin-bottom: 8px;">No income records found</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); opacity: 0.7;">There are no payments received for the selected dates/owners.</p>
+                </div>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
             return;
         }
 
@@ -48,7 +54,7 @@ async function loadReceivedPayments(owner = null) {
                     <div style="min-width: 0;">
                         <div style="font-weight: 900; font-size: 0.95rem; color: var(--text-main);">${b.tenant_name}</div>
                         <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                            UNIT ${b.room_no} • ${b.billing_month}
+                            UNIT ${b.room_no} • ${b.billing_month} • TO: <span style="color: var(--primary); font-weight: 900;">${(b.received_by || b.assigned_owner || 'System').toUpperCase()}</span>
                         </div>
                     </div>
                 </div>

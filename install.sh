@@ -6,28 +6,43 @@
 INSTALL_DIR="/opt/rentbill"
 SERVICE_NAME="rentbill.service"
 BINARY_NAME="rentbill"
+IS_WINDOWS=false
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    IS_WINDOWS=true
+    BINARY_NAME="rentbill.exe"
+    INSTALL_DIR="./release"
+fi
 
 echo "🚀 Starting RentBill Pro installation..."
 
-# 1. Check for root privileges (required to write to /opt and /etc)
-if [ "$EUID" -ne 0 ]; then 
-  echo "❌ Error: Please run as root: sudo $0"
-  exit 1
+# 1. Check for root privileges on Unix (required to write to /opt and /etc)
+if [ "$IS_WINDOWS" = false ]; then
+    if [ "$EUID" -ne 0 ]; then 
+      echo "❌ Error: Please run as root: sudo $0"
+      exit 1
+    fi
 fi
 
-# 2. Identify the real user (who ran sudo) to set ownership correctly
-REAL_USER=${SUDO_USER:-$(logname || echo $USER)}
-REAL_GROUP=$(id -gn $REAL_USER)
+# 2. Identify the real user
+if [ "$IS_WINDOWS" = true ]; then
+    REAL_USER=$USER
+    REAL_GROUP="Staff"
+else
+    REAL_USER=${SUDO_USER:-$(logname || echo $USER)}
+    REAL_GROUP=$(id -gn $REAL_USER)
+fi
 
 echo "👤 Identifying system user: $REAL_USER:$REAL_GROUP"
 
 # 3. Handle Removal or Update
 if [ "$1" == "--remove" ]; then
     echo "🗑️  Uninstalling RentBill Pro..."
-    systemctl stop $SERVICE_NAME 2>/dev/null
-    systemctl disable $SERVICE_NAME 2>/dev/null
-    rm -f /etc/systemd/system/$SERVICE_NAME
-    systemctl daemon-reload
+    if [ "$IS_WINDOWS" = false ]; then
+        systemctl stop $SERVICE_NAME 2>/dev/null
+        systemctl disable $SERVICE_NAME 2>/dev/null
+        rm -f /etc/systemd/system/$SERVICE_NAME
+        systemctl daemon-reload
+    fi
     
     echo "❓ Do you want to delete all data (database, backups, and uploads) as well? (y/N)"
     read -r response
@@ -36,14 +51,16 @@ if [ "$1" == "--remove" ]; then
         echo "✅ Application and ALL data removed."
     else
         rm -f $INSTALL_DIR/$BINARY_NAME
-        echo "✅ Application removed. Database, backups, and uploads preserved at $INSTALL_DIR"
+        echo "✅ Application removed. Database, backups, and uploads preserved."
     fi
     exit 0
 fi
 
 if [ "$1" == "--update" ]; then
     echo "🔄 Preparing to update RentBill Pro..."
-    systemctl stop $SERVICE_NAME 2>/dev/null
+    if [ "$IS_WINDOWS" = false ]; then
+        systemctl stop $SERVICE_NAME 2>/dev/null
+    fi
     # We don't remove INSTALL_DIR here to preserve DB, config, and uploads
     echo "✅ Ready for update."
 fi
@@ -52,8 +69,12 @@ fi
 echo "🛠 Building application binary..."
 if [ -f "./build.sh" ]; then
     chmod +x ./build.sh
-    # Run build as the real user to avoid permission issues in the source folder
-    su -c "./build.sh" $REAL_USER
+    if [ "$IS_WINDOWS" = true ]; then
+        ./build.sh
+    else
+        # Run build as the real user to avoid permission issues in the source folder
+        su -c "./build.sh" $REAL_USER
+    fi
     if [ $? -ne 0 ]; then
         echo "❌ Error: Build failed. Check logs above."
         exit 1
@@ -86,14 +107,16 @@ else
 fi
 
 # 8. Set Ownership and Permissions
-# This is critical so the service (running as the user) can write to the DB and backups
-echo "🔐 Setting folder permissions for $REAL_USER..."
-chown -R $REAL_USER:$REAL_GROUP $INSTALL_DIR
-chmod +x $INSTALL_DIR/$BINARY_NAME
+if [ "$IS_WINDOWS" = false ]; then
+    echo "🔐 Setting folder permissions for $REAL_USER..."
+    chown -R $REAL_USER:$REAL_GROUP $INSTALL_DIR
+    chmod +x $INSTALL_DIR/$BINARY_NAME
+fi
 
 # 9. Create/Update systemd service file
-echo "⚙️  Configuring systemd service..."
-cat <<EOF > /etc/systemd/system/$SERVICE_NAME
+if [ "$IS_WINDOWS" = false ]; then
+    echo "⚙️  Configuring systemd service..."
+    cat <<EOF > /etc/systemd/system/$SERVICE_NAME
 [Unit]
 Description=Rent Bill Pro Local Server
 After=network.target
@@ -112,15 +135,18 @@ Environment=GIN_MODE=release
 WantedBy=multi-user.target
 EOF
 
-# 10. Reload and start service
-echo "🔄 Reloading systemd and starting service..."
-systemctl daemon-reload
-systemctl enable $SERVICE_NAME
-systemctl restart $SERVICE_NAME
+    # 10. Reload and start service
+    echo "🔄 Reloading systemd and starting service..."
+    systemctl daemon-reload
+    systemctl enable $SERVICE_NAME
+    systemctl restart $SERVICE_NAME
+fi
 
 echo "--------------------------------------------------"
 echo "✅ RentBill Pro is now successfully installed!"
 echo "📍 Location: $INSTALL_DIR"
-echo "🛠 Service: $SERVICE_NAME (running as $REAL_USER)"
+if [ "$IS_WINDOWS" = false ]; then
+    echo "🛠 Service: $SERVICE_NAME (running as $REAL_USER)"
+fi
 echo "🌐 Web interface: http://localhost:8080 (or your configured port)"
 echo "--------------------------------------------------"

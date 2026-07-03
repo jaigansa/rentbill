@@ -5,5 +5,6 @@ const Templates = {
     get tenants() { return document.getElementById('tpl-tenants').innerHTML; },
     get owners() { return document.getElementById('tpl-owners').innerHTML; },
     get settings() { return document.getElementById('tpl-settings').innerHTML; },
+    get tenantPortal() { return document.getElementById('tpl-tenantPortal').innerHTML; },
     get modals() { return document.getElementById('tpl-modals').innerHTML; }
 };

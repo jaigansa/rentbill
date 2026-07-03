@@ -16,8 +16,13 @@ echo "🚀 Starting build process..."
 echo "Cleaning dependencies..."
 go mod tidy
 
-echo "🔨 Building Go application..."
-go build -o rentbill .
+BINARY_NAME="rentbill"
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+    BINARY_NAME="rentbill.exe"
+fi
+
+echo "🔨 Building Go application ($BINARY_NAME)..."
+go build -o "$BINARY_NAME" .
 if [ $? -ne 0 ]; then
     echo "❌ Go Build failed!"
     exit 1
@@ -31,7 +36,7 @@ if [ "$PACK_ONLY" = true ]; then
     mkdir -p $DIST_DIR/backups
 
     # Copy Files (Note: UI is embedded in the binary, so we only need the binary)
-    cp rentbill $DIST_DIR/
+    cp "$BINARY_NAME" $DIST_DIR/
     
     if [ -f "config.json" ]; then
         cp config.json $DIST_DIR/config.json.template
@@ -45,7 +50,7 @@ if [ "$PACK_ONLY" = true ]; then
     # Cleanup release folder
     rm -rf $DIST_DIR
     # We remove the local binary only when packing
-    rm rentbill
+    rm "$BINARY_NAME"
 
     echo "-------------------------------------------"
     echo "✅ Build & Pack Complete!"
@@ -54,6 +59,6 @@ if [ "$PACK_ONLY" = true ]; then
 else
     echo "-------------------------------------------"
     echo "✅ Build Complete! (Binary kept at root)"
-    echo "🚀 Run with: ./rentbill"
+    echo "🚀 Run with: ./$BINARY_NAME"
     echo "-------------------------------------------"
 fi
