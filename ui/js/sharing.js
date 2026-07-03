@@ -312,7 +312,7 @@ async function prepareAndShare(type, id, extraDetails = null) {
             let propName = appSettings.property_name || 'RENTBILL PRO';
             let propAddr = appSettings.property_address || 'Property Management System';
 
-            const ownerName = bill.assigned_owner || t.assigned_upi;
+            const ownerName = (bill.is_paid && bill.payment_details) ? bill.payment_details : (bill.assigned_owner || t.assigned_upi);
             const ownerAcc = appSettings.receiving_accounts?.find(a => a.owner_name === ownerName);
             if (ownerAcc) {
                 if (ownerAcc.property_name) propName = ownerAcc.property_name;

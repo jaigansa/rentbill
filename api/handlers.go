@@ -860,7 +860,7 @@ func GetAllPaidBills(c *gin.Context) {
 	from := c.Query("from")
 	to := c.Query("to")
 
-	query := `SELECT b.id, b.renter_id, b.billing_month, b.total_amount, b.paid_amount, b.payment_details, b.payment_date, b.payment_method, r.name, r.room_no, r.assigned_upi 
+	query := `SELECT b.id, b.renter_id, b.billing_month, b.total_amount, b.paid_amount, COALESCE(b.payment_details, ''), COALESCE(b.payment_date, ''), COALESCE(b.payment_method, ''), r.name, r.room_no, COALESCE(r.assigned_upi, '') 
 	          FROM bills b JOIN renters r ON b.renter_id = r.id 
 	          WHERE b.is_paid = 1`
 	var args []interface{}

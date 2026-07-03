@@ -27,7 +27,7 @@ async function loadReceivedPayments(owner = null) {
 
     try {
         const allPaid = await API.bills.getAllPaidBills(fromDate, toDate);
-        const filtered = owner ? allPaid.filter(b => b.assigned_owner === owner) : allPaid;
+        const filtered = owner ? allPaid.filter(b => (b.received_by || b.assigned_owner) === owner) : allPaid;
 
         if (filtered.length === 0) {
             listDiv.innerHTML = '<p style="text-align:center; font-size:0.75rem; color:var(--text-muted); padding: 2rem;">No paid records found for this selection.</p>';

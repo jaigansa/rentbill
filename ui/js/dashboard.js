@@ -163,7 +163,7 @@ function updateOwnerSettlements(paidBills, expenses, withdrawals) {
 
     // 1. Calculate Income per owner
     paidBills.forEach(b => {
-        const owner = b.assigned_owner || 'Building';
+        const owner = b.received_by || b.assigned_owner || 'Building';
         if (!settlements[owner]) settlements[owner] = { income: 0, expenses: 0, payouts: 0 };
         settlements[owner].income += (b.paid_amount || 0);
     });
