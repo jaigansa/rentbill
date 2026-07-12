@@ -398,8 +398,15 @@ func GetRenters(c *gin.Context) {
 
 func GetRenter(c *gin.Context) {
 	var r Renter
-	err := DB.QueryRow("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears FROM renters WHERE id = ?", c.Param("id")).Scan(&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears)
-	if err == nil { c.JSON(http.StatusOK, r) } else { c.JSON(http.StatusNotFound, gin.H{"error": "Not found"}) }
+	err := DB.QueryRow(`SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due FROM renters WHERE id = ?`, c.Param("id")).Scan(
+		&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears,
+		&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue,
+	)
+	if err == nil {
+		c.JSON(http.StatusOK, r)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+	}
 }
 
 func CreateRenter(c *gin.Context) {
@@ -438,14 +445,47 @@ func UpdateRenter(c *gin.Context) {
 
 func MarkVacant(c *gin.Context) {
 	var req struct {
-		ID int `json:"id"`; Refund string `json:"refund_amount"`; Dues float64 `json:"dues_deducted"`; Repairs float64 `json:"repairs_deducted"`; RefundLabel string `json:"refund_label"`; FinalBalance float64 `json:"final_balance"`
+		ID            int     `json:"id"`
+		Refund        string  `json:"refund_amount"`
+		Dues          float64 `json:"dues_deducted"`
+		Repairs       float64 `json:"repairs_deducted"`
+		RefundLabel   string  `json:"refund_label"`
+		FinalBalance  float64 `json:"final_balance"`
+		VacateDate    string  `json:"vacate_date"`
+		ExitEBReading string  `json:"exit_eb_reading"`
+		ExitRentDue   float64 `json:"exit_rent_due"`
+		ExitEBDue     float64 `json:"exit_eb_due"`
+		ExitReason    string  `json:"exit_reason"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
 	var name string
 	DB.QueryRow("SELECT name FROM renters WHERE id = ?", req.ID).Scan(&name)
 	newArrears := 0.0
-	if req.FinalBalance < 0 { newArrears = -req.FinalBalance }
-	DB.Exec("UPDATE renters SET is_active = 0, pending_arrears = ? WHERE id = ?", newArrears, req.ID)
+	if req.FinalBalance < 0 {
+		newArrears = -req.FinalBalance
+	}
+	_, err := DB.Exec(`UPDATE renters SET 
+		is_active = 0, 
+		pending_arrears = ?, 
+		vacate_date = ?, 
+		exit_refund_amount = ?, 
+		exit_dues_deducted = ?, 
+		exit_repairs_deducted = ?, 
+		exit_refund_label = ?, 
+		exit_balance = ?, 
+		exit_eb_reading = ?, 
+		exit_reason = ?,
+		exit_rent_due = ?,
+		exit_eb_due = ?
+		WHERE id = ?`,
+		newArrears, req.VacateDate, req.Refund, req.Dues, req.Repairs, req.RefundLabel, req.FinalBalance, req.ExitEBReading, req.ExitReason, req.ExitRentDue, req.ExitEBDue, req.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
 	LogActivity("UNIT_VACATED", fmt.Sprintf("Tenant %s vacated. %s: %s (New Arrears: %.2f)", name, req.RefundLabel, req.Refund, newArrears), AppConfig.Username, 0)
 	TriggerRefresh("UNIT_VACATED")
 	c.JSON(http.StatusOK, gin.H{"success": true})
@@ -453,8 +493,27 @@ func MarkVacant(c *gin.Context) {
 
 func RestoreRenter(c *gin.Context) {
 	var body struct { ID int `json:"id"` }
-	c.ShouldBindJSON(&body)
-	DB.Exec("UPDATE renters SET is_active = 1 WHERE id = ?", body.ID)
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+	_, err := DB.Exec(`UPDATE renters SET 
+		is_active = 1, 
+		vacate_date = NULL, 
+		exit_refund_amount = NULL, 
+		exit_dues_deducted = 0, 
+		exit_repairs_deducted = 0, 
+		exit_refund_label = NULL, 
+		exit_balance = 0, 
+		exit_eb_reading = NULL, 
+		exit_reason = NULL,
+		exit_rent_due = 0,
+		exit_eb_due = 0 
+		WHERE id = ?`, body.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
 	LogActivity("TENANT_RESTORED", "Tenant restored", AppConfig.Username, 0)
 	TriggerRefresh("TENANT_RESTORED")
 	c.JSON(http.StatusOK, gin.H{"success": true})
@@ -462,7 +521,7 @@ func RestoreRenter(c *gin.Context) {
 
 func GetRenterHistory(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "100")
-	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears FROM renters WHERE is_active = 0 ORDER BY move_in_date DESC LIMIT ?", limit)
+	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due FROM renters WHERE is_active = 0 ORDER BY vacate_date DESC, move_in_date DESC LIMIT ?", limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -471,7 +530,14 @@ func GetRenterHistory(c *gin.Context) {
 	var renters = []Renter{}
 	for rows.Next() {
 		var r Renter
-		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears)
+		err := rows.Scan(
+			&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears,
+			&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan history"})
+			return
+		}
 		renters = append(renters, r)
 	}
 	if renters == nil { renters = []Renter{} }

@@ -51,6 +51,16 @@ type Renter struct {
 	Occupation       string  `json:"occupation"`
 	AssignedUPI      string  `json:"assigned_upi"`
 	PendingArrears   float64 `json:"pending_arrears"`
+	VacateDate          *string  `json:"vacate_date,omitempty"`
+	ExitRefundAmount    *string  `json:"exit_refund_amount,omitempty"`
+	ExitDuesDeducted    *float64 `json:"exit_dues_deducted,omitempty"`
+	ExitRepairsDeducted *float64 `json:"exit_repairs_deducted,omitempty"`
+	ExitRefundLabel     *string  `json:"exit_refund_label,omitempty"`
+	ExitBalance         *float64 `json:"exit_balance,omitempty"`
+	ExitEBReading       *string  `json:"exit_eb_reading,omitempty"`
+	ExitReason          *string  `json:"exit_reason,omitempty"`
+	ExitRentDue         *float64 `json:"exit_rent_due,omitempty"`
+	ExitEBDue           *float64 `json:"exit_eb_due,omitempty"`
 }
 
 type Bill struct {

@@ -90,6 +90,16 @@ func InitDB() error {
 	DB.Exec("ALTER TABLE expenses ADD COLUMN owner_name TEXT")
 	DB.Exec("ALTER TABLE activity_logs ADD COLUMN amount REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE maintenance_tasks ADD COLUMN photo_path TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN vacate_date DATE")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_refund_amount TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_dues_deducted REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_repairs_deducted REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_refund_label TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_balance REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_eb_reading TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_reason TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_rent_due REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN exit_eb_due REAL DEFAULT 0")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)

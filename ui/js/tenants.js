@@ -209,7 +209,7 @@ async function loadArchivedTenants() {
             <div class="tenant-row">
                 <div>
                     <div style="font-weight: 800; font-size: 1rem; color: var(--text-muted); text-decoration: line-through;">${t.name}</div>
-                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Vacated ${new Date(t.move_in_date).toLocaleDateString()}</div>
+                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Vacated ${t.vacate_date ? new Date(t.vacate_date).toLocaleDateString('en-IN') : 'N/A'} • Stayed from ${t.move_in_date ? new Date(t.move_in_date).toLocaleDateString('en-IN') : 'N/A'}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div class="room-badge" style="opacity: 0.5; font-style: italic;">${t.room_no}</div>
@@ -310,7 +310,7 @@ function closeSettlementModal() {
 }
 
 async function processSettlementAndVacant() {
-    if (!confirm("Confirm final settlement?")) return;
+    if (typeof window.bypassConfirm === 'undefined' && !confirm("Confirm final settlement?")) return;
 
     const adv = parseFloat(document.getElementById('sAdvance').value) || 0;
     const rent = parseFloat(document.getElementById('sRentDue').value) || 0;
@@ -336,7 +336,12 @@ async function processSettlementAndVacant() {
             dues_deducted: details.rentDue + details.ebDue,
             repairs_deducted: details.repairs,
             refund_label: details.refundLabel,
-            final_balance: numericBalance
+            final_balance: numericBalance,
+            vacate_date: new Date().toISOString().split('T')[0],
+            exit_eb_reading: details.ebReading,
+            exit_rent_due: details.rentDue,
+            exit_eb_due: details.ebDue,
+            exit_reason: details.reason
         });
         showNotification("Unit is now vacant", "success");
         await refreshGlobalTenantCache(); // Sync cache

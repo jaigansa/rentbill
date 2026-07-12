@@ -403,17 +403,17 @@ async function prepareAndShare(type, id, extraDetails = null) {
 
             const s = extraDetails || {
                 advance: t.advance_amount,
-                ebReading: 'N/A',
-                rentDue: 0,
-                ebDue: 0,
-                repairs: 0,
-                reason: 'None',
-                totalRefund: currencyFormatter.format(t.advance_amount),
-                refundLabel: 'Total Refund'
+                ebReading: t.exit_eb_reading || 'N/A',
+                rentDue: t.exit_rent_due || 0,
+                ebDue: t.exit_eb_due || 0,
+                repairs: t.exit_repairs_deducted || 0,
+                reason: t.exit_reason || 'None',
+                totalRefund: t.exit_refund_amount || currencyFormatter.format(t.advance_amount),
+                refundLabel: t.exit_refund_label || 'Total Refund'
             };
 
-            const genDate = new Date();
-            const moveInDate = new Date(t.move_in_date).toLocaleDateString('en-IN');
+            const genDate = t.vacate_date ? new Date(t.vacate_date) : new Date();
+            const moveInDate = t.move_in_date ? new Date(t.move_in_date).toLocaleDateString('en-IN') : 'N/A';
             const vacateDate = genDate.toLocaleDateString('en-IN');
 
             const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
