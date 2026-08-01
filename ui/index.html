@@ -7,6 +7,10 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#ffffff">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <!-- Local Libraries -->
     <script src="/libs/lucide.min.js"></script>
@@ -16,73 +20,388 @@
 <body>
 
     <div id="pinOverlay" class="modal-overlay hidden"></div>
+
+    <!-- New User Onboarding Guide & Quick Setup Modal -->
+    <div id="onboardingOverlay" class="modal-overlay hidden" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 540px; width: 95%; padding: 0; overflow: hidden; border-radius: 20px;">
+            <div style="background: var(--primary-gradient); padding: 1.5rem; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 38px; height: 38px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(8px); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="sparkles" style="width: 20px; height: 20px; color: white;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 900; margin: 0; color: white;">RentBill Pro Quick Start Guide</h3>
+                        <p style="font-size: 0.65rem; opacity: 0.85; margin: 0; font-weight: 600;">5-Step Interactive Setup Tour</p>
+                    </div>
+                </div>
+                <button onclick="closeOnboardingModal()" class="btn btn-icon-sm" style="background: rgba(255,255,255,0.2); color: white; border: none; width: 32px; height: 32px; border-radius: 50%;"><i data-lucide="x"></i></button>
+            </div>
+
+            <!-- Step Indicator Pills -->
+            <div style="display: flex; background: var(--bg-input); padding: 8px 12px; border-bottom: 1px solid var(--border); gap: 4px; overflow-x: auto;" class="no-scrollbar">
+                <button onclick="renderOnboardingStep(0)" class="onboarding-pill active" id="onboardPill-0" style="padding: 4px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; white-space: nowrap;">1. Bank/UPI</button>
+                <button onclick="renderOnboardingStep(1)" class="onboarding-pill" id="onboardPill-1" style="padding: 4px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; white-space: nowrap;">2. Tenants</button>
+                <button onclick="renderOnboardingStep(2)" class="onboarding-pill" id="onboardPill-2" style="padding: 4px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; white-space: nowrap;">3. Bills</button>
+                <button onclick="renderOnboardingStep(3)" class="onboarding-pill" id="onboardPill-3" style="padding: 4px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; white-space: nowrap;">4. Proofs</button>
+                <button onclick="renderOnboardingStep(4)" class="onboarding-pill" id="onboardPill-4" style="padding: 4px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); cursor: pointer; white-space: nowrap;">5. Leases</button>
+            </div>
+
+            <!-- Dynamic Body Content -->
+            <div id="onboardingStepBody" style="padding: 1.5rem; min-height: 220px;"></div>
+
+            <!-- Footer Navigation Controls -->
+            <div style="padding: 1rem 1.5rem; background: var(--bg-card); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <button id="btnOnboardPrev" onclick="onboardingPrevStep()" class="btn btn-secondary btn-sm" style="font-weight: 800;"><i data-lucide="chevron-left"></i> Back</button>
+                <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted);" id="onboardStepCounter">Step 1 of 5</div>
+                <button id="btnOnboardNext" onclick="onboardingNextStep()" class="btn btn-primary btn-sm" style="font-weight: 800;">Next <i data-lucide="chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
     <div id="mainApp" class="hidden"></div>
     <div id="modalContainer"></div>
     <div id="notification-container"></div>
+
+    <!-- Batch Billing Overlay Modal -->
+    <div id="batchBillingOverlay" class="modal-overlay hidden" style="z-index: 9990;">
+        <div class="modal-content" style="max-width: 900px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 850; margin: 0; color: var(--text-main);">Batch Monthly Billing</h3>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Generate monthly bills for all active tenants in a single grid</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-icon-sm" onclick="closeBatchBillingModal()" style="border-radius: 50%;">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: var(--bg-card); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--border);">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Billing Month *</label>
+                        <input type="text" id="batchBillingMonth" class="form-input" placeholder="e.g. August 2026">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Date Generated *</label>
+                        <input type="date" id="batchDateGenerated" class="form-input">
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                        <thead>
+                            <tr style="background: var(--bg-input); text-align: left;">
+                                <th style="padding: 10px;">Unit</th>
+                                <th style="padding: 10px;">Tenant</th>
+                                <th style="padding: 10px;">Rent</th>
+                                <th style="padding: 10px;">Maint</th>
+                                <th style="padding: 10px;">Water</th>
+                                <th style="padding: 10px;">Arrears</th>
+                                <th style="padding: 10px; width: 90px;">Prev EB</th>
+                                <th style="padding: 10px; width: 110px;">Current EB *</th>
+                                <th style="padding: 10px;">Units/Cost</th>
+                                <th style="padding: 10px; text-align: right;">Total Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchBillingTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card);">
+                <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-main);">
+                    Total Batch: <span id="batchGrandTotal" style="color: var(--primary); font-size: 1.1rem; margin-left: 4px;">₹0</span>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeBatchBillingModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitBatchBilling()">
+                        <i data-lucide="check-circle-2" style="width: 16px; height: 16px;"></i> Generate All Bills
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tenant Payment Proof Modal -->
+    <div id="tenantProofOverlay" class="modal-overlay hidden" style="z-index: 9995;">
+        <div class="modal-content" style="max-width: 480px; width: 92%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-success-light); color: var(--success); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="upload-cloud" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 850; margin: 0; color: var(--text-main);">Submit Payment Proof</h3>
+                        <p id="proofModalSub" style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Upload payment screenshot or UTR number</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-icon-sm" onclick="closeTenantProofModal()" style="border-radius: 50%;">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+
+            <form id="tenantProofForm" onsubmit="event.preventDefault(); submitTenantPaymentProof();" style="padding: 1.5rem;">
+                <input type="hidden" id="proofBillId">
+                <div class="login-input-group" style="margin-bottom: 1rem;">
+                    <label for="proofRefInput">UPI UTR / Transaction Reference ID *</label>
+                    <div class="login-input-wrapper">
+                        <i data-lucide="hash" class="input-icon"></i>
+                        <input type="text" id="proofRefInput" placeholder="e.g. UPI/3940281940" required>
+                    </div>
+                </div>
+
+                <div class="login-input-group" style="margin-bottom: 1.5rem;">
+                    <label for="proofPhotoInput">Payment Screenshot (Optional)</label>
+                    <div class="login-input-wrapper">
+                        <i data-lucide="image" class="input-icon"></i>
+                        <input type="file" id="proofPhotoInput" accept="image/*" style="padding: 8px 12px; font-size: 0.8rem;">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeTenantProofModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--success); border-color: var(--success);">
+                        <i data-lucide="send" style="width: 16px; height: 16px;"></i> Submit for Verification
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tenant Change Password Modal -->
+    <div id="tenantChangePassOverlay" class="modal-overlay hidden" style="z-index: 9996;">
+        <div class="modal-content" style="max-width: 440px; width: 92%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="key-round" style="width: 20px; height: 20px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 850; margin: 0; color: var(--text-main);">Change Password</h3>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Update your tenant portal password</p>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-icon-sm" onclick="closeTenantChangePasswordModal()" style="border-radius: 50%;">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+
+            <form id="tenantChangePassForm" onsubmit="event.preventDefault(); submitTenantChangePassword();" style="padding: 1.5rem;">
+                <div class="login-input-group" style="margin-bottom: 1rem;">
+                    <label for="tenantCurrentPass">Current Password *</label>
+                    <div class="login-input-wrapper">
+                        <i data-lucide="lock" class="input-icon"></i>
+                        <input type="password" id="tenantCurrentPass" placeholder="Enter current password" required>
+                    </div>
+                </div>
+
+                <div class="login-input-group" style="margin-bottom: 1rem;">
+                    <label for="tenantNewPass">New Password *</label>
+                    <div class="login-input-wrapper">
+                        <i data-lucide="key" class="input-icon"></i>
+                        <input type="password" id="tenantNewPass" placeholder="At least 4 characters" required minlength="4">
+                    </div>
+                </div>
+
+                <div class="login-input-group" style="margin-bottom: 1.5rem;">
+                    <label for="tenantConfirmPass">Confirm New Password *</label>
+                    <div class="login-input-wrapper">
+                        <i data-lucide="check" class="input-icon"></i>
+                        <input type="password" id="tenantConfirmPass" placeholder="Re-enter new password" required minlength="4">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeTenantChangePasswordModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save" style="width: 16px; height: 16px;"></i> Update Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <!-- UI Templates -->
     <template id="tpl-authOverlay">
-        <div class="modal-content" style="max-width: 360px; text-align: center; border: none; box-shadow: var(--shadow-xl);">
-            <div class="modal-body" style="padding: 3rem 2rem;">
-                <!-- 1. Admin PIN Sign-in -->
+        <div class="modal-content">
+            <div class="modal-body">
+                <!-- Portal Brand Header -->
+                <div class="login-header" id="loginHeader">
+                    <div class="login-brand-icon" id="loginBrandIcon">
+                        <i data-lucide="building-2" style="width: 28px; height: 28px;"></i>
+                    </div>
+                    <h2 class="login-title" id="loginTitle">RentBill Pro</h2>
+                    <p class="login-subtitle" id="loginSubtitle">Property Manager</p>
+                </div>
+
+                <!-- Sliding Tab Switcher -->
+                <div class="login-tabs" id="loginTabs">
+                    <button type="button" class="login-tab-btn active" id="tab-admin" onclick="switchLoginTab('admin')">
+                        <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i> Admin Access
+                    </button>
+                    <button type="button" class="login-tab-btn" id="tab-tenant" onclick="switchLoginTab('tenant')">
+                        <i data-lucide="users" style="width: 14px; height: 14px;"></i> Tenant Portal
+                    </button>
+                </div>
+
+                <!-- 1. Admin Sign-in Form -->
                 <div id="adminPinLoginForm">
                     <form onsubmit="event.preventDefault(); verifyPin();">
-                    <input type="text" value="admin" autocomplete="username" style="display:none;">
-                    <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--primary); color: white; border-radius: 20px;">
-                        <i data-lucide="building-2" style="width: 32px; height: 32px;"></i>
-                    </div>
-                    <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">RentBill Pro</h2>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Authorized Access Only</p>
-                    
-                    <div style="position: relative; margin-bottom: 2rem;">
-                        <input type="password" id="adminPasswordInput" placeholder="Enter PIN or Password" required autocomplete="current-password" style="width: 100%; height: 50px; border-radius: 12px; padding: 0 3.5rem 0 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 800; font-size: 1rem; text-align: center; outline: none; letter-spacing: 1px;">
-                        <button type="button" onclick="toggleAdminPasswordVisibility()" style="position: absolute; right: 12px; top: 13px; background: none; border: none; color: var(--text-muted); cursor: pointer; outline: none;">
-                            <i id="adminEyeIcon" data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                        <input type="text" value="admin" autocomplete="username" style="display:none;">
+                        <div class="login-input-group">
+                            <label for="adminPasswordInput">Admin Password</label>
+                            <div class="login-input-wrapper">
+                                <i data-lucide="lock" class="input-icon"></i>
+                                <input type="password" id="adminPasswordInput" placeholder="Enter password" required autocomplete="current-password">
+                                <button type="button" class="visibility-btn" onclick="toggleAdminPasswordVisibility()">
+                                    <i id="adminEyeIcon" data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px; border-radius: var(--radius-lg); font-weight: 700; margin-top: 1.25rem;">
+                            <i data-lucide="log-in" style="width: 16px; height: 16px;"></i> Sign In
                         </button>
-                    </div>
-
-                    <div class="pin-keypad" id="pinKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; max-width: 240px; margin: 0 auto;">
-                        <button type="button" onclick="pressKey('1')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">1</button>
-                        <button type="button" onclick="pressKey('2')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">2</button>
-                        <button type="button" onclick="pressKey('3')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">3</button>
-                        <button type="button" onclick="pressKey('4')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">4</button>
-                        <button type="button" onclick="pressKey('5')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">5</button>
-                        <button type="button" onclick="pressKey('6')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">6</button>
-                        <button type="button" onclick="pressKey('7')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">7</button>
-                        <button type="button" onclick="pressKey('8')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">8</button>
-                        <button type="button" onclick="pressKey('9')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">9</button>
-                        <button type="button" onclick="forgotPin()" class="btn btn-secondary" title="Forgot Password" style="height: 64px; border-radius: 16px; font-weight: 800;">?</button>
-                        <button type="button" onclick="pressKey('0')" class="btn btn-secondary" style="height: 64px; font-size: 1.5rem; font-weight: 800; border-radius: 16px;">0</button>
-                        <button type="button" onclick="pressKey('back')" class="btn btn-secondary" title="Backspace" style="height: 64px; border-radius: 16px; font-size: 0.8rem; font-weight: 800;">DEL</button>
-                    </div>
-
-                    <div style="margin-top: 2rem;">
-                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 54px; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Sign In</button>
-                    </div>
                     </form>
-                    <div style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                        <a href="javascript:void(0)" onclick="toggleTenantPortalForm()" style="font-size: 0.75rem; font-weight: 800; color: var(--primary); text-decoration: none; text-transform: uppercase; letter-spacing: 0.5px;">Tenant Access Portal</a>
+                    <div class="forgot-pin-link">
+                        <a href="javascript:void(0)" onclick="showRecoveryFlow('admin')"><i data-lucide="help-circle" style="width: 12px; height: 12px; vertical-align: text-top; margin-right: 2px;"></i> Forgot Password?</a>
                     </div>
                 </div>
 
                 <!-- 2. Tenant Portal Login Form -->
                 <div id="tenantLoginForm" class="hidden">
-                    <div class="sidebar-brand" style="width: 64px; height: 64px; margin: 0 auto 1.5rem; background: var(--success); color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="key" style="width: 32px; height: 32px;"></i>
-                    </div>
-                    <h2 style="font-weight: 900; font-size: 1.5rem; color: var(--text-main); margin-bottom: 0.5rem;">Tenant Portal</h2>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 2rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">View ledger & report tasks</p>
-                    
-                    <form onsubmit="event.preventDefault(); submitTenantLogin();" style="display: flex; flex-direction: column; gap: 1rem; text-align: left;">
-                        <div class="input-group" style="margin:0;"><label style="font-size: 0.65rem;">Unit / Room Number *</label><input type="text" id="tenantRoomInput" placeholder="e.g. 101" required style="height: 48px; border-radius: 12px; padding: 0.5rem 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700;"></div>
-                        <div class="input-group" style="margin:0;"><label style="font-size: 0.65rem;">Registered Mobile *</label><input type="text" id="tenantMobileInput" placeholder="e.g. 9876543210" required style="height: 48px; border-radius: 12px; padding: 0.5rem 1rem; border: 1.5px solid var(--border); background: var(--bg-input); color: var(--text-main); font-weight: 700;"></div>
-                        <button type="submit" class="btn btn-success" style="width: 100%; height: 50px; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-top: 1rem; background: var(--success); border-color: var(--success); color: white;">Login to Portal</button>
-                        <button type="button" onclick="toggleTenantPortalForm()" class="btn btn-secondary" style="width: 100%; height: 44px; border-radius: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Admin Sign-in</button>
+                    <form onsubmit="event.preventDefault(); submitTenantLogin();">
+                        <div class="login-input-group">
+                            <label for="tenantRoomInput">Unit / Room Number *</label>
+                            <div class="login-input-wrapper">
+                                <i data-lucide="door-closed" class="input-icon"></i>
+                                <input type="text" id="tenantRoomInput" placeholder="e.g. 101" required>
+                            </div>
+                        </div>
+                        <div class="login-input-group" style="margin-bottom: 1.25rem;">
+                            <label for="tenantMobileInput">Password *</label>
+                            <div class="login-input-wrapper">
+                                <i data-lucide="lock" class="input-icon"></i>
+                                <input type="password" id="tenantMobileInput" placeholder="e.g. rahu3210" required autocomplete="current-password">
+                                <button type="button" class="visibility-btn" onclick="toggleTenantPasswordVisibility()">
+                                    <i id="tenantEyeIcon" data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                                </button>
+                            </div>
+                            <p style="font-size: 0.72rem; color: var(--text-muted); margin: 4px 0 0 0; text-align: left;">Default: 4 letters of name + 4 digits of mobile (e.g. rahu3210)</p>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px; border-radius: var(--radius-lg); font-weight: 700; background: var(--success); border-color: var(--success);">
+                            <i data-lucide="key" style="width: 16px; height: 16px;"></i> Login to Portal
+                        </button>
                     </form>
+                    <div class="forgot-pin-link">
+                        <a href="javascript:void(0)" onclick="showRecoveryFlow('tenant')"><i data-lucide="help-circle" style="width: 12px; height: 12px; vertical-align: text-top; margin-right: 2px;"></i> Forgot Password?</a>
+                    </div>
+                </div>
+
+                <!-- 3. Recovery Container -->
+                <div id="recoveryContainer" class="hidden">
+                    <button type="button" class="recovery-back-btn" onclick="hideRecoveryFlow()">
+                        <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Back to Sign In
+                    </button>
+                    
+                    <div id="recoveryForm">
+                        <div style="text-align: left; margin-bottom: 1.25rem;">
+                            <h3 id="recoveryTitle" style="font-weight: 850; font-size: 1.15rem; color: var(--text-main); margin: 0 0 0.25rem 0;">Password Recovery</h3>
+                            <p id="recoveryDesc" style="font-size: 0.78rem; color: var(--text-muted); margin: 0; line-height: 1.4;">Send a password reset link or temporary password to the registered mail.</p>
+                        </div>
+
+                        <!-- Extra inputs for Tenant recovery mode -->
+                        <div id="tenantRecoveryInputs" class="hidden" style="margin-bottom: 1.25rem; text-align: left;">
+                            <div class="login-input-group" style="margin-bottom: 0.75rem;">
+                                <label for="recRoomInput">Unit / Room Number *</label>
+                                <div class="login-input-wrapper">
+                                    <i data-lucide="door-closed" class="input-icon"></i>
+                                    <input type="text" id="recRoomInput" placeholder="e.g. 101">
+                                </div>
+                            </div>
+                            <div class="login-input-group">
+                                <label for="recMobileInput">Registered Mobile or Email</label>
+                                <div class="login-input-wrapper">
+                                    <i data-lucide="smartphone" class="input-icon"></i>
+                                    <input type="text" id="recMobileInput" placeholder="e.g. 9876543210">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="recovery-option" onclick="sendRecoveryEmail()">
+                            <div class="recovery-option-icon">
+                                <i data-lucide="mail" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="recovery-option-content">
+                                <h4>Send Reset Email</h4>
+                                <p id="recoveryEmailSub">Generates a temporary password and emails it to registered address.</p>
+                            </div>
+                        </button>
+
+                        <button type="button" class="recovery-option" onclick="showSupportRequestForm()">
+                            <div class="recovery-option-icon">
+                                <i data-lucide="help-circle" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="recovery-option-content">
+                                <h4>Contact Support</h4>
+                                <p>File a support request if email reset fails or is not configured.</p>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Loader state -->
+                    <div id="recoveryLoader" class="hidden">
+                        <div class="spinner-container">
+                            <div class="recovery-spinner"></div>
+                            <p style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">Processing request...</p>
+                        </div>
+                    </div>
+
+                    <!-- Success state -->
+                    <div id="recoverySuccess" class="hidden">
+                        <div class="recovery-status-view">
+                            <div class="status-icon-circle success">
+                                <i data-lucide="check" style="width: 32px; height: 32px;"></i>
+                            </div>
+                            <h4 class="status-title">Temporary PIN Sent</h4>
+                            <p class="status-desc">A temporary PIN has been successfully sent to the registered administrator email address. Please check your inbox and spam folder, then log in using the new PIN.</p>
+                            <button type="button" class="btn btn-primary" style="width: 100%; height: 44px; border-radius: var(--radius-lg);" onclick="hideRecoveryFlow()">
+                                Go to Log In
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Warning/Support Fallback state -->
+                    <div id="recoverySupport" class="hidden">
+                        <div class="recovery-status-view" style="text-align: left;">
+                            <div class="status-icon-circle warning" style="margin: 0 0 1rem 0;">
+                                <i data-lucide="alert-triangle" style="width: 32px; height: 32px;"></i>
+                            </div>
+                            <h4 class="status-title" style="margin-bottom: 0.5rem;">SMTP Not Configured</h4>
+                            <p class="status-desc" style="margin-bottom: 1rem; font-size: 0.8rem; line-height: 1.4;">Automatic PIN reset emails are unavailable because email server settings (SMTP) are not configured.</p>
+                            
+                            <div class="support-details-box">
+                                <p>Please contact IT support or email details to:</p>
+                                <p style="font-size: 0.95rem; font-weight: 700; color: var(--primary); margin: 4px 0 10px 0; user-select: all;">support@rentbill.pro</p>
+                                <p style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">Tip: Click below to generate a prefilled support request template.</p>
+                            </div>
+
+                            <button type="button" class="btn btn-primary" id="btnSendSupportMail" style="width: 100%; height: 44px; margin-bottom: 0.5rem; border-radius: var(--radius-lg);">
+                                <i data-lucide="mail" style="width: 16px; height: 16px;"></i> Send Support Request
+                            </button>
+                            <button type="button" class="btn btn-secondary" style="width: 100%; height: 44px; border-radius: var(--radius-lg);" onclick="showRecoveryOptions()">
+                                Other Options
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </template>
     </template>
 
     <template id="tpl-navigation">
@@ -117,11 +436,15 @@
             </nav>
 
             <div class="sidebar-footer">
+                <button onclick="openOnboardingModal(0)" class="btn btn-secondary" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem; margin-bottom: 0.5rem;" title="User Guide & Setup Tour">
+                    <i data-lucide="book-open" style="width: 18px; height: 18px; color: var(--primary);"></i>
+                    <span style="margin-left: 0.75rem; font-size: 0.85rem;" class="sidebar-text">User Guide</span>
+                </button>
                 <button onclick="toggleDarkMode()" id="darkModeToggle" class="btn btn-secondary" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem;" title="Toggle Theme">
                     <i data-lucide="moon" style="width: 18px; height: 18px;"></i>
                     <span style="margin-left: 0.75rem; font-size: 0.85rem;" class="sidebar-text">Appearance</span>
                 </button>
-                <button onclick="logout()" class="btn btn-danger" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem; margin-top: 0.5rem;" title="Logout">
+                <button onclick="logout()" class="btn btn-danger logout-btn" style="width: 100%; justify-content: flex-start; padding: 0.75rem 1rem; margin-top: 0.5rem;" title="Logout">
                     <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
                     <span style="margin-left: 0.75rem; font-size: 0.85rem;" class="sidebar-text">Logout</span>
                 </button>
@@ -142,6 +465,9 @@
                         <p style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Building Overview</p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button onclick="openOnboardingModal(0)" class="btn btn-secondary btn-sm" style="font-size: 0.65rem; font-weight: 800; border-radius: 6px; padding: 4px 10px;" title="Open User Guide">
+                            <i data-lucide="book-open" style="width: 12px; height: 12px; color: var(--primary);"></i> Guide
+                        </button>
                         <select id="dashboardPropertyFilter" onchange="filterDashboardByProperty()" style="font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; outline: none; text-transform: uppercase;">
                             <option value="">All Buildings</option>
                         </select>
@@ -172,9 +498,32 @@
                 <div class="card" style="padding: 1.25rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                         <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--warning);"><i data-lucide="zap"></i> Needs Billing</h3>
-                        <span id="countBilling" class="badge badge-warning">0</span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openBatchBillingModal()" style="border-radius: 8px; font-weight: 700; padding: 4px 10px; font-size: 0.75rem;">
+                                <i data-lucide="layers" style="width: 14px; height: 14px;"></i> Batch Billing
+                            </button>
+                            <span id="countBilling" class="badge badge-warning">0</span>
+                        </div>
                     </div>
                     <div id="queueBilling" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <!-- 3b. Action Queue: Pending Payment Approvals -->
+                <div class="card" id="cardPendingProofs" style="padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--success);"><i data-lucide="check-square"></i> Payment Approvals</h3>
+                        <span id="countPendingProofs" class="badge badge-success">0</span>
+                    </div>
+                    <div id="queuePendingProofs" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                </div>
+
+                <!-- 3c. Action Queue: Agreement Expiries -->
+                <div class="card" id="cardLeaseExpiries" style="padding: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; color: var(--warning);"><i data-lucide="file-clock"></i> Agreement Expiries</h3>
+                        <span id="countLeaseExpiries" class="badge badge-warning">0</span>
+                    </div>
+                    <div id="queueLeaseExpiries" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
                 </div>
 
                 <!-- 4. Action Queue: Pending Collections -->
@@ -273,6 +622,9 @@
                             <i data-lucide="zap" style="width: 16px;"></i> Generate Bills
                         </h4>
                         <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openBatchBillingModal()" style="border-radius: 8px; font-weight: 700; padding: 4px 10px; font-size: 0.75rem;">
+                                <i data-lucide="layers" style="width: 14px; height: 14px;"></i> Batch Billing
+                            </button>
                             <select id="billingPropertyFilter" onchange="renderBillingList()" style="font-size: 0.65rem; font-weight: 800; padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; outline: none; text-transform: uppercase;">
                                 <option value="">All Buildings</option>
                             </select>
@@ -368,11 +720,26 @@
                             <div class="input-group"><label>Aadhar No</label><input type="text" id="tAadhar"></div>
                             <div class="input-group"><label>Unit / Room *</label><input type="text" id="tRoom"></div>
                             <div class="input-group"><label>Monthly Rent *</label><input type="number" id="tRent"></div>
+                            <div class="input-group"><label>Maintenance Charge (₹/mo)</label><input type="number" id="tMaintCharge" value="0"></div>
                             <div class="input-group"><label>Security Advance</label><input type="number" id="tAdvance" value="0"></div>
                             <div class="input-group"><label>Move-in Date</label><input type="date" id="tMoveIn"></div>
                             <div class="input-group"><label>Initial EB Reading</label><input type="number" id="tInitialEb" step="0.01" value="0"></div>
                             <div class="input-group"><label>EB Unit Rate *</label><input type="number" id="tEbRate" step="0.01" value="9.00"></div>
-                            <div class="input-group"><label>Water/Maint</label><input type="number" id="tWater" value="0"></div>
+                            <!-- Water Charge Mode -->
+                            <div class="input-group" style="grid-column: span 2;">
+                                <label class="static-label" style="font-size:0.65rem;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                                    💧 Water Charge Mode
+                                    <span style="font-size:0.6rem;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:4px;font-weight:900;">CHOOSE ONE</span>
+                                </label>
+                                <div style="display:flex;gap:0.75rem;">
+                                    <label id="labelWaterFixed" style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer;padding:10px 16px;border:2px solid var(--border);border-radius:var(--radius-md);flex:1;justify-content:center;"><input type="radio" name="tWaterMode" id="tWaterFixed" value="FIXED" checked onchange="toggleWaterMeterFields()" style="accent-color:var(--primary);width:16px;height:16px;margin:0;cursor:pointer;"> Fixed Rate</label>
+                                    <label id="labelWaterMeter" style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer;padding:10px 16px;border:2px solid var(--border);border-radius:var(--radius-md);flex:1;justify-content:center;"><input type="radio" name="tWaterMode" id="tWaterMeter" value="METER" onchange="toggleWaterMeterFields()" style="accent-color:var(--primary);width:16px;height:16px;margin:0;cursor:pointer;"> Water Meter</label>
+                                </div>
+                            </div>
+                            <div class="input-group" id="groupWaterFlat"><label id="labelTWater">Water Flat Charge (₹/mo)</label><input type="number" id="tWater" value="0"></div>
+                            <div class="input-group" id="groupWaterUnitPrice" style="display:none;"><label>Water Unit Price (₹/unit)</label><input type="number" id="tWaterUnitPrice" step="0.01" value="0" placeholder="e.g. 15"></div>
+                            <div class="input-group" id="groupInitialWater" style="display:none;"><label>Initial Water Reading</label><input type="number" id="tInitialWater" step="0.01" value="0" placeholder="e.g. 1250"></div>
+                            <!-- End Water Section -->
                             <div class="input-group"><label>Arrears (OB)</label><input type="number" id="tArrears" value="0"></div>
                             <div class="input-group"><label>Receiving Account *</label><select id="tAssignedUpi"><option value="">-- Select --</option></select></div>
                             <div class="input-group" style="grid-column: span 2;"><label>Permanent Address</label><input type="text" id="tPermAddr"></div>
@@ -949,7 +1316,12 @@
                         <h2 id="tenantPortalWelcome" style="font-size: 1.4rem; font-weight: 950; color: var(--text-main); margin: 0;">Hello, Tenant</h2>
                         <p id="tenantPortalSub" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Room 101 • RentBill Tenant Portal</p>
                     </div>
-                    <button onclick="tenantLogout()" class="btn btn-danger btn-sm" style="border-radius: 8px;"><i data-lucide="log-out"></i> Sign Out</button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" onclick="openTenantChangePasswordModal()" class="btn btn-secondary btn-sm" style="border-radius: 8px; font-weight: 700;">
+                            <i data-lucide="key-round" style="width: 14px; height: 14px;"></i> Password
+                        </button>
+                        <button onclick="tenantLogout()" class="btn btn-danger btn-sm" style="border-radius: 8px;"><i data-lucide="log-out"></i> Sign Out</button>
+                    </div>
                 </div>
 
                 <!-- Balance / Stats Card -->

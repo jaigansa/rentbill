@@ -2,6 +2,7 @@ package api
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -96,16 +97,83 @@ func ForgotPin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "SMTP credentials not configured"})
 		return
 	}
+
+	var req struct {
+		Role   string `json:"role"`    // "admin" or "tenant"
+		Room   string `json:"room_no"` // for tenant
+		Mobile string `json:"mobile"`  // for tenant
+		Email  string `json:"email"`   // for tenant
+	}
+	c.ShouldBindJSON(&req)
+
+	if req.Role == "tenant" {
+		var r struct {
+			ID           int
+			Name         string
+			RoomNo       string
+			MobileNumber string
+			Email        string
+		}
+		var err error
+		if req.Room != "" && req.Mobile != "" {
+			err = DB.QueryRow("SELECT id, name, room_no, mobile_number, COALESCE(email, '') FROM renters WHERE room_no = ? AND mobile_number = ? AND is_active = 1", req.Room, req.Mobile).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.Email)
+		} else if req.Room != "" {
+			err = DB.QueryRow("SELECT id, name, room_no, mobile_number, COALESCE(email, '') FROM renters WHERE room_no = ? AND is_active = 1", req.Room).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.Email)
+		} else if req.Mobile != "" {
+			err = DB.QueryRow("SELECT id, name, room_no, mobile_number, COALESCE(email, '') FROM renters WHERE mobile_number = ? AND is_active = 1", req.Mobile).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.Email)
+		} else if req.Email != "" {
+			err = DB.QueryRow("SELECT id, name, room_no, mobile_number, COALESCE(email, '') FROM renters WHERE email = ? AND is_active = 1", req.Email).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.Email)
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Please provide Unit Number, Mobile, or Registered Email"})
+			return
+		}
+
+		if err != nil || r.ID == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Tenant record not found"})
+			return
+		}
+
+		targetEmail := r.Email
+		if targetEmail == "" && req.Email != "" {
+			targetEmail = req.Email
+		}
+		if targetEmail == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No registered email address found for this tenant. Please contact property owner."})
+			return
+		}
+
+		tenantPass := GetDefaultTenantPassword(r.Name, r.MobileNumber)
+
+		auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, AppConfig.EmailHost)
+		htmlMsg := fmt.Sprintf("<h1>Tenant Portal Password Recovery</h1><p>Hello <b>%s</b> (Unit %s),</p><p>Your portal password is: <b>%s</b></p><p style=\"font-size:0.85rem; color:#666;\">(Formed by first 4 letters of your name + last 4 digits of your registered mobile number)</p>", r.Name, r.RoomNo, tenantPass)
+		header := fmt.Sprintf("Subject: RentBill - Tenant Password Recovery\r\nTo: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n", targetEmail)
+		msg := []byte(header + htmlMsg)
+
+		recipients := []string{targetEmail}
+		err = smtp.SendMail(fmt.Sprintf("%s:%d", AppConfig.EmailHost, AppConfig.EmailPort), auth, AppConfig.EmailUser, recipients, msg)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send reset email: " + err.Error()})
+			return
+		}
+
+		hash, _ := HashPassword(tenantPass)
+		DB.Exec("UPDATE renters SET password_hash = ? WHERE id = ?", hash, r.ID)
+
+		LogActivity("FORGOT_PASSWORD", fmt.Sprintf("Password recovery email sent to tenant %s (%s)", r.Name, targetEmail), "system", 0)
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Password emailed to " + targetEmail})
+		return
+	}
+
 	var b [2]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate PIN"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate password"})
 		return
 	}
 	tempPin := fmt.Sprintf("%04d", (uint32(b[0])<<8|uint32(b[1]))%10000)
 
 	auth := smtp.PlainAuth("", AppConfig.EmailUser, AppConfig.EmailPass, AppConfig.EmailHost)
-	htmlMsg := fmt.Sprintf("<h1>PIN Recovery</h1><p>Temporary PIN: <b>%s</b></p>", tempPin)
-	header := fmt.Sprintf("Subject: RentBill - PIN Recovery\r\nTo: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n", AppConfig.EmailUser)
+	htmlMsg := fmt.Sprintf("<h1>Password Recovery</h1><p>Temporary Admin Password: <b>%s</b></p>", tempPin)
+	header := fmt.Sprintf("Subject: RentBill - Password Recovery\r\nTo: %s\r\nMIME-version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n", AppConfig.EmailUser)
 	msg := []byte(header + htmlMsg)
 
 	recipients := []string{AppConfig.EmailUser}
@@ -130,8 +198,8 @@ func ForgotPin(c *gin.Context) {
 	SaveConfig()
 	TriggerRefresh("SETTINGS_UPDATED")
 
-	LogActivity("FORGOT_PIN", "Reset PIN sent to "+AppConfig.EmailUser, AppConfig.Username, 0)
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	LogActivity("FORGOT_PIN", "Reset password sent to "+AppConfig.EmailUser, AppConfig.Username, 0)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Temporary password sent to " + AppConfig.EmailUser})
 }
 
 func CheckPin(c *gin.Context) {
@@ -377,10 +445,24 @@ func RestoreDatabase(c *gin.Context) {
 
 // --- MANAGEMENT (RENTERS & BILLS) ---
 
+func calcDefaultAgreementExpiry(moveInDate string, customExpiry string) string {
+	if strings.TrimSpace(customExpiry) != "" {
+		return customExpiry
+	}
+	if strings.TrimSpace(moveInDate) == "" {
+		return time.Now().AddDate(0, 11, 0).Format("2006-01-02")
+	}
+	t, err := time.Parse("2006-01-02", moveInDate)
+	if err != nil {
+		return time.Now().AddDate(0, 11, 0).Format("2006-01-02")
+	}
+	return t.AddDate(0, 11, 0).Format("2006-01-02")
+}
+
 func GetRenters(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "100")
 	offset := c.DefaultQuery("offset", "0")
-	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears FROM renters WHERE is_active = 1 ORDER BY room_no ASC LIMIT ? OFFSET ?", limit, offset)
+	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, COALESCE(agreement_expiry_date, ''), COALESCE(water_calc_mode, 'FIXED'), COALESCE(water_unit_price, 0), COALESCE(initial_water, 0), COALESCE(maint_charge, 0) FROM renters WHERE is_active = 1 ORDER BY room_no ASC LIMIT ? OFFSET ?", limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -389,7 +471,13 @@ func GetRenters(c *gin.Context) {
 	var renters = []Renter{}
 	for rows.Next() {
 		var r Renter
-		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears)
+		var expDate string
+		rows.Scan(&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears, &expDate, &r.WaterCalcMode, &r.WaterUnitPrice, &r.InitialWater, &r.MaintCharge)
+		if expDate == "" {
+			expDate = calcDefaultAgreementExpiry(r.MoveInDate, "")
+			DB.Exec("UPDATE renters SET agreement_expiry_date = ? WHERE id = ?", expDate, r.ID)
+		}
+		r.AgreementExpiryDate = expDate
 		renters = append(renters, r)
 	}
 	if renters == nil { renters = []Renter{} }
@@ -398,11 +486,17 @@ func GetRenters(c *gin.Context) {
 
 func GetRenter(c *gin.Context) {
 	var r Renter
-	err := DB.QueryRow(`SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due FROM renters WHERE id = ?`, c.Param("id")).Scan(
+	var expDate string
+	err := DB.QueryRow(`SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due, COALESCE(agreement_expiry_date, ''), COALESCE(water_calc_mode, 'FIXED'), COALESCE(water_unit_price, 0), COALESCE(initial_water, 0), COALESCE(maint_charge, 0) FROM renters WHERE id = ?`, c.Param("id")).Scan(
 		&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears,
-		&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue,
+		&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue, &expDate, &r.WaterCalcMode, &r.WaterUnitPrice, &r.InitialWater, &r.MaintCharge,
 	)
 	if err == nil {
+		if expDate == "" {
+			expDate = calcDefaultAgreementExpiry(r.MoveInDate, "")
+			DB.Exec("UPDATE renters SET agreement_expiry_date = ? WHERE id = ?", expDate, r.ID)
+		}
+		r.AgreementExpiryDate = expDate
 		c.JSON(http.StatusOK, r)
 	} else {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
@@ -415,13 +509,15 @@ func CreateRenter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	res, err := DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears)
+	r.AgreementExpiryDate = calcDefaultAgreementExpiry(r.MoveInDate, r.AgreementExpiryDate)
+	if r.WaterCalcMode == "" { r.WaterCalcMode = "FIXED" }
+	res, err := DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, agreement_expiry_date, water_calc_mode, water_unit_price, initial_water, maint_charge) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears, r.AgreementExpiryDate, r.WaterCalcMode, r.WaterUnitPrice, r.InitialWater, r.MaintCharge)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 	id, _ := res.LastInsertId()
-	LogActivity("TENANT_REGISTERED", fmt.Sprintf("Registered %s for Unit %s", r.Name, r.RoomNo), AppConfig.Username, 0)
+	LogActivity("TENANT_REGISTERED", fmt.Sprintf("Registered %s for Unit %s (Expiry: %s)", r.Name, r.RoomNo, r.AgreementExpiryDate), AppConfig.Username, 0)
 	TriggerRefresh("TENANT_REGISTERED")
 	c.JSON(http.StatusOK, gin.H{"id": id})
 }
@@ -432,8 +528,10 @@ func UpdateRenter(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	_, err := DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=?, pending_arrears=? WHERE id=?`,
-		r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears, c.Param("id"))
+	r.AgreementExpiryDate = calcDefaultAgreementExpiry(r.MoveInDate, r.AgreementExpiryDate)
+	if r.WaterCalcMode == "" { r.WaterCalcMode = "FIXED" }
+	_, err := DB.Exec(`UPDATE renters SET name=?, room_no=?, aadhar_no=?, base_rent=?, eb_unit_price=?, water_maint=?, advance_amount=?, move_in_date=?, mobile_number=?, email=?, initial_eb=?, perm_address=?, emergency_contact=?, occupation=?, assigned_upi=?, pending_arrears=?, agreement_expiry_date=?, water_calc_mode=?, water_unit_price=?, initial_water=?, maint_charge=? WHERE id=?`,
+		r.Name, r.RoomNo, r.AadharNo, r.BaseRent, r.EBUnitPrice, r.WaterMaint, r.AdvanceAmount, r.MoveInDate, r.MobileNumber, r.Email, r.InitialEB, r.PermanentAddr, r.EmergencyContact, r.Occupation, r.AssignedUPI, r.PendingArrears, r.AgreementExpiryDate, r.WaterCalcMode, r.WaterUnitPrice, r.InitialWater, r.MaintCharge, c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -441,6 +539,88 @@ func UpdateRenter(c *gin.Context) {
 	LogActivity("TENANT_UPDATED", fmt.Sprintf("Updated %s", r.Name), AppConfig.Username, 0)
 	TriggerRefresh("TENANT_UPDATED")
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func GetExpiringAgreements(c *gin.Context) {
+	rows, err := DB.Query(`
+		SELECT id, name, room_no, move_in_date, COALESCE(agreement_expiry_date, '')
+		FROM renters
+		WHERE is_active = 1
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+	defer rows.Close()
+
+	type ExpiringItem struct {
+		ID         int    `json:"id"`
+		Name       string `json:"name"`
+		RoomNo     string `json:"room_no"`
+		MoveInDate string `json:"move_in_date"`
+		ExpiryDate string `json:"agreement_expiry_date"`
+		DaysLeft   int    `json:"days_left"`
+		IsExpired  bool   `json:"is_expired"`
+	}
+
+	var results = []ExpiringItem{}
+	now := time.Now().Truncate(24 * time.Hour)
+
+	for rows.Next() {
+		var item ExpiringItem
+		var rawExpiry string
+		rows.Scan(&item.ID, &item.Name, &item.RoomNo, &item.MoveInDate, &rawExpiry)
+
+		if rawExpiry == "" {
+			rawExpiry = calcDefaultAgreementExpiry(item.MoveInDate, "")
+			DB.Exec("UPDATE renters SET agreement_expiry_date = ? WHERE id = ?", rawExpiry, item.ID)
+		}
+		item.ExpiryDate = rawExpiry
+
+		expTime, err := time.Parse("2006-01-02", rawExpiry)
+		if err != nil {
+			continue
+		}
+
+		daysLeft := int(expTime.Sub(now).Hours() / 24)
+		item.DaysLeft = daysLeft
+		item.IsExpired = daysLeft < 0
+
+		if daysLeft <= 30 {
+			results = append(results, item)
+		}
+	}
+
+	c.JSON(http.StatusOK, results)
+}
+
+func RenewTenantAgreement(c *gin.Context) {
+	renterID := c.Param("id")
+	var r Renter
+	var rawExpiry sql.NullString
+	err := DB.QueryRow("SELECT id, name, room_no, move_in_date, COALESCE(agreement_expiry_date, '') FROM renters WHERE id = ? AND is_active = 1", renterID).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MoveInDate, &rawExpiry)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Active tenant not found"})
+		return
+	}
+
+	baseDate := time.Now()
+	if rawExpiry.Valid && rawExpiry.String != "" {
+		if parsed, err := time.Parse("2006-01-02", rawExpiry.String); err == nil && parsed.After(time.Now()) {
+			baseDate = parsed
+		}
+	}
+	newExpiryDate := baseDate.AddDate(0, 11, 0).Format("2006-01-02")
+
+	_, err = DB.Exec("UPDATE renters SET agreement_expiry_date = ? WHERE id = ?", newExpiryDate, renterID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to extend agreement"})
+		return
+	}
+
+	LogActivity("AGREEMENT_RENEWED", fmt.Sprintf("Renewed 11-month agreement for %s (Unit %s) until %s", r.Name, r.RoomNo, newExpiryDate), AppConfig.Username, 0)
+	TriggerRefresh("AGREEMENT_RENEWED")
+	c.JSON(http.StatusOK, gin.H{"success": true, "new_expiry_date": newExpiryDate, "message": "Agreement renewed for 11 months!"})
 }
 
 func MarkVacant(c *gin.Context) {
@@ -521,7 +701,7 @@ func RestoreRenter(c *gin.Context) {
 
 func GetRenterHistory(c *gin.Context) {
 	limit := c.DefaultQuery("limit", "100")
-	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due FROM renters WHERE is_active = 0 ORDER BY vacate_date DESC, move_in_date DESC LIMIT ?", limit)
+	rows, err := DB.Query("SELECT id, name, room_no, aadhar_no, move_in_date, advance_amount, base_rent, eb_unit_price, water_maint, is_active, mobile_number, email, initial_eb, perm_address, emergency_contact, occupation, assigned_upi, pending_arrears, vacate_date, exit_refund_amount, exit_dues_deducted, exit_repairs_deducted, exit_refund_label, exit_balance, exit_eb_reading, exit_reason, exit_rent_due, exit_eb_due, COALESCE(maint_charge, 0) FROM renters WHERE is_active = 0 ORDER BY vacate_date DESC, move_in_date DESC LIMIT ?", limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -532,7 +712,7 @@ func GetRenterHistory(c *gin.Context) {
 		var r Renter
 		err := rows.Scan(
 			&r.ID, &r.Name, &r.RoomNo, &r.AadharNo, &r.MoveInDate, &r.AdvanceAmount, &r.BaseRent, &r.EBUnitPrice, &r.WaterMaint, &r.IsActive, &r.MobileNumber, &r.Email, &r.InitialEB, &r.PermanentAddr, &r.EmergencyContact, &r.Occupation, &r.AssignedUPI, &r.PendingArrears,
-			&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue,
+			&r.VacateDate, &r.ExitRefundAmount, &r.ExitDuesDeducted, &r.ExitRepairsDeducted, &r.ExitRefundLabel, &r.ExitBalance, &r.ExitEBReading, &r.ExitReason, &r.ExitRentDue, &r.ExitEBDue, &r.MaintCharge,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan history"})
@@ -552,15 +732,15 @@ func DeleteRenter(c *gin.Context) {
 }
 
 func ExportRentersCSV(c *gin.Context) {
-	rows, _ := DB.Query("SELECT name, room_no, mobile_number, email, aadhar_no, base_rent, water_maint, advance_amount, move_in_date, occupation, assigned_upi, eb_unit_price, initial_eb, pending_arrears FROM renters WHERE is_active = 1 ORDER BY room_no ASC")
+	rows, _ := DB.Query("SELECT name, room_no, mobile_number, email, aadhar_no, base_rent, water_maint, advance_amount, move_in_date, occupation, assigned_upi, eb_unit_price, initial_eb, pending_arrears, COALESCE(maint_charge, 0) FROM renters WHERE is_active = 1 ORDER BY room_no ASC")
 	defer rows.Close()
 	c.Header("Content-Type", "text/csv")
 	c.Header("Content-Disposition", "attachment; filename=units.csv")
-	fmt.Fprintln(c.Writer, "Name,Unit,Mobile,Email,Aadhar,Base Rent,Water/Maint,Advance,Move-in Date,Occupation,Assigned Owner,EB Rate,Initial EB,Arrears")
+	fmt.Fprintln(c.Writer, "Name,Unit,Mobile,Email,Aadhar,Base Rent,Water Charge,Advance,Move-in Date,Occupation,Assigned Owner,EB Rate,Initial EB,Arrears,Maintenance")
 	for rows.Next() {
-		var r struct { Name, Room, Mobile, Email, Aadhar, MoveIn, Job, UPI string; Rent, Water, Advance, EBRate, InitialEB, Arrears float64 }
-		rows.Scan(&r.Name, &r.Room, &r.Mobile, &r.Email, &r.Aadhar, &r.Rent, &r.Water, &r.Advance, &r.MoveIn, &r.Job, &r.UPI, &r.EBRate, &r.InitialEB, &r.Arrears)
-		fmt.Fprintf(c.Writer, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f\n", r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI, r.EBRate, r.InitialEB, r.Arrears)
+		var r struct { Name, Room, Mobile, Email, Aadhar, MoveIn, Job, UPI string; Rent, Water, Advance, EBRate, InitialEB, Arrears, Maint float64 }
+		rows.Scan(&r.Name, &r.Room, &r.Mobile, &r.Email, &r.Aadhar, &r.Rent, &r.Water, &r.Advance, &r.MoveIn, &r.Job, &r.UPI, &r.EBRate, &r.InitialEB, &r.Arrears, &r.Maint)
+		fmt.Fprintf(c.Writer, "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,\"%s\",\"%s\",\"%s\",%.2f,%.2f,%.2f,%.2f\n", r.Name, r.Room, r.Mobile, r.Email, r.Aadhar, r.Rent, r.Water, r.Advance, r.MoveIn, r.Job, r.UPI, r.EBRate, r.InitialEB, r.Arrears, r.Maint)
 	}
 }
 
@@ -582,7 +762,11 @@ func ImportRentersCSV(c *gin.Context) {
 		if ebRate == 0 { ebRate = 9.0 }
 		initialEB, _ := strconv.ParseFloat(rec[12], 64)
 		arrears, _ := strconv.ParseFloat(rec[13], 64)
-		_, err = DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, occupation, assigned_upi, pending_arrears) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, rec[0], rec[1], rec[4], rent, ebRate, water, advance, rec[8], rec[2], rec[3], initialEB, rec[9], rec[10], arrears)
+		maint := 0.0
+		if len(rec) > 14 {
+			maint, _ = strconv.ParseFloat(rec[14], 64)
+		}
+		_, err = DB.Exec(`INSERT INTO renters (name, room_no, aadhar_no, base_rent, eb_unit_price, water_maint, advance_amount, move_in_date, mobile_number, email, initial_eb, occupation, assigned_upi, pending_arrears, maint_charge) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, rec[0], rec[1], rec[4], rent, ebRate, water, advance, rec[8], rec[2], rec[3], initialEB, rec[9], rec[10], arrears, maint)
 		if err == nil { count++ }
 	}
 	LogActivity("DATA_IMPORT", fmt.Sprintf("Imported %d units", count), AppConfig.Username, 0)
@@ -590,12 +774,12 @@ func ImportRentersCSV(c *gin.Context) {
 }
 
 func GetBills(c *gin.Context) {
-	rows, _ := DB.Query("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, COALESCE(date_generated, CURRENT_DATE), notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE renter_id = ? ORDER BY date_generated DESC LIMIT 20", c.Param("renter_id"))
+	rows, _ := DB.Query("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, COALESCE(date_generated, CURRENT_DATE), notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included, COALESCE(prev_water_reading, 0), COALESCE(curr_water_reading, 0), COALESCE(water_unit_price, 0), COALESCE(water_calc_mode, 'FIXED'), COALESCE(maint_amount, 0) FROM bills WHERE renter_id = ? ORDER BY date_generated DESC LIMIT 20", c.Param("renter_id"))
 	defer rows.Close()
 	var bills = []Bill{}
 	for rows.Next() {
 		var b Bill
-		rows.Scan(&b.ID, &b.RenterID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded)
+		rows.Scan(&b.ID, &b.RenterID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded, &b.PrevWaterReading, &b.CurrWaterReading, &b.WaterUnitPrice, &b.WaterCalcMode, &b.MaintAmount)
 		bills = append(bills, b)
 	}
 	if bills == nil { bills = []Bill{} }
@@ -604,7 +788,7 @@ func GetBills(c *gin.Context) {
 
 func GetBill(c *gin.Context) {
 	var b Bill
-	err := DB.QueryRow("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, COALESCE(date_generated, CURRENT_DATE), notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE id = ?", c.Param("id")).Scan(&b.ID, &b.RenterID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded)
+	err := DB.QueryRow("SELECT id, renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, payment_method, payment_details, payment_date, COALESCE(date_generated, CURRENT_DATE), notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included, COALESCE(prev_water_reading, 0), COALESCE(curr_water_reading, 0), COALESCE(water_unit_price, 0), COALESCE(water_calc_mode, 'FIXED'), COALESCE(maint_amount, 0) FROM bills WHERE id = ?", c.Param("id")).Scan(&b.ID, &b.RenterID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded, &b.PrevWaterReading, &b.CurrWaterReading, &b.WaterUnitPrice, &b.WaterCalcMode, &b.MaintAmount)
 	if err == nil { c.JSON(http.StatusOK, b) } else { c.JSON(http.StatusNotFound, gin.H{"error": "Not found"}) }
 }
 
@@ -612,16 +796,32 @@ func CreateBill(c *gin.Context) {
 	var b Bill
 	if err := c.ShouldBindJSON(&b); err != nil { c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"}); return }
 	var r Renter
-	DB.QueryRow("SELECT name, base_rent, water_maint, eb_unit_price, pending_arrears FROM renters WHERE id = ?", b.RenterID).Scan(&r.Name, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.PendingArrears)
+	DB.QueryRow("SELECT name, base_rent, water_maint, eb_unit_price, pending_arrears, COALESCE(water_calc_mode, 'FIXED'), COALESCE(water_unit_price, 0), COALESCE(maint_charge, 0) FROM renters WHERE id = ?", b.RenterID).Scan(&r.Name, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.PendingArrears, &r.WaterCalcMode, &r.WaterUnitPrice, &r.MaintCharge)
 	
 	ebUnits := b.CurrEBReading - b.PrevEBReading
 	if ebUnits < 0 {
 		ebUnits = 0
 	}
 	ebCost := ebUnits * r.EBUnitPrice
+
+	maintAmount := b.MaintAmount
+	if maintAmount == 0 { maintAmount = r.MaintCharge }
+
+	waterCost := r.WaterMaint
+	if b.WaterCalcMode == "METER" || r.WaterCalcMode == "METER" {
+		wUnits := b.CurrWaterReading - b.PrevWaterReading
+		if wUnits < 0 { wUnits = 0 }
+		unitPrice := b.WaterUnitPrice
+		if unitPrice == 0 { unitPrice = r.WaterUnitPrice }
+		waterCost = wUnits * unitPrice
+		b.WaterCalcMode = "METER"
+		b.WaterUnitPrice = unitPrice
+	} else {
+		b.WaterCalcMode = "FIXED"
+	}
 	
-	total := r.BaseRent + r.WaterMaint + ebCost + b.Others + b.ArrearsIncluded - b.DiscountAmount
-	res, err := DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, arrears_included, discount_amount) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, b.DateGenerated, b.Notes, r.BaseRent, r.WaterMaint, b.ArrearsIncluded, b.DiscountAmount)
+	total := r.BaseRent + maintAmount + waterCost + ebCost + b.Others + b.ArrearsIncluded - b.DiscountAmount
+	res, err := DB.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, maint_amount, arrears_included, discount_amount, prev_water_reading, curr_water_reading, water_unit_price, water_calc_mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, b.RenterID, b.BillingMonth, b.PrevEBReading, b.CurrEBReading, b.Others, total, b.DateGenerated, b.Notes, r.BaseRent, waterCost, maintAmount, b.ArrearsIncluded, b.DiscountAmount, b.PrevWaterReading, b.CurrWaterReading, b.WaterUnitPrice, b.WaterCalcMode)
 	if err == nil {
 		DB.Exec("UPDATE renters SET pending_arrears = MAX(0, pending_arrears - ?) WHERE id = ?", b.ArrearsIncluded, b.RenterID)
 		id, _ := res.LastInsertId()
@@ -629,6 +829,101 @@ func CreateBill(c *gin.Context) {
 		TriggerRefresh("BILL_GENERATED")
 		c.JSON(http.StatusOK, gin.H{"success": true, "id": id})
 	} else { c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed"}) }
+}
+
+func CreateBatchBills(c *gin.Context) {
+	var req struct {
+		BillingMonth  string `json:"billing_month"`
+		DateGenerated string `json:"date_generated"`
+		Bills         []struct {
+			RenterID         int     `json:"renter_id"`
+			PrevEBReading    float64 `json:"prev_eb_reading"`
+			CurrEBReading    float64 `json:"curr_eb_reading"`
+			PrevWaterReading float64 `json:"prev_water_reading"`
+			CurrWaterReading float64 `json:"curr_water_reading"`
+			WaterUnitPrice   float64 `json:"water_unit_price"`
+			WaterCalcMode    string  `json:"water_calc_mode"`
+			MaintAmount      float64 `json:"maint_amount"`
+			Others           float64 `json:"others"`
+			DiscountAmount   float64 `json:"discount_amount"`
+			ArrearsIncluded  float64 `json:"arrears_included"`
+			Notes            string  `json:"notes"`
+		} `json:"bills"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input payload"})
+		return
+	}
+
+	if len(req.Bills) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No bill entries provided"})
+		return
+	}
+
+	tx, err := DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start database transaction"})
+		return
+	}
+
+	insertedCount := 0
+	for _, item := range req.Bills {
+		var r Renter
+		err := tx.QueryRow("SELECT name, base_rent, water_maint, eb_unit_price, COALESCE(water_calc_mode, 'FIXED'), COALESCE(water_unit_price, 0), COALESCE(maint_charge, 0) FROM renters WHERE id = ? AND is_active = 1", item.RenterID).Scan(&r.Name, &r.BaseRent, &r.WaterMaint, &r.EBUnitPrice, &r.WaterCalcMode, &r.WaterUnitPrice, &r.MaintCharge)
+		if err != nil {
+			continue
+		}
+
+		ebUnits := item.CurrEBReading - item.PrevEBReading
+		if ebUnits < 0 {
+			ebUnits = 0
+		}
+		ebCost := ebUnits * r.EBUnitPrice
+
+		maintAmount := item.MaintAmount
+		if maintAmount == 0 { maintAmount = r.MaintCharge }
+
+		calcMode := item.WaterCalcMode
+		if calcMode == "" { calcMode = r.WaterCalcMode }
+		waterCost := r.WaterMaint
+		unitPrice := item.WaterUnitPrice
+		if unitPrice == 0 { unitPrice = r.WaterUnitPrice }
+
+		if calcMode == "METER" {
+			wUnits := item.CurrWaterReading - item.PrevWaterReading
+			if wUnits < 0 { wUnits = 0 }
+			waterCost = wUnits * unitPrice
+		}
+
+		total := r.BaseRent + maintAmount + waterCost + ebCost + item.Others + item.ArrearsIncluded - item.DiscountAmount
+
+		dateGen := req.DateGenerated
+		if dateGen == "" {
+			dateGen = time.Now().Format("2006-01-02")
+		}
+
+		_, err = tx.Exec(`INSERT INTO bills (renter_id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, date_generated, notes, rent_amount, water_amount, maint_amount, arrears_included, discount_amount, prev_water_reading, curr_water_reading, water_unit_price, water_calc_mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, item.RenterID, req.BillingMonth, item.PrevEBReading, item.CurrEBReading, item.Others, total, dateGen, item.Notes, r.BaseRent, waterCost, maintAmount, item.ArrearsIncluded, item.DiscountAmount, item.PrevWaterReading, item.CurrWaterReading, unitPrice, calcMode)
+		if err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to insert bill for " + r.Name})
+			return
+		}
+
+		if item.ArrearsIncluded > 0 {
+			tx.Exec("UPDATE renters SET pending_arrears = MAX(0, pending_arrears - ?) WHERE id = ?", item.ArrearsIncluded, item.RenterID)
+		}
+		insertedCount++
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit bills transaction"})
+		return
+	}
+
+	LogActivity("BILL_GENERATED", fmt.Sprintf("Batch Generated %d bills for %s", insertedCount, req.BillingMonth), AppConfig.Username, 0)
+	TriggerRefresh("BILL_GENERATED")
+	c.JSON(http.StatusOK, gin.H{"success": true, "count": insertedCount})
 }
 
 func PayBill(c *gin.Context) {
@@ -1058,6 +1353,12 @@ func GetLastEB(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"last_eb": lastEB})
 }
 
+func GetLastWaterReading(c *gin.Context) {
+	var lastWater float64
+	DB.QueryRow(`SELECT COALESCE((SELECT curr_water_reading FROM bills WHERE renter_id = ? AND water_calc_mode = 'METER' ORDER BY id DESC LIMIT 1), (SELECT COALESCE(initial_water, 0) FROM renters WHERE id = ?))`, c.Param("renter_id"), c.Param("renter_id")).Scan(&lastWater)
+	c.JSON(http.StatusOK, gin.H{"last_water": lastWater})
+}
+
 func SendBillEmail(c *gin.Context) {
 	// Minimal stub
 	c.JSON(http.StatusOK, gin.H{"success": true})
@@ -1080,21 +1381,74 @@ func authenticateTenantRequest(c *gin.Context) (int, string, error) {
 	return id, name, nil
 }
 
+func GetDefaultTenantPassword(name, mobile string) string {
+	var letters []rune
+	for _, r := range strings.ToLower(name) {
+		if r >= 'a' && r <= 'z' {
+			letters = append(letters, r)
+		}
+	}
+	first4 := string(letters)
+	if len(letters) > 4 {
+		first4 = string(letters[:4])
+	}
+
+	var digits []rune
+	for _, r := range mobile {
+		if r >= '0' && r <= '9' {
+			digits = append(digits, r)
+		}
+	}
+	last4 := string(digits)
+	if len(digits) > 4 {
+		last4 = string(digits[len(digits)-4:])
+	}
+
+	return first4 + last4
+}
+
 func TenantLogin(c *gin.Context) {
 	var req struct {
-		Room   string `json:"room_no"`
-		Mobile string `json:"mobile_number"`
+		Room     string `json:"room_no"`
+		Mobile   string `json:"mobile_number"`
+		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
 	}
+	inputSecret := req.Password
+	if inputSecret == "" {
+		inputSecret = req.Mobile
+	}
+
 	var r Renter
-	err := DB.QueryRow("SELECT id, name, room_no, mobile_number, base_rent, pending_arrears FROM renters WHERE room_no = ? AND mobile_number = ? AND is_active = 1", req.Room, req.Mobile).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.BaseRent, &r.PendingArrears)
+	var passHash sql.NullString
+	err := DB.QueryRow("SELECT id, name, room_no, mobile_number, base_rent, pending_arrears, COALESCE(password_hash, '') FROM renters WHERE room_no = ? AND is_active = 1", req.Room).Scan(&r.ID, &r.Name, &r.RoomNo, &r.MobileNumber, &r.BaseRent, &r.PendingArrears, &passHash)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Unit Number or Mobile Number"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Unit Number or Password"})
 		return
 	}
+
+	defaultPass := GetDefaultTenantPassword(r.Name, r.MobileNumber)
+	inputLower := strings.ToLower(strings.TrimSpace(inputSecret))
+
+	valid := false
+	if passHash.Valid && passHash.String != "" {
+		if CheckPasswordHash(inputSecret, passHash.String) || inputLower == defaultPass || inputSecret == r.MobileNumber {
+			valid = true
+		}
+	} else {
+		if inputLower == defaultPass || inputSecret == r.MobileNumber {
+			valid = true
+		}
+	}
+
+	if !valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Unit Number or Password"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"id":              r.ID,
 		"name":            r.Name,
@@ -1105,6 +1459,70 @@ func TenantLogin(c *gin.Context) {
 	})
 }
 
+func TenantChangePassword(c *gin.Context) {
+	renterID, renterName, err := authenticateTenantRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || strings.TrimSpace(req.NewPassword) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Current and new password required"})
+		return
+	}
+
+	if len(req.NewPassword) < 4 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "New password must be at least 4 characters long"})
+		return
+	}
+
+	var roomNo, mobileNo string
+	var passHash sql.NullString
+	err = DB.QueryRow("SELECT room_no, mobile_number, COALESCE(password_hash, '') FROM renters WHERE id = ?", renterID).Scan(&roomNo, &mobileNo, &passHash)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tenant record not found"})
+		return
+	}
+
+	defaultPass := GetDefaultTenantPassword(renterName, mobileNo)
+	inputLower := strings.ToLower(strings.TrimSpace(req.CurrentPassword))
+
+	valid := false
+	if passHash.Valid && passHash.String != "" {
+		if CheckPasswordHash(req.CurrentPassword, passHash.String) || inputLower == defaultPass || req.CurrentPassword == mobileNo {
+			valid = true
+		}
+	} else {
+		if inputLower == defaultPass || req.CurrentPassword == mobileNo {
+			valid = true
+		}
+	}
+
+	if !valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect current password"})
+		return
+	}
+
+	newHash, err := HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt new password"})
+		return
+	}
+
+	_, err = DB.Exec("UPDATE renters SET password_hash = ? WHERE id = ?", newHash, renterID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	LogActivity("TENANT_PASSWORD_CHANGED", fmt.Sprintf("Tenant %s (Unit %s) updated their portal password", renterName, roomNo), "tenant", 0)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Password updated successfully!"})
+}
+
 func TenantGetBills(c *gin.Context) {
 	renterID, _, err := authenticateTenantRequest(c)
 	if err != nil {
@@ -1112,7 +1530,7 @@ func TenantGetBills(c *gin.Context) {
 		return
 	}
 
-	rows, err := DB.Query(`SELECT id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, COALESCE(payment_method, ''), COALESCE(payment_details, ''), COALESCE(payment_date, ''), date_generated, notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included FROM bills WHERE renter_id = ? ORDER BY date_generated DESC`, renterID)
+	rows, err := DB.Query(`SELECT id, billing_month, prev_eb_reading, curr_eb_reading, others, total_amount, is_paid, COALESCE(payment_method, ''), COALESCE(payment_details, ''), COALESCE(payment_date, ''), date_generated, notes, rent_amount, water_amount, paid_amount, discount_amount, write_off_amount, arrears_amount, arrears_included, COALESCE(proof_status, 'NONE'), COALESCE(proof_ref, ''), COALESCE(proof_photo, ''), COALESCE(proof_date, ''), COALESCE(maint_amount, 0) FROM bills WHERE renter_id = ? ORDER BY date_generated DESC`, renterID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error"})
 		return
@@ -1122,10 +1540,161 @@ func TenantGetBills(c *gin.Context) {
 	var bills = []Bill{}
 	for rows.Next() {
 		var b Bill
-		rows.Scan(&b.ID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded)
+		var pStatus, pRef, pPhoto, pDate string
+		rows.Scan(&b.ID, &b.BillingMonth, &b.PrevEBReading, &b.CurrEBReading, &b.Others, &b.TotalAmount, &b.IsPaid, &b.PaymentMethod, &b.PaymentDetails, &b.PaymentDate, &b.DateGenerated, &b.Notes, &b.RentAmount, &b.WaterAmount, &b.PaidAmount, &b.DiscountAmount, &b.WriteOffAmount, &b.ArrearsAmount, &b.ArrearsIncluded, &pStatus, &pRef, &pPhoto, &pDate, &b.MaintAmount)
+		b.ProofStatus = pStatus
+		b.ProofRef = &pRef
+		b.ProofPhoto = &pPhoto
+		b.ProofDate = &pDate
 		bills = append(bills, b)
 	}
 	c.JSON(http.StatusOK, bills)
+}
+
+func TenantSubmitPaymentProof(c *gin.Context) {
+	renterID, renterName, err := authenticateTenantRequest(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	billIDStr := c.PostForm("bill_id")
+	proofRef := c.PostForm("proof_ref")
+
+	if billIDStr == "" {
+		var req struct {
+			BillID int    `json:"bill_id"`
+			Ref    string `json:"proof_ref"`
+		}
+		if err := c.ShouldBindJSON(&req); err == nil && req.BillID > 0 {
+			billIDStr = strconv.Itoa(req.BillID)
+			proofRef = req.Ref
+		}
+	}
+
+	billID, err := strconv.Atoi(billIDStr)
+	if err != nil || billID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Valid Bill ID required"})
+		return
+	}
+
+	var b Bill
+	err = DB.QueryRow("SELECT id, renter_id, total_amount, is_paid FROM bills WHERE id = ? AND renter_id = ?", billID, renterID).Scan(&b.ID, &b.RenterID, &b.TotalAmount, &b.IsPaid)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found for this tenant"})
+		return
+	}
+	if b.IsPaid == 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bill is already marked as paid"})
+		return
+	}
+
+	proofPhotoPath := ""
+	file, err := c.FormFile("proof_photo")
+	if err == nil {
+		ext := filepath.Ext(file.Filename)
+		filename := fmt.Sprintf("proof_%d_%d_%d%s", renterID, billID, time.Now().Unix(), ext)
+		savePath := filepath.Join("./uploads/proofs", filename)
+		if err := c.SaveUploadedFile(file, savePath); err == nil {
+			proofPhotoPath = "/uploads/proofs/" + filename
+		}
+	}
+
+	nowStr := time.Now().Format("2006-01-02 15:04:05")
+	_, err = DB.Exec("UPDATE bills SET proof_status = 'PENDING', proof_ref = ?, proof_photo = ?, proof_date = ? WHERE id = ?", proofRef, proofPhotoPath, nowStr, billID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record payment proof"})
+		return
+	}
+
+	LogActivity("PAYMENT_PROOF_SUBMITTED", fmt.Sprintf("Tenant %s submitted payment proof for Bill #%d (Ref: %s)", renterName, billID, proofRef), "tenant", b.TotalAmount)
+	TriggerRefresh("PAYMENT_PROOF_SUBMITTED")
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment proof submitted successfully for verification."})
+}
+
+func GetPendingPaymentProofs(c *gin.Context) {
+	rows, err := DB.Query(`
+		SELECT b.id, b.renter_id, r.name, r.room_no, b.billing_month, b.total_amount, 
+		       COALESCE(b.proof_status, 'PENDING'), COALESCE(b.proof_ref, ''), 
+		       COALESCE(b.proof_photo, ''), COALESCE(b.proof_date, '')
+		FROM bills b
+		JOIN renters r ON b.renter_id = r.id
+		WHERE b.proof_status = 'PENDING' AND b.is_paid = 0
+		ORDER BY b.proof_date DESC
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database query error"})
+		return
+	}
+	defer rows.Close()
+
+	type PendingProof struct {
+		BillID      int     `json:"bill_id"`
+		RenterID    int     `json:"renter_id"`
+		RenterName  string  `json:"renter_name"`
+		RoomNo      string  `json:"room_no"`
+		Month       string  `json:"billing_month"`
+		TotalAmount float64 `json:"total_amount"`
+		ProofStatus string  `json:"proof_status"`
+		ProofRef    string  `json:"proof_ref"`
+		ProofPhoto  string  `json:"proof_photo"`
+		ProofDate   string  `json:"proof_date"`
+	}
+
+	var proofs = []PendingProof{}
+	for rows.Next() {
+		var p PendingProof
+		rows.Scan(&p.BillID, &p.RenterID, &p.RenterName, &p.RoomNo, &p.Month, &p.TotalAmount, &p.ProofStatus, &p.ProofRef, &p.ProofPhoto, &p.ProofDate)
+		proofs = append(proofs, p)
+	}
+
+	c.JSON(http.StatusOK, proofs)
+}
+
+func VerifyPaymentProof(c *gin.Context) {
+	billID := c.Param("id")
+	var req struct {
+		Action string `json:"action"`
+		Method string `json:"payment_method"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	var b Bill
+	var renterName string
+	err := DB.QueryRow(`
+		SELECT b.id, b.renter_id, r.name, b.total_amount, COALESCE(b.proof_ref, '') 
+		FROM bills b 
+		JOIN renters r ON b.renter_id = r.id 
+		WHERE b.id = ?`, billID).Scan(&b.ID, &b.RenterID, &renterName, &b.TotalAmount, &b.Notes)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
+		return
+	}
+
+	if req.Action == "approve" {
+		method := req.Method
+		if method == "" {
+			method = "UPI / Online"
+		}
+		nowDate := time.Now().Format("2006-01-02")
+		_, err := DB.Exec("UPDATE bills SET is_paid = 1, proof_status = 'APPROVED', payment_method = ?, payment_date = ?, paid_amount = total_amount WHERE id = ?", method, nowDate, billID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to approve payment"})
+			return
+		}
+
+		LogActivity("PAYMENT_RECORDED", fmt.Sprintf("Approved payment of %.2f for %s (Unit %s)", b.TotalAmount, renterName, billID), AppConfig.Username, b.TotalAmount)
+		TriggerRefresh("PAYMENT_RECORDED")
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment proof approved and marked paid."})
+	} else {
+		DB.Exec("UPDATE bills SET proof_status = 'REJECTED' WHERE id = ?", billID)
+		LogActivity("PAYMENT_PROOF_REJECTED", fmt.Sprintf("Rejected payment proof for %s (Bill #%s)", renterName, billID), AppConfig.Username, 0)
+		TriggerRefresh("PAYMENT_PROOF_REJECTED")
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Payment proof rejected."})
+	}
 }
 
 func TenantGetMaintenance(c *gin.Context) {

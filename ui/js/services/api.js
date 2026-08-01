@@ -39,7 +39,7 @@ const API = {
 
     auth: {
         verify: (pin) => API.request('/auth/verify', { method: 'POST', body: JSON.stringify({ pin }) }),
-        forgotPin: () => API.request('/auth/forgot-pin', { method: 'POST' }), // Note: forgot-pin path check
+        forgotPin: (data) => API.request('/auth/forgot-pin', { method: 'POST', body: JSON.stringify(data || {}) }),
         logout: () => API.request('/auth/logout', { method: 'POST' }),
         checkPin: (pin) => API.request('/auth/check-pin', { method: 'POST', body: JSON.stringify({ pin }) })
     },
@@ -52,23 +52,29 @@ const API = {
         update: (id, data) => API.request(`/renters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/renters/${id}`, { method: 'DELETE' }),
         markVacant: (data) => API.request('/vacant', { method: 'POST', body: JSON.stringify(data) }),
-        restore: (id) => API.request('/restore', { method: 'POST', body: JSON.stringify({ id }) })
+        restore: (id) => API.request('/restore', { method: 'POST', body: JSON.stringify({ id }) }),
+        getExpiringAgreements: () => API.request('/renters/expiring-agreements'),
+        renewAgreement: (id) => API.request(`/renters/${id}/renew-agreement`, { method: 'POST' })
     },
 
     bills: {
         getByRenter: (renterId) => API.request(`/bills/${renterId}`),
         getOne: (id) => API.request(`/bill/${id}`),
         create: (data) => API.request('/bills', { method: 'POST', body: JSON.stringify(data) }),
+        createBatch: (data) => API.request('/bills/batch', { method: 'POST', body: JSON.stringify(data) }),
         pay: (id, data) => API.request(`/bills/${id}/pay`, { method: 'PUT', body: JSON.stringify(data) }),
         delete: (id) => API.request(`/bills/${id}`, { method: 'DELETE' }),
         sendEmail: (data) => API.request('/bills/email', { method: 'POST', body: JSON.stringify(data) }),
         getMonthlyReport: (month) => API.request(`/reports/monthly/${month}`),
         getFinancialSummary: () => API.request('/reports/financial-summary'),
         getPendingBills: () => API.request('/reports/pending-bills'),
+        getPendingProofs: () => API.request('/bills/pending-proofs'),
+        verifyProof: (id, action, method) => API.request(`/bills/${id}/verify-proof`, { method: 'POST', body: JSON.stringify({ action, payment_method: method }) }),
         getTenantLedger: () => API.request('/reports/tenant-ledger'),
         getAllPaidBills: (from, to) => API.request(`/reports/all-paid-bills?from=${from || ''}&to=${to || ''}`),
         getTrends: (owner) => API.request('/reports/trends?owner=' + encodeURIComponent(owner || '')),
-        getLastEB: (renterId) => API.request(`/last-eb/${renterId}`)
+        getLastEB: (renterId) => API.request(`/last-eb/${renterId}`),
+        getLastWater: (renterId) => API.request(`/last-water/${renterId}`)
     },
 
     expenses: {

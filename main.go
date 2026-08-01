@@ -74,6 +74,8 @@ func main() {
 		// Tenant Portal Group
 		v1.POST("/tenant/login", api.TenantLogin)
 		v1.GET("/tenant/bills", api.TenantGetBills)
+		v1.POST("/tenant/submit-proof", api.TenantSubmitPaymentProof)
+		v1.POST("/tenant/change-password", api.TenantChangePassword)
 		v1.GET("/tenant/maintenance", api.TenantGetMaintenance)
 		v1.POST("/tenant/maintenance", api.TenantCreateMaintenance)
 
@@ -105,15 +107,21 @@ func main() {
 			auth.GET("/renters/history", api.GetRenterHistory)
 			auth.GET("/renters/export", api.ExportRentersCSV)
 			auth.POST("/renters/import", api.ImportRentersCSV)
+			auth.GET("/renters/expiring-agreements", api.GetExpiringAgreements)
+			auth.POST("/renters/:id/renew-agreement", api.RenewTenantAgreement)
 
 			// Bills
 			auth.GET("/bills/:renter_id", api.GetBills)
 			auth.GET("/bill/:id", api.GetBill)
 			auth.POST("/bills", api.CreateBill)
+			auth.POST("/bills/batch", api.CreateBatchBills)
 			auth.PUT("/bills/:id/pay", api.PayBill)
 			auth.DELETE("/bills/:id", api.DeleteBill)
 			auth.POST("/bills/email", api.SendBillEmail)
 			auth.GET("/last-eb/:renter_id", api.GetLastEB)
+			auth.GET("/last-water/:renter_id", api.GetLastWaterReading)
+			auth.GET("/bills/pending-proofs", api.GetPendingPaymentProofs)
+			auth.POST("/bills/:id/verify-proof", api.VerifyPaymentProof)
 
 			// Operations
 			auth.GET("/expenses", api.GetExpenses)

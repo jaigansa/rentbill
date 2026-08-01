@@ -81,6 +81,80 @@ async function populateActionQueues(tenants, ledger) {
         }
     }
 
+    // --- Queue 1b: Pending Payment Approvals ---
+    const qProofs = document.getElementById('queuePendingProofs');
+    if (qProofs) {
+        try {
+            const proofs = await API.bills.getPendingProofs() || [];
+            const countEl = document.getElementById('countPendingProofs');
+            if (countEl) countEl.innerText = proofs.length;
+
+            if (proofs.length > 0) {
+                qProofs.innerHTML = proofs.map(p => `
+                    <div class="tenant-row" style="padding: 0.75rem; border: 1.5px solid var(--success); border-radius: 10px; background: var(--bg-success-light); display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-main);">${p.renter_name} (Unit ${p.room_no})</div>
+                            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">
+                                ${p.billing_month} • Ref: <span style="user-select: all; color: var(--primary);">${p.proof_ref || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                            <div style="font-weight: 950; font-size: 0.9rem; color: var(--success);">${currencyFormatter.format(p.total_amount)}</div>
+                            <div style="display: flex; gap: 4px;">
+                                ${p.proof_photo ? `<a href="${p.proof_photo}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 2px 6px; font-size: 0.6rem; border-radius: 4px;" title="View Image">📷 View</a>` : ''}
+                                <button onclick="approveProof(${p.bill_id})" class="btn btn-success btn-sm" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 4px; font-weight: 800;" title="Approve">✓ Approve</button>
+                                <button onclick="rejectProof(${p.bill_id})" class="btn btn-danger btn-sm" style="padding: 2px 6px; font-size: 0.65rem; border-radius: 4px; font-weight: 800;" title="Reject">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                qProofs.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 0.75rem;">No payment approvals pending.</p>';
+            }
+        } catch (e) {
+            console.error("Failed to load pending proofs", e);
+        }
+    }
+
+    // --- Queue 1c: Agreement Expiries ---
+    const qExpiries = document.getElementById('queueLeaseExpiries');
+    if (qExpiries) {
+        try {
+            const expiries = await API.tenants.getExpiringAgreements() || [];
+            const countEl = document.getElementById('countLeaseExpiries');
+            if (countEl) countEl.innerText = expiries.length;
+
+            if (expiries.length > 0) {
+                qExpiries.innerHTML = expiries.map(e => {
+                    const badgeText = e.is_expired ? `EXPIRED ${Math.abs(e.days_left)} DAYS AGO` : `EXPIRES IN ${e.days_left} DAYS`;
+                    const badgeBg = e.is_expired ? 'var(--bg-danger-light)' : 'var(--bg-warning-light)';
+                    const badgeColor = e.is_expired ? 'var(--danger)' : 'var(--warning)';
+
+                    return `
+                        <div class="tenant-row" style="padding: 0.75rem; border: 1.5px solid ${badgeColor}; border-radius: 10px; background: ${badgeBg}; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                            <div style="min-width: 0; flex: 1;">
+                                <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-main);">${e.name} (Unit ${e.room_no})</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">
+                                    Expiry Date: ${e.agreement_expiry_date}
+                                </div>
+                            </div>
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; border-color: ${badgeColor}; font-size: 0.55rem; padding: 2px 6px;">${badgeText}</span>
+                                <button onclick="renewLeaseAgreement(${e.id})" class="btn btn-primary btn-sm" style="padding: 2px 8px; font-size: 0.65rem; border-radius: 4px; font-weight: 800;" title="Renew Lease for 11 Months">
+                                    <i data-lucide="rotate-cw" style="width: 12px; height: 12px;"></i> Renew (+11 Mos)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                qExpiries.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 0.75rem;">All lease agreements up to date!</p>';
+            }
+        } catch (err) {
+            console.error("Failed to load expiring agreements", err);
+        }
+    }
+
     // --- Queue 2: Pending Collections ---
     const qCollection = document.getElementById('queueCollection');
     if (qCollection) {
@@ -91,11 +165,16 @@ async function populateActionQueues(tenants, ledger) {
         
         qCollection.innerHTML = defaulters.length ? defaulters.map(d => `
             <div onclick="quickPay(${d.id})" class="tenant-row" style="padding: 0.75rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid var(--border); border-radius: 10px; border-left: 3px solid var(--danger);">
-                <div style="min-width: 0;">
+                <div style="min-width: 0; flex: 1;">
                     <div style="font-weight: 800; font-size: 0.85rem;">${d.name}</div>
                     <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">UNIT ${d.room_no}</div>
                 </div>
-                <div style="font-weight: 900; color: var(--danger); font-size: 0.85rem;">₹${d.balance}</div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button type="button" onclick="event.stopPropagation(); sendWhatsAppReminder(${d.id}, 'Current Dues', ${d.balance});" class="btn btn-sm" style="background: #25D366; color: white; border: none; padding: 3px 8px; font-size: 0.65rem; font-weight: 800; border-radius: 6px; display: inline-flex; align-items: center; gap: 3px;" title="Send WhatsApp Reminder">
+                        <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> WA
+                    </button>
+                    <div style="font-weight: 900; color: var(--danger); font-size: 0.85rem;">₹${d.balance}</div>
+                </div>
             </div>
         `).join('') : '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 1rem;">All dues collected!</p>';
     }
@@ -462,6 +541,134 @@ function loadExpenseCategoryChart(expenses) {
     });
 }
 
+function loadActivityLogs() {
+    const container = document.getElementById('activityLog');
+    const fromDate = document.getElementById('activityFromDate')?.value || '';
+    const toDate = document.getElementById('activityToDate')?.value || '';
+    if (!container) return;
+
+    API.system.getLogs('ALL', fromDate, toDate).then(logs => {
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--text-muted); font-size: 0.7rem;">No logs found.</p>';
+            return;
+        }
+
+        container.innerHTML = logs.map(l => {
+            let icon = 'info';
+            let color = 'var(--text-muted)';
+            let bgColor = 'var(--bg-main)';
+            if (l.action.includes('PAYMENT')) { icon = 'check-circle'; color = 'var(--success)'; bgColor = 'var(--bg-success-light)'; }
+            if (l.action.includes('BILL')) { icon = 'zap'; color = 'var(--warning)'; bgColor = 'var(--primary-light)'; }
+            if (l.action.includes('EXPENSE')) { icon = 'trending-down'; color = 'var(--danger)'; bgColor = 'rgba(239, 68, 68, 0.1)'; }
+            if (l.action.includes('OWNER_PAYOUT')) { icon = 'banknote'; color = 'var(--primary)'; bgColor = 'var(--primary-light)'; }
+            if (l.action.includes('TENANT')) { icon = 'user'; color = 'var(--primary)'; }
+
+            const dateObj = new Date(l.timestamp);
+            const day = dateObj.getDate();
+            const month = dateObj.toLocaleString('default', { month: 'short' }).toUpperCase();
+            const time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+            return `
+                <div style="display: flex; gap: 15px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start;">
+                    <!-- Date Box Icon Style -->
+                    <div style="width: 40px; height: 40px; background: ${bgColor}; color: ${color}; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(0,0,0,0.05);">
+                        <span style="font-size: 0.5rem; font-weight: 900; line-height: 1;">${month}</span>
+                        <span style="font-size: 0.9rem; font-weight: 950; line-height: 1.1;">${day}</span>
+                    </div>
+                    
+                    <div style="min-width: 0; flex: 1; padding-top: 2px;">
+                        <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-main); line-height: 1.3; margin-bottom: 4px;">${l.details}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
+                                <i data-lucide="clock" style="width: 10px; height: 10px;"></i> ${time}
+                            </span>
+                            <span style="font-size: 0.55rem; color: ${color}; font-weight: 900; background: ${bgColor}; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                ${l.action.replace(/_/g, ' ')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+}
+
+function draftBillNow(renterId, monthName) {
+    showSection('tenants-section', 'tenants-billing');
+    if (typeof loadSpecificBilling === 'function') {
+        loadSpecificBilling(renterId, monthName);
+    }
+}
+
+function quickPay(renterId) {
+    showSection('tenants-section');
+    switchSubSection('tenants-section', 'tenants-ledger');
+}
+
+function loadCollectionsChart(pendingBills, paidBills) {
+    const ctx = document.getElementById('collectionsChart');
+    if (!ctx) return;
+
+    let targetMonth = '';
+    const now = new Date();
+    const allBills = [...(pendingBills || []), ...(paidBills || [])];
+    if (allBills.length > 0) {
+        const sorted = allBills.sort((a, b) => new Date(b.date_generated || b.payment_date || Date.now()) - new Date(a.date_generated || a.payment_date || Date.now()));
+        targetMonth = sorted[0].billing_month;
+    } else {
+        const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        targetMonth = prevMonthDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    const targetPaid = (paidBills || []).filter(b => b.billing_month === targetMonth);
+    const targetPending = (pendingBills || []).filter(b => b.billing_month === targetMonth);
+
+    const collected = targetPaid.reduce((sum, b) => sum + (b.paid_amount || 0), 0);
+    const pending = targetPending.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+    const totalBilled = collected + pending;
+
+    const percent = totalBilled > 0 ? Math.round((collected / totalBilled) * 100) : 0;
+
+    const percentEl = document.getElementById('collectionsPercent');
+    if (percentEl) percentEl.innerText = `${percent}%`;
+
+    const legendEl = document.getElementById('collectionsLegendText');
+    if (legendEl) {
+        legendEl.innerText = `${targetMonth.toUpperCase()}: ${currencyFormatter.format(collected)} / ${currencyFormatter.format(totalBilled)}`;
+    }
+
+    if (window.myCollectionsChart) window.myCollectionsChart.destroy();
+
+    window.myCollectionsChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Collected', 'Pending'],
+            datasets: [{
+                data: [collected, pending],
+                backgroundColor: ['#10b981', '#f59e0b'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` ${context.label}: ${currencyFormatter.format(context.raw)}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 let currentDashboardOwnerFilter = '';
 
 function filterDashboardByProperty() {
@@ -513,5 +720,38 @@ function populateDashboardPropertyFilter() {
         filterSelect.appendChild(opt);
     });
     
-    filterSelect.value = currentVal;
+     if (currentVal && Array.from(filterSelect.options).some(o => o.value === currentVal)) {
+        filterSelect.value = currentVal;
+    }
+}
+
+async function approveProof(billId) {
+    try {
+        await API.bills.verifyProof(billId, 'approve', 'UPI / Online');
+        showNotification("Payment approved & bill marked paid!", "success");
+        loadDashboardStats();
+    } catch (e) {
+        showNotification(e.message || "Failed to approve payment", "error");
+    }
+}
+
+async function rejectProof(billId) {
+    if (!confirm("Are you sure you want to reject this payment proof?")) return;
+    try {
+        await API.bills.verifyProof(billId, 'reject');
+        showNotification("Payment proof rejected", "info");
+        loadDashboardStats();
+    } catch (e) {
+        showNotification(e.message || "Failed to reject proof", "error");
+    }
+}
+
+async function renewLeaseAgreement(id) {
+    try {
+        const res = await API.tenants.renewAgreement(id);
+        showNotification(res.message || "Agreement renewed for 11 months!", "success");
+        loadDashboardStats();
+    } catch (e) {
+        showNotification(e.message || "Failed to renew agreement", "error");
+    }
 }

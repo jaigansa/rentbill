@@ -192,10 +192,10 @@
 .btn {
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: 0.75rem 1.5rem;
-    min-height: 44px;
+    padding: 0.6rem 1.25rem;
+    min-height: 42px;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -206,8 +206,9 @@
     user-select: none;
     background: var(--bg-card);
     color: var(--text-main);
-    text-transform: none; /* Modern buttons don't need all-caps */
+    text-transform: none;
     letter-spacing: normal;
+    box-sizing: border-box;
 }
 
 .btn:hover {
@@ -242,9 +243,11 @@
 
 .btn-sm {
     min-height: 32px;
-    padding: 4px 12px;
+    height: 32px;
+    padding: 0 12px;
     font-size: 0.75rem;
     gap: 4px;
+    border-radius: var(--radius-sm);
 }
 
 .btn-secondary {
@@ -267,6 +270,44 @@
 .btn-danger:hover {
     background: var(--danger);
     color: white;
+}
+
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 !important;
+    border-radius: var(--radius-md);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
+}
+
+.btn-icon-sm {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 !important;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
+}
+
+.btn-circle, .btn-icon-circle {
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 /* --- TOP SECRET / MODERN ENHANCEMENTS --- */
@@ -307,13 +348,23 @@
     padding: 0;
 }
 
-/* --- MODERN INPUTS --- */
+/* --- MODERN INPUTS & GRID FORMS --- */
+.grid-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem 1rem;
+}
+
+.grid-inputs .input-group {
+    margin-top: 0;
+}
+
 .input-group {
     position: relative;
     margin-top: 1rem;
 }
 
-.input-group label {
+.input-group > label:not(.static-label) {
     position: absolute;
     top: -8px;
     left: 10px;
@@ -326,6 +377,15 @@
     padding: 0 6px;
     z-index: 5;
     letter-spacing: 0.025em;
+}
+
+.input-group label.static-label,
+.input-group .static-label {
+    position: static !important;
+    transform: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin-bottom: 6px !important;
 }
 
 .input-group input,
@@ -865,4 +925,88 @@
     color: white !important;
     border-color: var(--primary) !important;
     box-shadow: none;
+}
+
+/* --- MODAL OVERLAY GLASS & ANIMATION --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9990;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+/* --- MOBILE TOUCH & BOTTOM-SHEET MODAL OVERHAUL --- */
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-end !important;
+        padding: 0 !important;
+    }
+
+    @keyframes mobileBottomSheet {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 24px 24px 0 0 !important;
+        max-height: 88vh !important;
+        margin: 0 !important;
+        animation: mobileBottomSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    /* Single-Column Stacked Form Grids on Mobile */
+    .grid-inputs {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .grid-inputs .input-group[style*="grid-column: span 2"] {
+        grid-column: span 1 !important;
+    }
+
+    /* Touch target minimums for buttons and inputs */
+    input, select, textarea, .btn, .nav-btn {
+        min-height: 44px !important;
+    }
+
+    /* Tactile active feedback for touch devices */
+    .btn:active, .nav-btn:active, .sub-nav-btn:active {
+        transform: scale(0.96) !important;
+    }
 }

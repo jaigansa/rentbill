@@ -15,6 +15,11 @@ window.onload = async () => {
         await loadSettings();
         await refreshGlobalTenantCache();
         applyPermissions(); // NEW: Apply role-based restrictions
+        if (!localStorage.getItem('rentbill_onboarded')) {
+            setTimeout(() => {
+                if (typeof openOnboardingModal === 'function') openOnboardingModal(0);
+            }, 600);
+        }
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
     registerServiceWorker();
@@ -55,7 +60,7 @@ function applyPermissions() {
         const style = document.createElement('style');
         style.id = 'staff-permissions-style';
         style.innerHTML = `
-            .role-staff .btn-danger, 
+            .role-staff .btn-danger:not(.logout-btn):not([onclick*="logout"]), 
             .role-staff .delete-btn,
             .role-staff button[onclick*="delete"],
             .role-staff button[onclick*="markVacant"],

@@ -42,6 +42,7 @@ type Renter struct {
 	BaseRent         float64 `json:"base_rent"`
 	EBUnitPrice      float64 `json:"eb_unit_price"`
 	WaterMaint       float64 `json:"water_maint"`
+	MaintCharge      float64 `json:"maint_charge"`
 	IsActive         int     `json:"is_active"`
 	MobileNumber     string  `json:"mobile_number"`
 	Email            string  `json:"email"`
@@ -51,6 +52,11 @@ type Renter struct {
 	Occupation       string  `json:"occupation"`
 	AssignedUPI      string  `json:"assigned_upi"`
 	PendingArrears   float64 `json:"pending_arrears"`
+	PasswordHash     string  `json:"-"`
+	AgreementExpiryDate string `json:"agreement_expiry_date"`
+	WaterCalcMode    string  `json:"water_calc_mode"`
+	WaterUnitPrice   float64 `json:"water_unit_price"`
+	InitialWater     float64 `json:"initial_water"`
 	VacateDate          *string  `json:"vacate_date,omitempty"`
 	ExitRefundAmount    *string  `json:"exit_refund_amount,omitempty"`
 	ExitDuesDeducted    *float64 `json:"exit_dues_deducted,omitempty"`
@@ -79,11 +85,20 @@ type Bill struct {
 	Notes           string  `json:"notes"`
 	RentAmount      float64 `json:"rent_amount"`
 	WaterAmount     float64 `json:"water_amount"`
+	MaintAmount     float64 `json:"maint_amount"`
 	PaidAmount      float64 `json:"paid_amount"`
 	DiscountAmount  float64 `json:"discount_amount"`
 	WriteOffAmount  float64 `json:"write_off_amount"`
 	ArrearsAmount   float64 `json:"arrears_amount"`
 	ArrearsIncluded float64 `json:"arrears_included"`
+	ProofStatus     string  `json:"proof_status,omitempty"`
+	ProofRef        *string `json:"proof_ref,omitempty"`
+	ProofPhoto      *string `json:"proof_photo,omitempty"`
+	ProofDate       *string `json:"proof_date,omitempty"`
+	PrevWaterReading float64 `json:"prev_water_reading"`
+	CurrWaterReading float64 `json:"curr_water_reading"`
+	WaterUnitPrice   float64 `json:"water_unit_price"`
+	WaterCalcMode    string  `json:"water_calc_mode"`
 }
 
 type Expense struct {

@@ -1,22 +1,26 @@
 # Rent Bill Pro 🏠
 
-A professional, high-contrast E-Ink styled property management system designed for landlords and property managers. Track tenants, generate itemized bills, manage owner payouts, handle partial payments, and provide a dedicated read-only tenant portal with ease.
+A professional, high-contrast modern property management system designed for landlords and property managers. Track tenants, calculate fixed or metered water charges, generate itemized bulk invoices with 1-click batch billing, manage owner payouts, track 11-month lease expiries, verify tenant payment screenshot proofs, and provide a dedicated read-only tenant portal.
 
 ---
 
 ## 🚀 Core Features
 
-- **Multi-Property Support**: Group and filter dashboard overview stats, active units lists, and generate billing records by owner/property.
-- **Unit Management**: Register and manage tenants with a full unit directory.
-- **Smart Billing**: One-click bill generation with automated Electricity (EB) calculations and **Arrears tracking**.
-- **Flexible Payments**: 
-    - Support for UPI, Cash, and Bank transfers.
-    - Advanced adjustments: **Discounts**, **Write-offs**, and **Carry Forwards**.
-- **Owner Settlements**: Track income per owner/account and record payouts with detailed **Timelines**.
-- **Professional Sharing**: Send high-quality, itemized Invoices and Receipts via **WhatsApp** and **Email**.
-- **Tenant Portal (Read-only Access)**: A dedicated, mobile-friendly tenant dashboard to securely view outstanding balance, monthly rent, full payment history ledger, and submit/track maintenance tickets.
-- **Data Security**: PIN-protected actions, manual & auto-backups, and a "Safe Restore" mechanism.
-- **Audit Ready**: Generate detailed monthly financial reports at the click of a button.
+- **📖 Interactive New User Onboarding Tour**: 5-step guided setup wizard for first-time property managers with 1-click step shortcuts to configure receiving accounts, register units, generate batch bills, approve payment proofs, and manage lease renewals. Accessible anytime via **"📖 User Guide"** in the sidebar and header.
+- **💧 Dual Water Charge Calculation**:
+  - **Fixed Rate (FLAT)**: Fixed monthly maintenance fee (e.g., ₹200/mo).
+  - **Water Meter Rate (METER)**: Metered calculation based on $(\text{Current Water Reading} - \text{Previous Water Reading}) \times \text{Water Unit Price}$.
+- **⚡ 1-Click Batch Monthly Billing**: Generate monthly bills for all active units simultaneously in a single interactive batch grid with automated EB and Water meter math.
+- **📄 11-Month Lease Agreement Expiry & 1-Click Renewal**: Automated monitoring of rental agreements expiring within 30 days with a 1-click **Renew (+11 Mos)** extension button.
+- **📲 Tenant Payment Proof Upload & UTR Verification**: Tenants can upload UPI payment screenshots and UTR transaction numbers directly from their portal. Admin dashboard includes a dedicated **Payment Approvals** queue for 1-click verification.
+- **📱 Mobile-First Touch Ergonomics**:
+  - **Mobile Bottom-Sheet Modals**: Modals automatically transform into smooth slide-up bottom sheets (`border-radius: 24px 24px 0 0`) on mobile screens ($<768\text{px}$).
+  - **Touch Target Optimization**: All buttons, inputs, dropdowns, and navigation elements guarantee $\ge 44\text{px}$ touch targets for easy one-handed operation.
+  - **Glassmorphism Bottom Bar**: Tactile mobile navigation with active tab glows and safe-area inset padding for iOS/Android gesture bars.
+- **Multi-Property & Unit Directory**: Group and filter overview statistics, active unit lists, and billing records by building/property owner.
+- **WhatsApp & Email Invoicing**: Send high-quality itemized rent invoices and payment receipts via **WhatsApp** and **Email**.
+- **Tenant Portal**: Dedicated dashboard for tenants to view outstanding balances, payment ledgers, submit payment proofs, and track maintenance requests.
+- **Real-Time Live Sync**: Built-in Server-Sent Events (SSE) for instant real-time synchronization across desktop and mobile screens.
 
 ---
 
@@ -46,28 +50,25 @@ Copy the example configuration file:
 ```bash
 cp config.example.json config.json
 ```
-*(On Windows, you can duplicate `config.example.json` and rename it to `config.json`)*
-*Note: The app will automatically initialize with default settings (Master PIN: `1234`) if this file is missing.*
+*(On Windows, duplicate `config.example.json` and rename it to `config.json`)*  
+*Note: The app will automatically initialize with default settings (Master Password: `admin`) if this file is missing.*
 
-### 4. Build & Install the Application
+### 4. Run & Build the Application
 
-#### **On Windows (Command Prompt)**
-To install dependencies, setup folders, and build natively:
+#### **On Windows**
+To build and run natively:
 ```cmd
-install.bat
+go run .
 ```
-To run the server:
-```cmd
-rentbill.exe
-```
+*(Or use `run.bat` / `install.bat`)*
 
-#### **On Linux / macOS (Bash)**
-To build the application binary:
+#### **On Linux / macOS**
+To build the binary:
 ```bash
 chmod +x build.sh
 ./build.sh
 ```
-To install folders, configure paths, and run the service background task automatically (using systemd):
+To install systemd background service:
 ```bash
 chmod +x install.sh
 sudo ./install.sh
@@ -75,67 +76,38 @@ sudo ./install.sh
 
 ---
 
-## 🚀 Production Deployment (Linux)
+## 📖 Quick User Guide
 
-### 1. Manage the systemd Service
-Once `install.sh` has run, you can control the RentBill Pro service using:
-```bash
-sudo systemctl status rentbill
-sudo systemctl restart rentbill
-sudo systemctl stop rentbill
-```
+### 1. First-Time Setup Wizard
+Log in as Admin and click the **"📖 User Guide"** button in the sidebar footer or top dashboard bar. The 5-step interactive wizard guides you through:
+1. **Bank & UPI Accounts**: Configure receiving accounts per property/owner.
+2. **Register Units & Tenants**: Set rent, move-in date, agreement expiry date, and Water mode (Fixed vs. Metered).
+3. **Monthly Batch Billing**: Generate bills for all units with 1 click.
+4. **Payment Proofs & WhatsApp**: Verify tenant UTR screenshots and send 1-click WhatsApp reminders.
+5. **Lease Agreement Renewal**: Review expiring agreements and extend validity by 11 months.
 
-### 2. Security Recommendations
-- **Reverse Proxy**: Use Nginx or Caddy as a reverse proxy to handle SSL (HTTPS) and serve the app on Port 80/443.
-- **Firewall**: Ensure only necessary ports (80, 443, 22) are open.
-- **Backup Strategy**: Regularly download the `.db` files from the app settings to your local machine.
+### 2. Fixed vs. Water Meter Setup
+When registering or editing a tenant:
+- Select **FIXED** to charge a flat fee (e.g. ₹200).
+- Select **METER** and specify **Water Unit Price** (e.g. ₹15/unit) and **Initial Water Reading**. Monthly bills will calculate $(\text{Curr} - \text{Prev}) \times \text{Rate}$.
 
-### 3. Updating the App
-1. Pull the latest code: `git pull`
-2. Build the app: `./build.sh`
-3. Restart the service: `sudo systemctl restart rentbill`
-
----
-
-## 📖 User Guide
-
-### 1. Getting Started
-- **Default PIN**: The default auth PIN is `1234`.
-- **Change PIN**: Go to **Settings > Credentials** to configure your secure 4-digit Master PIN.
-
-### 2. Setting Up Receiving Accounts
-1. Go to **Settings > Receiving Accounts**.
-2. Enter the **Owner Name** (e.g., John Doe).
-3. Select **Account Type** (UPI or Bank).
-4. Fill in details and click **Add Account Record**.
-
-### 3. Managing Tenants
-- **Registration**: Use the **Register** button in the Unit Directory to add a tenant, assigning them to a configured payee/owner.
-- **Vacating**: Click on any tenant card to edit details or use "Mark Vacant" to settle the final dues.
-- **Archiving**: Deleting a tenant performs a soft-delete, preserving their ledger history for reports.
-
-### 4. Monthly Billing & Payments
-- **Billing**: Go to the **Billing** tab, input the current EB reading, and generate the invoice. Arrears are automatically added to the next bill.
-- **Payment Collection**: Record payments under **History & Records**.
-- **Adjustments**: Support for partial payments via **Discounts** (forgive balance), **Write-offs** (bad debts), or **Carry Forwards** (rolled into arrears).
-
-### 5. Tenant Access Portal
-Tenants can access their own secure dashboard:
-1. Click **Tenant Access Portal** at the bottom of the sign-in overlay.
-2. Login using their **Room Number** and **Registered Mobile Number**.
-3. View their payment history, download invoice statements, and file maintenance tickets (Plumbing, Electrical, etc.).
+### 3. Tenant Portal Access
+Tenants log in using their **Unit / Room Number** and **Password** to:
+- View itemized monthly bills & total arrears.
+- Upload UPI payment screenshots and UTR reference numbers.
+- Print official payment receipts and file maintenance tickets.
 
 ---
 
 ## 📁 Project Structure
 
-- `/api`: Backend code (routing, handlers, SQLite helper, SSE, middleware).
-- `/ui`: Embedded static frontend codebase (HTML, CSS, JS).
+- `/api`: Go backend handlers, database migrations, SSE live sync, SQLite client, and authentication.
+- `/ui`: Embedded static frontend codebase (HTML, CSS modules, Plus Jakarta Sans typography, JS modules).
 - `/backups`: Local database backups.
-- `/uploads`: Uploaded attachments and maintenance images.
+- `/uploads`: Uploaded payment screenshots, ID proof vault documents, and maintenance photos.
 - `rentbill.db`: Active SQLite database file.
-- `main.go`: Entry point of the server binary.
-- `static.go`: Embeds the static frontend assets.
+- `main.go`: Application entry point.
 
 ---
-© 2026 Rent Bill Pro - Reliable Property Management
+
+© 2026 Rent Bill Pro - Reliable Property Management Systemle Property Management

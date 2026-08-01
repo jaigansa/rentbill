@@ -1,17 +1,12 @@
 function toggleTenantPortalForm() {
-    const adminForm = document.getElementById('adminPinLoginForm');
     const tenantForm = document.getElementById('tenantLoginForm');
-    if (!adminForm || !tenantForm) return;
+    if (!tenantForm) return;
 
     const isTenantHidden = tenantForm.classList.contains('hidden');
     if (isTenantHidden) {
-        adminForm.classList.add('hidden');
-        tenantForm.classList.remove('hidden');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        switchLoginTab('tenant');
     } else {
-        tenantForm.classList.add('hidden');
-        adminForm.classList.remove('hidden');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        switchLoginTab('admin');
     }
 }
 
@@ -20,16 +15,16 @@ async function submitTenantLogin() {
     const mobile = document.getElementById('tenantMobileInput').value.trim();
 
     if (!room || !mobile) {
-        return showNotification("Fill Room & Mobile", "error");
+        return showNotification("Fill Room & Password/Mobile", "error");
     }
 
     try {
         const response = await fetch('/api/tenant/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ room_no: room, mobile_number: mobile })
+            body: JSON.stringify({ room_no: room, mobile_number: mobile, password: mobile })
         });
-        if (!response.ok) throw new Error("Invalid Unit Number or Mobile Number");
+        if (!response.ok) throw new Error("Invalid Unit Number or Password");
         
         const tenant = await response.json();
         
@@ -92,7 +87,7 @@ function tenantLogout() {
     if (overlay) {
         overlay.innerHTML = Templates.authOverlay;
         overlay.classList.remove('hidden');
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        switchLoginTab('tenant');
     }
 }
 
@@ -121,9 +116,15 @@ async function loadTenantLedger() {
 
         listDiv.innerHTML = bills.map(b => {
             const dateStr = b.date_generated ? new Date(b.date_generated).toLocaleDateString('en-IN') : 'N/A';
-            const statusText = b.is_paid ? 'PAID' : 'UNPAID';
-            const statusColor = b.is_paid ? 'var(--success)' : 'var(--danger)';
-            const statusBg = b.is_paid ? 'var(--bg-success-light)' : 'var(--bg-danger-light)';
+            let statusText = b.is_paid ? 'PAID' : 'UNPAID';
+            let statusColor = b.is_paid ? 'var(--success)' : 'var(--danger)';
+            let statusBg = b.is_paid ? 'var(--bg-success-light)' : 'var(--bg-danger-light)';
+
+            if (!b.is_paid && b.proof_status === 'PENDING') {
+                statusText = 'PENDING VERIFICATION';
+                statusColor = 'var(--warning)';
+                statusBg = 'var(--bg-warning-light)';
+            }
 
             return `
                 <div class="tenant-row" style="padding: 1rem; border: 1.5px solid var(--border); border-radius: 12px; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
@@ -136,6 +137,11 @@ async function loadTenantLedger() {
                     <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                         <div style="font-weight: 900; font-size: 1rem; color: var(--text-main);">${currencyFormatter.format(b.total_amount)}</div>
                         <span class="badge" style="background: ${statusBg}; color: ${statusColor}; border-color: ${statusColor}; font-size: 0.55rem; padding: 2px 6px;">${statusText}</span>
+                        ${!b.is_paid && b.proof_status !== 'PENDING' ? `
+                            <button type="button" class="btn btn-sm btn-primary" onclick="openSubmitProofModal(${b.id}, '${b.billing_month}', ${b.total_amount})" style="font-size: 0.65rem; padding: 3px 8px; margin-top: 4px; border-radius: 6px;">
+                                <i data-lucide="upload-cloud" style="width: 12px; height: 12px;"></i> Submit Proof
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -144,6 +150,63 @@ async function loadTenantLedger() {
     } catch (e) {
         console.error(e);
         listDiv.innerHTML = '<p style="text-align:center; padding:1rem; color:var(--danger); font-size:0.75rem;">Failed to load ledger.</p>';
+    }
+}
+
+function openSubmitProofModal(billId, monthName, totalAmount) {
+    const overlay = document.getElementById('tenantProofOverlay');
+    if (!overlay) return;
+
+    document.getElementById('proofBillId').value = billId;
+    const sub = document.getElementById('proofModalSub');
+    if (sub) sub.innerText = `${monthName} • Total: ${currencyFormatter.format(totalAmount)}`;
+    
+    document.getElementById('proofRefInput').value = '';
+    document.getElementById('proofPhotoInput').value = '';
+    overlay.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTenantProofModal() {
+    const overlay = document.getElementById('tenantProofOverlay');
+    if (overlay) overlay.classList.add('hidden');
+}
+
+async function submitTenantPaymentProof() {
+    const billId = document.getElementById('proofBillId').value;
+    const refVal = document.getElementById('proofRefInput').value.trim();
+    const photoInput = document.getElementById('proofPhotoInput');
+
+    if (!billId) return showNotification("Invalid Bill", "error");
+    if (!refVal) return showNotification("Please enter Transaction Reference / UTR ID", "error");
+
+    const formData = new FormData();
+    formData.append('bill_id', billId);
+    formData.append('proof_ref', refVal);
+    if (photoInput && photoInput.files.length > 0) {
+        formData.append('proof_photo', photoInput.files[0]);
+    }
+
+    try {
+        const response = await fetch('/api/tenant/submit-proof', {
+            method: 'POST',
+            headers: {
+                'X-Room-No': window.currentTenant.room_no,
+                'X-Mobile-No': window.currentTenant.mobile_number
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Failed to submit proof");
+        }
+
+        showNotification("Payment proof submitted for verification!", "success");
+        closeTenantProofModal();
+        loadTenantLedger();
+    } catch (e) {
+        showNotification(e.message || "Submission failed", "error");
     }
 }
 
@@ -265,3 +328,51 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function openTenantChangePasswordModal() {
+    const overlay = document.getElementById('tenantChangePassOverlay');
+    if (!overlay) return;
+    document.getElementById('tenantCurrentPass').value = '';
+    document.getElementById('tenantNewPass').value = '';
+    document.getElementById('tenantConfirmPass').value = '';
+    overlay.classList.remove('hidden');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTenantChangePasswordModal() {
+    const overlay = document.getElementById('tenantChangePassOverlay');
+    if (overlay) overlay.classList.add('hidden');
+}
+
+async function submitTenantChangePassword() {
+    const currentPass = document.getElementById('tenantCurrentPass').value;
+    const newPass = document.getElementById('tenantNewPass').value;
+    const confirmPass = document.getElementById('tenantConfirmPass').value;
+
+    if (!currentPass || !newPass) return showNotification("Please enter current and new password", "error");
+    if (newPass !== confirmPass) return showNotification("New passwords do not match", "error");
+    if (newPass.length < 4) return showNotification("Password must be at least 4 characters", "error");
+
+    try {
+        const response = await fetch('/api/tenant/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Room-No': window.currentTenant.room_no,
+                'X-Mobile-No': window.currentTenant.mobile_number
+            },
+            body: JSON.stringify({
+                current_password: currentPass,
+                new_password: newPass
+            })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Password update failed");
+
+        showNotification("Password updated successfully!", "success");
+        closeTenantChangePasswordModal();
+    } catch (e) {
+        showNotification(e.message || "Failed to change password", "error");
+    }
+}

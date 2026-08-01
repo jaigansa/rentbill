@@ -1,0 +1,3 @@
+@echo off
+echo 🚀 Starting RentBill Pro via Go...
+go run .

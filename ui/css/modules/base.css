@@ -5,27 +5,31 @@
     -webkit-tap-highlight-color: transparent; 
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
     font-family: var(--font-main);
     background-color: var(--bg-main);
     color: var(--text-main);
-    line-height: 1.4;
-    padding-bottom: env(safe-area-inset-bottom, 90px);
-    transition: none; /* E-ink has no transitions */
+    line-height: 1.5;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     min-height: 100vh;
-    -webkit-font-smoothing: none; /* Sharper for E-ink */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-numeric: tabular-nums;
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-    font-weight: 900;
-    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 input, select, textarea, button {
     font-family: inherit;
-    /* Prevent iOS zoom on focus */
-    font-size: 16px !important; 
+    font-size: 16px !important; /* Prevent iOS auto-zoom on focus */
 }
 
 @media (min-width: 851px) {
@@ -36,6 +40,21 @@ input, select, textarea, button {
 
 .hidden { display: none !important; }
 
-/* Scrollbar Utilities */
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary);
+}
+
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

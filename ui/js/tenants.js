@@ -72,6 +72,7 @@ async function addTenant() {
         return;
     }
 
+    const waterMode = document.querySelector('input[name="tWaterMode"]:checked')?.value || 'FIXED';
     const data = {
         name: document.getElementById('tName').value, 
         mobile_number: document.getElementById('tMobile').value,
@@ -79,9 +80,13 @@ async function addTenant() {
         room_no: document.getElementById('tRoom').value,
         aadhar_no: document.getElementById('tAadhar')?.value || '', 
         base_rent: parseFloat(document.getElementById('tRent').value) || 0,
+        maint_charge: parseFloat(document.getElementById('tMaintCharge')?.value) || 0,
         eb_unit_price: parseFloat(document.getElementById('tEbRate').value) || 0, 
         initial_eb: parseFloat(document.getElementById('tInitialEb').value) || 0,
-        water_maint: parseFloat(document.getElementById('tWater').value) || 0, 
+        water_maint: parseFloat(document.getElementById('tWater').value) || 0,
+        water_calc_mode: waterMode,
+        water_unit_price: parseFloat(document.getElementById('tWaterUnitPrice')?.value) || 0,
+        initial_water: parseFloat(document.getElementById('tInitialWater')?.value) || 0,
         advance_amount: parseFloat(document.getElementById('tAdvance').value) || 0,
         move_in_date: document.getElementById('tMoveIn').value, 
         perm_address: document.getElementById('tPermAddr').value,
@@ -94,55 +99,33 @@ async function addTenant() {
         const result = editMode ? await API.tenants.update(editId, data) : await API.tenants.create(data);
         showNotification("Success", "success");
         await refreshGlobalTenantCache(); // Refresh cache immediately
-        if (!editMode && confirm("Registration successful. Print Agreement?")) printProfessionalAgreement(result.id);
-        resetForm(); 
-        showSection('tenants-section');
-        switchSubSection('tenants-section', 'tenants-ledger');
-    } catch (e) { showNotification("Save failed", "error"); }
+        toggleRegForm(); 
+        loadTenants(); 
+    } catch (e) { 
+        showNotification(e.message || "Operation failed", "error"); 
+    }
 }
 
 async function editTenant(id) {
-    if (!id) return showNotification("Invalid Tenant ID", "error");
-    
     try {
-        console.log("Edit request for ID:", id);
-        
-        // 1. Try Cache First
-        let t = null;
-        if (window.allTenants) {
-            t = window.allTenants.find(ten => String(ten.id) === String(id));
-        }
-        
-        // 2. Fallback to direct API
-        if (!t) {
-            console.log("Tenant not in cache, calling API...");
-            t = await API.tenants.getOne(id);
-        }
-        
-        if (!t) throw new Error("Record not found in database");
-        
+        const t = await API.tenants.getOne(id);
+        if (!t) return showNotification("Tenant not found", "error");
+
         editMode = true; 
         editId = id;
-        
-        const formTitle = document.getElementById('form-title');
+
+        const title = document.getElementById('form-title');
         const submitBtn = document.getElementById('mainSubmitBtn');
         const deleteBtn = document.getElementById('formDeleteBtn');
         const agreementBtn = document.getElementById('formAgreementBtn');
         const regForm = document.getElementById('entrance-form');
 
-        if (formTitle) formTitle.innerText = "Update Unit Profile";
+        if (title) title.innerText = "Edit Tenant Record";
         if (submitBtn) submitBtn.innerText = "Update Record";
-        if (deleteBtn) {
-            deleteBtn.classList.remove('hidden');
-            deleteBtn.onclick = () => deleteTenant(id);
-        }
-        if (agreementBtn) {
-            agreementBtn.classList.remove('hidden');
-            agreementBtn.onclick = () => printProfessionalAgreement(id);
-        }
-
-        showSection('tenants-section');
-        switchSubSection('tenants-section', 'tenants-registry');
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+        if (deleteBtn) deleteBtn.onclick = () => deleteTenant(id);
+        if (agreementBtn) agreementBtn.classList.remove('hidden');
+        if (agreementBtn) agreementBtn.onclick = () => printProfessionalAgreement(id);
         
         if (regForm && regForm.classList.contains('hidden')) toggleRegForm();
 
@@ -150,12 +133,13 @@ async function editTenant(id) {
         const mapping = { 
             'tName': 'name', 'tMobile': 'mobile_number', 'tEmail': 'email', 
             'tAadhar': 'aadhar_no',
-            'tRoom': 'room_no', 'tRent': 'base_rent', 
+            'tRoom': 'room_no', 'tRent': 'base_rent', 'tMaintCharge': 'maint_charge',
             'tEbRate': 'eb_unit_price', 'tInitialEb': 'initial_eb', 
             'tWater': 'water_maint', 'tAdvance': 'advance_amount', 
             'tMoveIn': 'move_in_date', 'tPermAddr': 'perm_address', 
             'tEmerg': 'emergency_contact', 'tJob': 'occupation', 
-            'tAssignedUpi': 'assigned_upi', 'tArrears': 'pending_arrears'
+            'tAssignedUpi': 'assigned_upi', 'tArrears': 'pending_arrears',
+            'tWaterUnitPrice': 'water_unit_price', 'tInitialWater': 'initial_water'
         };
 
         Object.keys(mapping).forEach(f => {
@@ -166,6 +150,14 @@ async function editTenant(id) {
                 el.value = (val !== undefined && val !== null) ? val : '';
             }
         });
+
+        // Set Water Calc Mode radio
+        const mode = t.water_calc_mode || 'FIXED';
+        const radioFixed = document.getElementById('tWaterFixed');
+        const radioMeter = document.getElementById('tWaterMeter');
+        if (radioFixed) radioFixed.checked = (mode === 'FIXED');
+        if (radioMeter) radioMeter.checked = (mode === 'METER');
+        toggleWaterMeterFields();
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -187,8 +179,37 @@ function resetForm() {
     if (deleteBtn) deleteBtn.classList.add('hidden');
     if (agreementBtn) agreementBtn.classList.add('hidden');
 
-    const fields = ['tName', 'tMobile', 'tEmail', 'tAadhar', 'tRoom', 'tRent', 'tEbRate', 'tInitialEb', 'tWater', 'tAdvance', 'tMoveIn', 'tPermAddr', 'tEmerg', 'tJob', 'tAssignedUpi', 'tArrears'];
+    const fields = ['tName', 'tMobile', 'tEmail', 'tAadhar', 'tRoom', 'tRent', 'tMaintCharge', 'tEbRate', 'tInitialEb', 'tWater', 'tWaterUnitPrice', 'tInitialWater', 'tAdvance', 'tMoveIn', 'tPermAddr', 'tEmerg', 'tJob', 'tAssignedUpi', 'tArrears'];
     fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const radioFixed = document.getElementById('tWaterFixed');
+    if (radioFixed) radioFixed.checked = true;
+    toggleWaterMeterFields();
+}
+
+function toggleWaterMeterFields() {
+    const mode = document.querySelector('input[name="tWaterMode"]:checked')?.value || 'FIXED';
+    const groupFlat = document.getElementById('groupWaterFlat');
+    const groupUnit = document.getElementById('groupWaterUnitPrice');
+    const groupInit = document.getElementById('groupInitialWater');
+    const labelFixed = document.getElementById('labelWaterFixed');
+    const labelMeter = document.getElementById('labelWaterMeter');
+    const labelTWater = document.getElementById('labelTWater');
+
+    if (mode === 'METER') {
+        if (groupFlat) groupFlat.style.display = 'none';
+        if (labelTWater) labelTWater.innerText = 'Water Flat Charge (₹/mo)';
+        if (groupUnit) groupUnit.style.display = '';
+        if (groupInit) groupInit.style.display = '';
+        if (labelFixed) { labelFixed.style.borderColor = 'var(--border)'; labelFixed.style.background = ''; }
+        if (labelMeter) { labelMeter.style.borderColor = 'var(--primary)'; labelMeter.style.background = 'var(--primary-light)'; }
+    } else {
+        if (groupFlat) groupFlat.style.display = '';
+        if (labelTWater) labelTWater.innerText = 'Water Flat Charge (₹/mo)';
+        if (groupUnit) groupUnit.style.display = 'none';
+        if (groupInit) groupInit.style.display = 'none';
+        if (labelFixed) { labelFixed.style.borderColor = 'var(--primary)'; labelFixed.style.background = 'var(--primary-light)'; }
+        if (labelMeter) { labelMeter.style.borderColor = 'var(--border)'; labelMeter.style.background = ''; }
+    }
 }
 
 function toggleRegForm() {

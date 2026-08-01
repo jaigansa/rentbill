@@ -26,7 +26,7 @@ func InitDB() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT, room_no TEXT, aadhar_no TEXT, move_in_date DATE, 
 			advance_amount REAL, base_rent REAL, eb_unit_price REAL, 
-			water_maint REAL DEFAULT 0, is_active INTEGER DEFAULT 1,
+			water_maint REAL DEFAULT 0, maint_charge REAL DEFAULT 0, is_active INTEGER DEFAULT 1,
 			mobile_number TEXT, email TEXT, initial_eb REAL DEFAULT 0,
 			perm_address TEXT, emergency_contact TEXT, occupation TEXT, assigned_upi TEXT,
 			pending_arrears REAL DEFAULT 0
@@ -37,7 +37,7 @@ func InitDB() error {
 			curr_eb_reading REAL, others REAL DEFAULT 0, total_amount REAL, 
 			is_paid INTEGER DEFAULT 0, payment_method TEXT, payment_details TEXT,
 			payment_date DATE, date_generated DATE, notes TEXT,
-			rent_amount REAL DEFAULT 0, water_amount REAL DEFAULT 0,
+			rent_amount REAL DEFAULT 0, water_amount REAL DEFAULT 0, maint_amount REAL DEFAULT 0,
 			paid_amount REAL DEFAULT 0, discount_amount REAL DEFAULT 0,
 			write_off_amount REAL DEFAULT 0, arrears_amount REAL DEFAULT 0,
 			arrears_included REAL DEFAULT 0,
@@ -86,6 +86,8 @@ func InitDB() error {
 		}
 	}
 
+	DB.Exec("ALTER TABLE renters ADD COLUMN maint_charge REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE bills ADD COLUMN maint_amount REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE bills ADD COLUMN arrears_included REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE expenses ADD COLUMN owner_name TEXT")
 	DB.Exec("ALTER TABLE activity_logs ADD COLUMN amount REAL DEFAULT 0")
@@ -100,6 +102,19 @@ func InitDB() error {
 	DB.Exec("ALTER TABLE renters ADD COLUMN exit_reason TEXT")
 	DB.Exec("ALTER TABLE renters ADD COLUMN exit_rent_due REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE renters ADD COLUMN exit_eb_due REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN password_hash TEXT")
+	DB.Exec("ALTER TABLE renters ADD COLUMN agreement_expiry_date DATE")
+	DB.Exec("ALTER TABLE renters ADD COLUMN water_calc_mode TEXT DEFAULT 'FIXED'")
+	DB.Exec("ALTER TABLE renters ADD COLUMN water_unit_price REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN initial_water REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE bills ADD COLUMN proof_status TEXT DEFAULT 'NONE'")
+	DB.Exec("ALTER TABLE bills ADD COLUMN proof_ref TEXT")
+	DB.Exec("ALTER TABLE bills ADD COLUMN proof_photo TEXT")
+	DB.Exec("ALTER TABLE bills ADD COLUMN proof_date DATETIME")
+	DB.Exec("ALTER TABLE bills ADD COLUMN prev_water_reading REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE bills ADD COLUMN curr_water_reading REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE bills ADD COLUMN water_unit_price REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE bills ADD COLUMN water_calc_mode TEXT DEFAULT 'FIXED'")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
@@ -115,6 +130,9 @@ func InitDB() error {
 	}
 	if _, err := os.Stat("./uploads/maintenance"); os.IsNotExist(err) {
 		os.Mkdir("./uploads/maintenance", 0755)
+	}
+	if _, err := os.Stat("./uploads/proofs"); os.IsNotExist(err) {
+		os.Mkdir("./uploads/proofs", 0755)
 	}
 	return nil
 }

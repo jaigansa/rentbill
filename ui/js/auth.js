@@ -25,6 +25,11 @@ function showOverlay(show) {
     if (show) {
         overlay.classList.remove('hidden');
         mainApp.classList.add('hidden');
+        
+        // Reset state to default Admin view when overlay opens
+        setTimeout(() => {
+            switchLoginTab('admin');
+        }, 50);
     } else {
         overlay.classList.add('hidden');
         mainApp.classList.remove('hidden');
@@ -32,19 +37,19 @@ function showOverlay(show) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function pressKey(key) {
-    const input = document.getElementById('adminPasswordInput');
-    if (!input) return;
-    if (key === 'back') {
-        input.value = input.value.slice(0, -1);
-    } else {
-        input.value += key;
-    }
-}
+let activeRecoveryMode = 'admin';
 
 function toggleAdminPasswordVisibility() {
-    const input = document.getElementById('adminPasswordInput');
-    const eyeIcon = document.getElementById('adminEyeIcon');
+    toggleInputVisibility('adminPasswordInput', 'adminEyeIcon');
+}
+
+function toggleTenantPasswordVisibility() {
+    toggleInputVisibility('tenantMobileInput', 'tenantEyeIcon');
+}
+
+function toggleInputVisibility(inputId, eyeIconId) {
+    const input = document.getElementById(inputId);
+    const eyeIcon = document.getElementById(eyeIconId);
     if (!input || !eyeIcon) return;
 
     if (input.type === 'password') {
@@ -55,6 +60,222 @@ function toggleAdminPasswordVisibility() {
         eyeIcon.setAttribute('data-lucide', 'eye');
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+/* Unified Tab Swapping Logic */
+function switchLoginTab(mode) {
+    const tabAdmin = document.getElementById('tab-admin');
+    const tabTenant = document.getElementById('tab-tenant');
+    const adminForm = document.getElementById('adminPinLoginForm');
+    const tenantForm = document.getElementById('tenantLoginForm');
+    const recoveryContainer = document.getElementById('recoveryContainer');
+    
+    const brandIcon = document.getElementById('loginBrandIcon');
+    const subtitle = document.getElementById('loginSubtitle');
+    const tabsContainer = document.getElementById('loginTabs');
+
+    if (!adminForm || !tenantForm) return;
+
+    // Reset forms & recovery view
+    if (recoveryContainer) recoveryContainer.classList.add('hidden');
+    if (tabsContainer) tabsContainer.classList.remove('hidden');
+
+    const adminInput = document.getElementById('adminPasswordInput');
+    const tenantRoom = document.getElementById('tenantRoomInput');
+    const tenantMobile = document.getElementById('tenantMobileInput');
+    if (adminInput) adminInput.value = "";
+    if (tenantRoom) tenantRoom.value = "";
+    if (tenantMobile) tenantMobile.value = "";
+
+    if (mode === 'admin') {
+        // Tab buttons
+        if (tabAdmin) tabAdmin.classList.add('active');
+        if (tabTenant) tabTenant.classList.remove('active');
+        
+        // Form visibility
+        adminForm.classList.remove('hidden');
+        tenantForm.classList.add('hidden');
+
+        // Brand styling
+        if (brandIcon) {
+            brandIcon.className = "login-brand-icon";
+            brandIcon.innerHTML = `<i data-lucide="building-2" style="width: 28px; height: 28px;"></i>`;
+        }
+        if (subtitle) {
+            subtitle.innerText = "Authorized Access Only";
+            subtitle.style.color = "var(--text-muted)";
+        }
+    } else {
+        // Tab buttons
+        if (tabAdmin) tabAdmin.classList.remove('active');
+        if (tabTenant) tabTenant.classList.add('active');
+        
+        // Form visibility
+        adminForm.classList.add('hidden');
+        tenantForm.classList.remove('hidden');
+
+        // Brand styling
+        if (brandIcon) {
+            brandIcon.className = "login-brand-icon tenant";
+            brandIcon.innerHTML = `<i data-lucide="key" style="width: 28px; height: 28px;"></i>`;
+        }
+        if (subtitle) {
+            subtitle.innerText = "Tenant Access Portal";
+            subtitle.style.color = "var(--success)";
+        }
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+/* Recovery Wizard Logic */
+function showRecoveryFlow(mode = 'admin') {
+    activeRecoveryMode = mode;
+    const adminForm = document.getElementById('adminPinLoginForm');
+    const tenantForm = document.getElementById('tenantLoginForm');
+    const tabsContainer = document.getElementById('loginTabs');
+    const recoveryContainer = document.getElementById('recoveryContainer');
+    const subtitle = document.getElementById('loginSubtitle');
+    const tenantInputs = document.getElementById('tenantRecoveryInputs');
+    const recTitle = document.getElementById('recoveryTitle');
+    const recDesc = document.getElementById('recoveryDesc');
+    const recEmailSub = document.getElementById('recoveryEmailSub');
+
+    if (adminForm) adminForm.classList.add('hidden');
+    if (tenantForm) tenantForm.classList.add('hidden');
+    if (tabsContainer) tabsContainer.classList.add('hidden');
+    if (recoveryContainer) recoveryContainer.classList.remove('hidden');
+    if (subtitle) subtitle.innerText = mode === 'tenant' ? "Tenant Password Recovery" : "Admin Security & Recovery";
+
+    if (mode === 'tenant') {
+        if (tenantInputs) tenantInputs.classList.remove('hidden');
+        if (recTitle) recTitle.innerText = "Tenant Password Reset";
+        if (recDesc) recDesc.innerText = "Enter your Unit Number & Mobile/Email to receive a password reset mail.";
+        if (recEmailSub) recEmailSub.innerText = "Emails a temporary password to tenant's registered email.";
+
+        // Pre-fill from tenant form if typed
+        const tenantRoom = document.getElementById('tenantRoomInput');
+        const tenantMobile = document.getElementById('tenantMobileInput');
+        const recRoom = document.getElementById('recRoomInput');
+        const recMobile = document.getElementById('recMobileInput');
+        if (tenantRoom && recRoom && tenantRoom.value) recRoom.value = tenantRoom.value;
+        if (tenantMobile && recMobile && tenantMobile.value) recMobile.value = tenantMobile.value;
+    } else {
+        if (tenantInputs) tenantInputs.classList.add('hidden');
+        if (recTitle) recTitle.innerText = "Admin Password Reset";
+        if (recDesc) recDesc.innerText = "Generates a temporary admin password and emails it to the registered owner mail.";
+        if (recEmailSub) recEmailSub.innerText = "Generates a temporary password and emails it to registered admin address.";
+    }
+
+    showRecoveryOptions();
+}
+
+function hideRecoveryFlow() {
+    const recoveryContainer = document.getElementById('recoveryContainer');
+    if (recoveryContainer) recoveryContainer.classList.add('hidden');
+    switchLoginTab(activeRecoveryMode);
+}
+
+function showRecoveryOptions() {
+    const form = document.getElementById('recoveryForm');
+    const loader = document.getElementById('recoveryLoader');
+    const success = document.getElementById('recoverySuccess');
+    const support = document.getElementById('recoverySupport');
+
+    if (form) form.classList.remove('hidden');
+    if (loader) loader.classList.add('hidden');
+    if (success) success.classList.add('hidden');
+    if (support) support.classList.add('hidden');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function sendRecoveryEmail() {
+    const form = document.getElementById('recoveryForm');
+    const loader = document.getElementById('recoveryLoader');
+    const success = document.getElementById('recoverySuccess');
+    const support = document.getElementById('recoverySupport');
+
+    let payload = { role: activeRecoveryMode };
+
+    if (activeRecoveryMode === 'tenant') {
+        const recRoom = document.getElementById('recRoomInput');
+        const recMobile = document.getElementById('recMobileInput');
+        const roomVal = recRoom ? recRoom.value.trim() : '';
+        const mobileVal = recMobile ? recMobile.value.trim() : '';
+
+        if (!roomVal && !mobileVal) {
+            return showNotification("Please enter Unit Number or Mobile/Email", "error");
+        }
+        payload.room_no = roomVal;
+        if (mobileVal.includes('@')) {
+            payload.email = mobileVal;
+        } else {
+            payload.mobile = mobileVal;
+        }
+    }
+
+    if (form) form.classList.add('hidden');
+    if (loader) loader.classList.remove('hidden');
+
+    try {
+        const res = await API.auth.forgotPin(payload);
+        
+        // Success transition
+        if (loader) loader.classList.add('hidden');
+        if (success) {
+            const successDesc = success.querySelector('.status-desc');
+            if (successDesc && res && res.message) {
+                successDesc.innerText = res.message;
+            }
+            success.classList.remove('hidden');
+        }
+    } catch (e) {
+        console.error("Forgot Password API failed:", e);
+        
+        if (loader) loader.classList.add('hidden');
+        if (support) {
+            const supportDesc = support.querySelector('.status-desc');
+            if (supportDesc && e.message) {
+                supportDesc.innerText = e.message;
+            }
+            support.classList.remove('hidden');
+        }
+        
+        prepareSupportMailto();
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showSupportRequestForm() {
+    const form = document.getElementById('recoveryForm');
+    const support = document.getElementById('recoverySupport');
+
+    if (form) form.classList.add('hidden');
+    if (support) support.classList.remove('hidden');
+
+    prepareSupportMailto();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function prepareSupportMailto() {
+    const mailtoBtn = document.getElementById('btnSendSupportMail');
+    if (!mailtoBtn) return;
+    
+    const origin = window.location.origin;
+    const subject = encodeURIComponent("RentBill Pro - Admin Password Recovery Request");
+    const body = encodeURIComponent(
+        "Hello RentBill Support,\n\n" +
+        "I am the administrator of a RentBill Pro system and I have lost access to my admin account (PIN/password reset failed).\n\n" +
+        "System Details:\n" +
+        "- Server Origin: " + origin + "\n" +
+        "- Browser User Agent: " + navigator.userAgent + "\n\n" +
+        "Please assist me in resetting my administrator credentials."
+    );
+    mailtoBtn.onclick = () => {
+        window.location.href = `mailto:support@rentbill.pro?subject=${subject}&body=${body}`;
+    };
 }
 
 async function verifyPin() {
@@ -71,17 +292,6 @@ async function verifyPin() {
     } catch (e) {
         showNotification(e.message || "Invalid credentials", "error");
         input.value = "";
-    }
-}
-
-async function forgotPin() {
-    if (!confirm("Reset PIN and send to email?")) return;
-    showNotification("Processing...", "info");
-    try {
-        await API.auth.forgotPin();
-        showNotification("Temporary PIN sent", "success");
-    } catch (e) {
-        showNotification(e.message, "error");
     }
 }
 
