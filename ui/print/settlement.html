@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Payout Settlement Voucher - RentBill Pro</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/print.css">
+    <style>
+        body { background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; padding: 2rem; color: #0f172a; }
+        .settle-card { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 2.5rem; border-radius: 12px; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .settle-header { display: flex; justify-content: space-between; border-bottom: 2px solid #4f46e5; padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
+        .settle-title { font-size: 1.5rem; font-weight: 900; color: #4f46e5; margin: 0; text-transform: uppercase; }
+        .settle-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .settle-table th { background: #eef2ff; color: #4338ca; padding: 10px 14px; text-align: left; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #c7d2fe; }
+        .settle-table td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 0.9rem; }
+        .no-print-bar { max-width: 800px; margin: 0 auto 1.5rem auto; text-align: right; }
+        @media print {
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            .settle-card { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; width: 100% !important; }
+            .no-print-bar, .no-print, button, .btn { display: none !important; }
+            @page { margin: 10mm 12mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <button onclick="window.print()" class="btn btn-primary" style="padding: 8px 20px; font-weight: 800; cursor: pointer;">
+            🖨️ Print Settlement Voucher
+        </button>
+    </div>
+
+    <div class="settle-card">
+        <div class="settle-header">
+            <div>
+                <h1 class="settle-title">OWNER DISBURSEMENT VOUCHER</h1>
+                <p id="stPropName" style="font-weight: 800; margin-top: 4px; font-size: 1rem;">RentBill Pro Property</p>
+            </div>
+            <div style="text-align: right;">
+                <span style="background: #4f46e5; color: white; padding: 4px 10px; border-radius: 4px; font-weight: 900; font-size: 0.75rem;">PAYOUT VOUCHER</span>
+                <p style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">Voucher Date: <span id="stDate" style="font-weight: 800; color: #0f172a;">--</span></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; font-size: 0.875rem;">
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 800;">Beneficiary / Owner</h4>
+                <div id="stOwnerName" style="font-weight: 800; font-size: 1rem; color: #0f172a;">--</div>
+                <div id="stBankDetails" style="color: #64748b; margin-top: 2px;">Bank / UPI: --</div>
+            </div>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 800;">Settlement Summary</h4>
+                <div>Total Payout Amount: <span id="stAmount" style="font-weight: 900; color: #4f46e5; font-size: 1.1rem;">₹0.00</span></div>
+                <div>Payment Reference: <span id="stRef" style="font-weight: 800;">--</span></div>
+            </div>
+        </div>
+
+        <table class="settle-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align: right;">Amount Disbursed</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="stNotes">Owner Rental Revenue Payout Distribution</td>
+                    <td style="text-align: right; font-weight: 900; color: #4f46e5;" id="stTableAmt">₹0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div style="font-size: 0.75rem; color: #64748b;">
+                System Generated Payout Voucher • RentBill Pro
+            </div>
+            <div style="text-align: center; border-top: 1px solid #0f172a; padding-top: 6px; width: 200px; font-weight: 800; font-size: 0.85rem;">
+                Authorized Manager Signature
+            </div>
+        </div>
+    </div>
+</body>
+</html>

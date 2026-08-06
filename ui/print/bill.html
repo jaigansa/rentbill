@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Monthly Bill - RentBill Pro</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/print.css">
+    <style>
+        body { background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; padding: 2rem; color: #0f172a; }
+        .print-container { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 2.5rem; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0; margin-bottom: 1.5rem; }
+        .property-title { font-size: 1.5rem; font-weight: 900; color: #4f46e5; margin: 0; }
+        .doc-badge { background: #4f46e5; color: white; padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; font-size: 0.875rem; }
+        .bill-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+        .bill-table th { background: #f1f5f9; padding: 10px 12px; text-align: left; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #475569; border-bottom: 2px solid #cbd5e1; }
+        .bill-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 0.9rem; }
+        .total-box { display: flex; justify-content: flex-end; margin-top: 1rem; }
+        .total-card { width: 300px; background: #eef2ff; border: 2px solid #4f46e5; padding: 1rem; border-radius: 10px; }
+        .no-print-bar { margin-bottom: 1.5rem; text-align: right; }
+        @media print {
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            .print-container { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; width: 100% !important; }
+            .no-print-bar, .no-print, button, .btn { display: none !important; }
+            @page { margin: 10mm 12mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <button onclick="window.print()" class="btn btn-primary" style="padding: 8px 20px; font-weight: 800; cursor: pointer;">
+            🖨️ Print Bill Document
+        </button>
+    </div>
+
+    <div class="print-container">
+        <div class="header">
+            <div>
+                <h1 class="property-title" id="propName">RentBill Pro Property</h1>
+                <p id="propAddr" style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">Property Address Line</p>
+            </div>
+            <span class="doc-badge">MONTHLY RENT BILL</span>
+        </div>
+
+        <div class="meta-grid">
+            <div><strong>Tenant Name:</strong> <span id="tenantName">--</span></div>
+            <div><strong>Bill Month / Date:</strong> <span id="billMonth">--</span></div>
+            <div><strong>Unit / Room No:</strong> <span id="roomNo">--</span></div>
+            <div><strong>Bill Invoice No:</strong> <span id="billId">--</span></div>
+        </div>
+
+        <table class="bill-table">
+            <thead>
+                <tr>
+                    <th>Line Item Description</th>
+                    <th style="text-align: right;">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody id="billItems">
+                <tr><td>Base Rent</td><td style="text-align: right;" id="valRent">₹0.00</td></tr>
+                <tr><td>Maintenance Fee</td><td style="text-align: right;" id="valMaint">₹0.00</td></tr>
+                <tr><td>Electricity Bill (EB)</td><td style="text-align: right;" id="valEb">₹0.00</td></tr>
+                <tr><td>Water Supply Charges</td><td style="text-align: right;" id="valWater">₹0.00</td></tr>
+                <tr><td>Arrears / Previous Dues</td><td style="text-align: right;" id="valArrears">₹0.00</td></tr>
+            </tbody>
+        </table>
+
+        <div class="total-box">
+            <div class="total-card">
+                <div style="font-size: 0.75rem; font-weight: 800; color: #4f46e5; text-transform: uppercase;">Net Amount Due</div>
+                <div id="valNetTotal" style="font-size: 1.75rem; font-weight: 900; color: #0f172a; margin-top: 4px;">₹0.00</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 3rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+            <div>Thank you for your prompt payment!</div>
+            <div>Authorized Signature _____________________</div>
+        </div>
+    </div>
+</body>
+</html>

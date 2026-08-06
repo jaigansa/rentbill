@@ -29,6 +29,21 @@ function numberToWords(num) {
     return str.trim() + ' Only';
 }
 
+function dateOnly(raw) {
+    if (!raw) return '';
+    const s = String(raw);
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : s;
+}
+
+function formatPrintDate(raw) {
+    if (!raw) return '—';
+    const s = String(raw);
+    const d = new Date(s.slice(0, 10));
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
 function showNotification(msg, type) {
     const container = document.getElementById('notification-container');
     if (!container) return;
@@ -59,7 +74,7 @@ function showNotification(msg, type) {
         <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-main);">${msg}</span>
     `;
     container.appendChild(note);
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
     setTimeout(() => {
         note.style.animation = 'noteSlideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
@@ -197,10 +212,13 @@ function applyTheme() {
     const theme = localStorage.getItem('theme') || 'light';
     const isDark = theme === 'dark';
     document.body.classList.toggle('dark-mode', isDark);
+    const bsTheme = isDark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-bs-theme', bsTheme);
+    document.body.setAttribute('data-bs-theme', bsTheme);
     
     // Update Theme Color Meta Tag
     let metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (metaTheme) metaTheme.setAttribute('content', isDark ? '#000000' : '#ffffff');
+    if (metaTheme) metaTheme.setAttribute('content', isDark ? '#212529' : '#ffffff');
     
     const btn = document.getElementById('darkModeToggle');
     if (btn) {

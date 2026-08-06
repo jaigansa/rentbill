@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rental Agreement - RentBill Pro</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/print.css">
+    <style>
+        body {
+            background: #f8fafc;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+            padding: 2rem;
+            color: #111827;
+            line-height: 1.6;
+        }
+
+        .agree-card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 2.5rem 3rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .agree-header {
+            text-align: center;
+            border-bottom: 3px double #111827;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .agree-prop {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #374151;
+            margin: 0 0 6px 0;
+        }
+
+        .agree-title {
+            font-size: 1.9rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: #111827;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .agree-sub {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #6b7280;
+            margin: 6px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .agree-record {
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #6b7280;
+            margin: 10px 0 0 0;
+        }
+
+        .agree-intro {
+            font-size: 0.95rem;
+            text-align: justify;
+        }
+
+        .party-box {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .party-box h3 {
+            margin: 0 0 6px 0;
+            font-size: 0.72rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #b91c1c;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 6px;
+        }
+
+        .party-box .pname {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: #111827;
+            margin: 4px 0;
+        }
+
+        .party-box p {
+            margin: 3px 0;
+            font-size: 0.85rem;
+            color: #374151;
+        }
+
+        .party-box .hl {
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .ag-facts {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.25rem 0;
+            font-size: 0.88rem;
+        }
+
+        .ag-facts td {
+            border: 1px solid #d1d5db;
+            padding: 8px 10px;
+        }
+
+        .ag-facts .k {
+            background: #f3f4f6;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.68rem;
+            letter-spacing: 0.5px;
+            color: #374151;
+            width: 34%;
+        }
+
+        .ag-facts .v {
+            font-weight: 700;
+        }
+
+        .ag-clause {
+            font-size: 0.92rem;
+            text-align: justify;
+            margin: 0 0 10px 0;
+        }
+
+        .ag-clause strong {
+            font-variant: small-caps;
+            font-size: 0.95rem;
+        }
+
+        .ag-sign {
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-top: 3.5rem;
+        }
+
+        .ag-sign-col {
+            width: 48%;
+            text-align: center;
+        }
+
+        .ag-sign-line {
+            border-top: 1px solid #111827;
+            padding-top: 6px;
+            font-weight: 900;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ag-sign-detail {
+            font-size: 0.78rem;
+            color: #374151;
+            margin-top: 4px;
+            font-weight: 700;
+        }
+
+        .ag-witness {
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            margin-top: 2.5rem;
+        }
+
+        .ag-witness-col {
+            width: 48%;
+            border-top: 1px dashed #9ca3af;
+            padding-top: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4b5563;
+            text-align: center;
+        }
+
+        .ag-place {
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 800;
+            margin-top: 2.5rem;
+        }
+
+        .ag-footer {
+            text-align: center;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            font-weight: 800;
+            color: #9ca3af;
+            text-transform: uppercase;
+            margin-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 10px;
+        }
+
+        .no-print-bar {
+            max-width: 800px;
+            margin: 0 auto 1.5rem auto;
+            text-align: right;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .agree-card {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+            }
+
+            .no-print-bar,
+            .no-print,
+            button,
+            .btn {
+                display: none !important;
+            }
+
+            @page {
+                margin: 12mm 14mm;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print-bar">
+        <button onclick="window.print()" class="btn btn-primary"
+            style="padding: 8px 20px; font-weight: 800; cursor: pointer;">
+            🖨️ Print Rental Agreement
+        </button>
+    </div>
+
+    <div class="agree-card">
+        <div class="agree-header">
+            <p class="agree-prop" id="agPropName">PROPERTY NAME</p>
+            <h1 class="agree-title">Rental Agreement</h1>
+            <p class="agree-sub" id="agPropAddr">Property Address, Chennai, Tamil Nadu</p>
+            <p class="agree-record">OFFICIAL RECORD NO: <span id="agRecordNo">RB/----/--/--</span></p>
+        </div>
+
+        <p class="agree-intro">
+            This Deed of Rental Agreement is made and executed on this
+            <strong id="agDate">--</strong>, by and between the parties herein described and on the terms and conditions
+            set forth below.
+        </p>
+
+        <div class="party-box">
+            <h3>1. Lessor / Landlord</h3>
+            <p class="pname" id="agOwnerName">Owner Name</p>
+            <p>S/o, D/o, W/o: ____________________</p>
+            <p><span class="hl">Address:</span> <span id="agOwnerAddr">--</span></p>
+            <p><span class="hl">Hereinafter called the "LESSOR"</span> (which expression shall include his/her heirs,
+                executors, administrators, legal representatives and assigns).</p>
+        </div>
+
+        <div class="party-box">
+            <h3>2. Lessee / Tenant</h3>
+            <p class="pname" id="agTenantName">Tenant Name</p>
+            <p>S/o, D/o, W/o: ____________________</p>
+            <p><span class="hl">Occupation:</span> <span id="agTenantOccupation">--</span></p>
+            <p><span class="hl">Mobile:</span> <span id="agTenantMobile">--</span> &nbsp; <span
+                    class="hl">Aadhaar:</span> <span id="agTenantAadhar">--</span></p>
+            <p id="agCoTenantsRow" style="display:none;"><span class="hl">Co-Tenant(s):</span> <span
+                    id="agCoTenants"></span></p>
+            <p><span class="hl">Permanent Address:</span> <span id="agTenantAddr">--</span></p>
+            <p id="agEmergencyRow" style="display:none;"><span class="hl">Emergency Contact:</span> <span
+                    id="agEmergency">--</span></p>
+            <p><span class="hl">Hereinafter called the "LESSEE"</span> (which expression shall include his/her heirs,
+                executors, administrators, legal representatives and assigns).</p>
+        </div>
+
+        <p class="agree-intro" style="margin-top: 1.25rem;">
+            WHEREAS the Lessor is the absolute owner and landlord of the premises described below and has agreed to let
+            out
+            the same to the Lessee, and the Lessee has agreed to take the said premises on lease, on the terms and
+            conditions recorded herein.
+        </p>
+
+        <table class="ag-facts">
+            <tr>
+                <td class="k">Premises / Unit No.</td>
+                <td class="v" id="agRoomNo">--</td>
+                <td class="k">Term Commencing From</td>
+                <td class="v" id="agStartDate">--</td>
+            </tr>
+            <tr>
+                <td class="k">Term Expiring On</td>
+                <td class="v" id="agEndDate">--</td>
+                <td class="k">Monthly Rent</td>
+                <td class="v" id="agRent">₹0.00</td>
+            </tr>
+            <tr>
+                <td class="k">Maintenance / Water</td>
+                <td class="v" id="agMaint">₹0.00</td>
+                <td class="k">EB Unit Rate</td>
+                <td class="v" id="agEbRate">₹0.00</td>
+            </tr>
+            <tr>
+                <td class="k">Security Deposit</td>
+                <td class="v" id="agAdvance">₹0.00</td>
+                <td class="k">Tenure</td>
+                <td class="v" id="agTenure">--</td>
+            </tr>
+        </table>
+
+        <p class="agree-intro" style="margin-top: 1.25rem;"><strong>NOW THIS AGREEMENT WITNESSETH AND IT IS HEREBY
+                AGREED BETWEEN THE PARTIES AS FOLLOWS:</strong></p>
+
+        <p class="ag-clause"><strong>1. Term of Lease:</strong> The lease shall be for an initial term commencing from
+            <span id="agStartDate2">--</span> and expiring on <span id="agEndDate2">--</span>. Thereafter, unless
+            terminated by either party,
+            the tenancy shall continue on a month-to-month basis on the same terms and conditions.
+        </p>
+
+        <p class="ag-clause"><strong>2. Rent:</strong> The Lessee shall pay a monthly rent of <strong
+                id="agClauseRent">₹0.00</strong> on or before
+            the 5th day of each calendar month, without any demand or reminder.</p>
+
+        <p class="ag-clause"><strong>3. Security Deposit:</strong> The Lessor has received a refundable security deposit
+            of
+            <strong id="agClauseDeposit">₹0.00</strong> from the Lessee, which shall be refunded within 30 days of
+            vacant possession,
+            subject to deduction of any arrears, utility dues or damages caused to the premises.
+        </p>
+
+        <p class="ag-clause"><strong>4. Utilities:</strong> Electricity (EB) and water charges shall be borne and paid
+            by the Lessee
+            monthly, either as per meter readings (EB at the agreed unit rate) or as per the agreed fixed maintenance
+            charges.</p>
+
+        <p class="ag-clause"><strong>5. Use of Premises:</strong> The premises shall be used only for residential
+            purposes by the Lessee
+            and his/her family members. The Lessee shall not sublet, assign or part with possession of the premises or
+            any part thereof
+            without the prior written consent of the Lessor, and shall not cause or permit any nuisance or unlawful
+            activity therein.</p>
+
+        <p class="ag-clause"><strong>6. Notice Period:</strong> Either party may terminate this tenancy by giving one
+            (1) month's
+            written notice to the other party. On vacation, the Lessee shall hand over the premises and keys in good
+            condition and settle
+            all dues up to the date of vacant possession.</p>
+
+        <p class="ag-clause"><strong>7. Repairs &amp; Maintenance:</strong> Routine and day-to-day maintenance shall be
+            attended to by the
+            Lessee. Structural repairs shall be carried out by the Lessor.</p>
+
+        <p class="ag-clause"><strong>8. Default &amp; Termination:</strong> In the event of default in payment of rent
+            or breach of any of the
+            terms herein, the Lessor shall be entitled to terminate the tenancy and recover possession of the premises
+            together with all
+            arrears of rent and other charges, without prejudice to any other remedy available under law.</p>
+
+        <p class="ag-clause"><strong>9. Jurisdiction:</strong> This agreement shall be governed by the laws of India and
+            the competent courts at
+            Chennai, Tamil Nadu shall alone have exclusive jurisdiction in respect of all matters arising out of this
+            agreement.</p>
+
+        <div id="agExtraTerms"></div>
+
+        <div class="ag-place">Signed at Chennai on this ____ day of ________________, 20____.</div>
+
+        <div class="ag-sign">
+            <div class="ag-sign-col">
+                <div class="ag-sign-line">Lessor Signature</div>
+                <p class="ag-sign-detail">Name: <span id="sigOwnerName">--</span></p>
+                <p class="ag-sign-detail">Address: <span id="sigOwnerAddr">--</span></p>
+            </div>
+            <div class="ag-sign-col">
+                <div class="ag-sign-line">Lessee Signature</div>
+                <p class="ag-sign-detail">Name: <span id="sigTenantName">--</span></p>
+                <p class="ag-sign-detail">Address: <span id="sigTenantAddr">--</span></p>
+            </div>
+        </div>
+
+        <div class="ag-witness">
+            <div class="ag-witness-col">Witness 1 - Name &amp; Signature</div>
+            <div class="ag-witness-col">Witness 2 - Name &amp; Signature</div>
+        </div>
+
+        <div class="ag-footer">Digitally Generated by RentBill Pro • Computer-Generated Record, Not a Stamped Instrument
+        </div>
+    </div>
+</body>
+
+</html>

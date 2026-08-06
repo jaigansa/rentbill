@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Tax Invoice - RentBill Pro</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/print.css">
+    <style>
+        body { background: #f8fafc; font-family: 'Inter', system-ui, sans-serif; padding: 2rem; color: #0f172a; }
+        .invoice-card { max-width: 800px; margin: 0 auto; background: #ffffff; padding: 2.5rem; border-radius: 12px; border: 1px solid #cbd5e1; }
+        .inv-header { display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 1.25rem; margin-bottom: 1.5rem; }
+        .inv-title { font-size: 1.75rem; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase; }
+        .inv-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        .inv-table th { background: #0f172a; color: white; padding: 10px 14px; text-align: left; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; }
+        .inv-table td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 0.9rem; }
+        .inv-status { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 900; font-size: 0.75rem; background: #dcfce7; color: #166534; border: 1px solid #166534; }
+        @media print {
+            body { background: white !important; padding: 0 !important; margin: 0 !important; }
+            .invoice-card { border: none !important; box-shadow: none !important; padding: 0 !important; max-width: 100% !important; width: 100% !important; }
+            .no-print-bar, .no-print, button, .btn { display: none !important; }
+            @page { margin: 10mm 12mm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar" style="max-width: 800px; margin: 0 auto 1.5rem auto; text-align: right;">
+        <button onclick="window.print()" class="btn btn-primary" style="padding: 8px 20px; font-weight: 800; cursor: pointer;">
+            🖨️ Print Tax Invoice
+        </button>
+    </div>
+
+    <div class="invoice-card">
+        <div class="inv-header">
+            <div>
+                <h1 class="inv-title">OFFICIAL TAX INVOICE</h1>
+                <p id="invoicePropName" style="font-weight: 800; margin-top: 4px; font-size: 1rem;">RentBill Pro Apartments</p>
+                <p id="invoicePropAddr" style="font-size: 0.85rem; color: #64748b; margin-top: 2px;">Property Address Line</p>
+            </div>
+            <div style="text-align: right;">
+                <span class="inv-status">PAID / RECEIPT</span>
+                <p style="font-weight: 800; margin-top: 8px; font-size: 0.85rem;">Invoice #: <span id="invNumber">INV-001</span></p>
+                <p style="font-size: 0.8rem; color: #64748b;">Date: <span id="invDate">--</span></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; font-size: 0.875rem;">
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 800;">Billed To (Tenant)</h4>
+                <div id="invTenantName" style="font-weight: 800; font-size: 1rem; color: #0f172a;">--</div>
+                <div id="invTenantRoom" style="font-weight: 700; color: #475569; margin-top: 2px;">Unit / Room: --</div>
+                <div id="invTenantMobile" style="color: #64748b; margin-top: 2px;">Mobile: --</div>
+            </div>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 800;">Payment Summary</h4>
+                <div>Payment Method: <span id="invPayMethod" style="font-weight: 800;">UPI / Bank</span></div>
+                <div>Transaction Ref: <span id="invPayRef" style="font-weight: 800;">--</span></div>
+                <div>Payment Status: <span style="font-weight: 900; color: #166534;">Fully Settled</span></div>
+            </div>
+        </div>
+
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Item Description</th>
+                    <th style="text-align: right;">Gross Amount</th>
+                    <th style="text-align: right;">Paid Amount</th>
+                </tr>
+            </thead>
+            <tbody id="invItemsBody">
+                <tr>
+                    <td>Monthly Rent & Utilities Settlement</td>
+                    <td style="text-align: right;" id="invGross">₹0.00</td>
+                    <td style="text-align: right; font-weight: 900; color: #166534;" id="invPaid">₹0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top: 4rem; display: flex; justify-content: space-between; align-items: flex-end;">
+            <div style="font-size: 0.75rem; color: #64748b; max-width: 350px;">
+                This document is a computer-generated tax invoice & receipt issued under standard lease terms.
+            </div>
+            <div style="text-align: center; border-top: 1px solid #0f172a; padding-top: 6px; width: 200px; font-weight: 800; font-size: 0.85rem;">
+                Authorized Stamp / Sign
+            </div>
+        </div>
+    </div>
+</body>
+</html>

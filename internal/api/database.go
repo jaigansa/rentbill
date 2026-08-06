@@ -19,7 +19,15 @@ func InitDB() error {
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
-	DB.Exec("PRAGMA foreign_keys = ON")
+	DB.Exec("PRAGMA foreign_keys = ON;")
+	DB.Exec("PRAGMA journal_mode = WAL;")
+	DB.Exec("PRAGMA synchronous = NORMAL;")
+	DB.Exec("PRAGMA busy_timeout = 5000;")
+	DB.Exec("PRAGMA auto_vacuum = INCREMENTAL;")
+
+	DB.SetMaxOpenConns(25)
+	DB.SetMaxIdleConns(10)
+	DB.SetConnMaxLifetime(30 * time.Minute)
 
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS renters (
@@ -29,7 +37,7 @@ func InitDB() error {
 			water_maint REAL DEFAULT 0, maint_charge REAL DEFAULT 0, is_active INTEGER DEFAULT 1,
 			mobile_number TEXT, email TEXT, initial_eb REAL DEFAULT 0,
 			perm_address TEXT, emergency_contact TEXT, occupation TEXT, assigned_upi TEXT,
-			pending_arrears REAL DEFAULT 0
+			pending_arrears REAL DEFAULT 0, co_tenant_names TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS bills (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,6 +86,18 @@ func InitDB() error {
 			expiry_date DATE, notes TEXT,
 			FOREIGN KEY(renter_id) REFERENCES renters(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS properties (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT, address TEXT, owner_name TEXT, agreement_terms TEXT,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS units (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			unit_name TEXT UNIQUE, floor TEXT, default_rent REAL DEFAULT 0,
+			default_maint REAL DEFAULT 0, is_occupied INTEGER DEFAULT 0,
+			agreement_terms TEXT,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 
 	for _, q := range queries {
@@ -85,6 +105,8 @@ func InitDB() error {
 			return fmt.Errorf("schema error: %w\nQuery: %s", err, q)
 		}
 	}
+
+	DB.Exec("ALTER TABLE units ADD COLUMN agreement_terms TEXT")
 
 	DB.Exec("ALTER TABLE renters ADD COLUMN maint_charge REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE bills ADD COLUMN maint_amount REAL DEFAULT 0")
@@ -107,6 +129,7 @@ func InitDB() error {
 	DB.Exec("ALTER TABLE renters ADD COLUMN water_calc_mode TEXT DEFAULT 'FIXED'")
 	DB.Exec("ALTER TABLE renters ADD COLUMN water_unit_price REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE renters ADD COLUMN initial_water REAL DEFAULT 0")
+	DB.Exec("ALTER TABLE renters ADD COLUMN co_tenant_names TEXT")
 	DB.Exec("ALTER TABLE bills ADD COLUMN proof_status TEXT DEFAULT 'NONE'")
 	DB.Exec("ALTER TABLE bills ADD COLUMN proof_ref TEXT")
 	DB.Exec("ALTER TABLE bills ADD COLUMN proof_photo TEXT")
@@ -115,6 +138,21 @@ func InitDB() error {
 	DB.Exec("ALTER TABLE bills ADD COLUMN curr_water_reading REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE bills ADD COLUMN water_unit_price REAL DEFAULT 0")
 	DB.Exec("ALTER TABLE bills ADD COLUMN water_calc_mode TEXT DEFAULT 'FIXED'")
+	DB.Exec("ALTER TABLE bills ADD COLUMN late_fee REAL DEFAULT 0")
+
+	// DB Indexes for High Performance Queries
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_renters_is_active_room ON renters(is_active, room_no);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_renter_month ON bills(renter_id, billing_month);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_is_paid ON bills(is_paid);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_proof_status ON bills(proof_status);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_billing_month ON bills(billing_month);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_date_generated ON bills(date_generated);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_payment_date ON bills(payment_date);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_bills_renter_is_paid ON bills(renter_id, is_paid);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_withdrawals_date ON owner_withdrawals(date);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON activity_logs(timestamp);")
+	DB.Exec("CREATE INDEX IF NOT EXISTS idx_units_unit_name ON units(unit_name);")
 
 	var count int
 	DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)

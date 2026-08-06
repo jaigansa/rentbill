@@ -33,15 +33,20 @@ func (b *Broker) AddClient() chan string {
 
 func (b *Broker) RemoveClient(ch chan string) {
 	b.mutex.Lock()
-	defer b.mutex.Unlock()
 	delete(b.clients, ch)
+	b.mutex.Unlock()
 	close(ch)
 }
 
 func (b *Broker) Broadcast(msg string) {
 	b.mutex.Lock()
-	defer b.mutex.Unlock()
+	clients := make([]chan string, 0, len(b.clients))
 	for ch := range b.clients {
+		clients = append(clients, ch)
+	}
+	b.mutex.Unlock()
+
+	for _, ch := range clients {
 		select {
 		case ch <- msg:
 		default:

@@ -17,6 +17,15 @@ import (
 var AppConfig Config
 var ConfigPath = "./config.json"
 
+// generateSecret returns a cryptographically random 32-byte base64 URL-safe string.
+func generateSecret() string {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "rentbill-rand-fallback-secret-please-set-manually"
+	}
+	return base64.RawURLEncoding.EncodeToString(buf)
+}
+
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
@@ -88,7 +97,7 @@ func InitConfig() {
 			Username:        "admin",
 			PropertyName:    "RENTBILL PRO",
 			PropertyAddress: "Property Management System",
-			SessionSecret:   "rb-pro-secret-key-change-me-for-security-2026",
+			SessionSecret:   generateSecret(),
 			ServerPort:      8080,
 		}
 		SaveConfig()
@@ -131,10 +140,30 @@ func InitConfig() {
 		if AppConfig.EmailPort == 0 {
 			AppConfig.EmailPort = 587
 		}
+		if AppConfig.Username != "" && AppConfig.Username != "admin" {
+			AppConfig.IsConfigured = true
+		}
 	}
 	if len(AppConfig.SessionSecret) < 16 {
-		AppConfig.SessionSecret = "rentbill-secure-session-fallback-secret-2024"
+		AppConfig.SessionSecret = generateSecret()
 		SaveConfig()
+	}
+}
+
+// WarnDefaultCredentials prints a console warning when default PINs or the known
+// hardcoded session secrets are still active.
+func WarnDefaultCredentials() {
+	if CheckPasswordHash("1234", AppConfig.MasterPinHash) {
+		fmt.Println("!!! SECURITY WARNING: Admin password is still the default '1234'. Change it in Settings before going live.")
+	}
+	if AppConfig.StaffPinHash != "" && CheckPasswordHash("0000", AppConfig.StaffPinHash) {
+		fmt.Println("!!! SECURITY WARNING: Staff password is still the default '0000'. Change it in Settings before going live.")
+	}
+	if AppConfig.SessionSecret == "rb-pro-secret-key-change-me-for-security-2026" ||
+		AppConfig.SessionSecret == "rentbill-secure-session-fallback-secret-2024" ||
+		AppConfig.SessionSecret == "rentbill-rand-fallback-secret-please-set-manually" ||
+		AppConfig.SessionSecret == "generate-a-random-secret" {
+		fmt.Println("!!! SECURITY WARNING: Session secret is a known default value. Set a random one in config.json and restart.")
 	}
 }
 

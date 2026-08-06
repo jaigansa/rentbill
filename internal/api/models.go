@@ -17,6 +17,7 @@ type Config struct {
 	EmailPort         int                `json:"email_port"`
 	SessionSecret     string             `json:"session_secret"`
 	ServerPort        int                `json:"server_port"`
+	IsConfigured      bool               `json:"is_configured"`
 	ReceivingAccounts []ReceivingAccount `json:"receiving_accounts"`
 }
 
@@ -57,6 +58,7 @@ type Renter struct {
 	WaterCalcMode    string  `json:"water_calc_mode"`
 	WaterUnitPrice   float64 `json:"water_unit_price"`
 	InitialWater     float64 `json:"initial_water"`
+	CoTenantNames    string  `json:"co_tenant_names"`
 	VacateDate          *string  `json:"vacate_date,omitempty"`
 	ExitRefundAmount    *string  `json:"exit_refund_amount,omitempty"`
 	ExitDuesDeducted    *float64 `json:"exit_dues_deducted,omitempty"`
@@ -90,6 +92,7 @@ type Bill struct {
 	DiscountAmount  float64 `json:"discount_amount"`
 	WriteOffAmount  float64 `json:"write_off_amount"`
 	ArrearsAmount   float64 `json:"arrears_amount"`
+	LateFee         float64 `json:"late_fee"`
 	ArrearsIncluded float64 `json:"arrears_included"`
 	ProofStatus     string  `json:"proof_status,omitempty"`
 	ProofRef        *string `json:"proof_ref,omitempty"`
@@ -157,4 +160,24 @@ type Document struct {
 	UploadDate string `json:"upload_date"`
 	ExpiryDate string `json:"expiry_date,omitempty"`
 	Notes      string `json:"notes"`
+}
+
+type Property struct {
+	ID             int    `json:"id"`
+	Name           string `json:"name"`
+	Address        string `json:"address"`
+	OwnerName      string `json:"owner_name"`
+	AgreementTerms string `json:"agreement_terms"`
+	Timestamp      string `json:"timestamp"`
+}
+
+type Unit struct {
+	ID             int     `json:"id"`
+	UnitName       string  `json:"unit_name"`
+	Floor          string  `json:"floor"`
+	DefaultRent    float64 `json:"default_rent"`
+	DefaultMaint   float64 `json:"default_maint"`
+	IsOccupied     int     `json:"is_occupied"`
+	AgreementTerms string  `json:"agreement_terms"`
+	Timestamp      string  `json:"timestamp"`
 }

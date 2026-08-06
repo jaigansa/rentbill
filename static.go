@@ -21,11 +21,13 @@ func GetPublicFS() http.FileSystem {
 	return http.FS(publicDir)
 }
 
-// GetIndexHTML returns the content of index.html
+// GetIndexHTML returns the permanent HTML content from ui/index.html.
 func GetIndexHTML() []byte {
 	index, err := UIAssets.ReadFile("ui/index.html")
-	if err != nil {
-		panic(err)
+	if err == nil && len(index) > 0 {
+		return index
 	}
-	return index
+
+	return []byte("<!DOCTYPE html><html><head><title>RentBill Pro</title></head><body style=\"font-family:sans-serif; text-align:center; padding:3rem;\"><h2>RentBill Pro - UI Initialization Error</h2><p>Unable to load ui/index.html from embedded assets.</p></body></html>")
 }
+

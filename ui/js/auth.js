@@ -8,7 +8,7 @@ async function checkAuth() {
     } else {
         showOverlay(false);
         const hash = window.location.hash.replace('#', '');
-        const validSections = ['dashboard-section', 'tenants-section', 'owners-section', 'settings-section'];
+        const validSections = ['dashboard-section', 'tenants-section', 'owners-section', 'property-section', 'settings-section'];
         if (hash && validSections.includes(hash)) {
             showSection(hash);
         } else {
@@ -18,15 +18,25 @@ async function checkAuth() {
     }
 }
 
-function showOverlay(show) {
+async function showOverlay(show) {
     const overlay = document.getElementById('pinOverlay');
     const mainApp = document.getElementById('mainApp');
     if (!overlay || !mainApp) return;
+
     if (show) {
         overlay.classList.remove('hidden');
         mainApp.classList.add('hidden');
-        
-        // Reset state to default Admin view when overlay opens
+
+        try {
+            const status = await API.auth.getSetupStatus();
+            if (status && !status.is_configured) {
+                showFirstTimeSetupView();
+                return;
+            }
+        } catch (e) {
+            console.warn("Could not check setup status", e);
+        }
+
         setTimeout(() => {
             switchLoginTab('admin');
         }, 50);
@@ -35,6 +45,50 @@ function showOverlay(show) {
         mainApp.classList.remove('hidden');
     }
     if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function showFirstTimeSetupView() {
+    const tabsContainer = document.getElementById('loginTabs');
+    const setupForm = document.getElementById('firstTimeSetupForm');
+    const adminForm = document.getElementById('adminPinLoginForm');
+    const tenantForm = document.getElementById('tenantLoginForm');
+    const recoveryContainer = document.getElementById('recoveryContainer');
+    const subtitle = document.getElementById('loginSubtitle');
+
+    if (tabsContainer) tabsContainer.classList.add('hidden');
+    if (adminForm) adminForm.classList.add('hidden');
+    if (tenantForm) tenantForm.classList.add('hidden');
+    if (recoveryContainer) recoveryContainer.classList.add('hidden');
+    if (setupForm) setupForm.classList.remove('hidden');
+    if (subtitle) {
+        subtitle.innerText = "First-Time Admin Account & Gmail Setup";
+        subtitle.style.color = "var(--primary)";
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+async function submitFirstTimeSetup() {
+    const gmail = document.getElementById('setupAdminGmail')?.value.trim();
+    const password = document.getElementById('setupAdminPassword')?.value;
+    const app_password = document.getElementById('setupGmailAppPass')?.value.trim();
+    const property_name = document.getElementById('setupPropName')?.value.trim();
+
+    if (!gmail || !gmail.includes('@')) {
+        return showNotification("Please enter a valid Admin Gmail address", "error");
+    }
+    if (!password) {
+        return showNotification("Admin Master Password is required", "error");
+    }
+
+    try {
+        const res = await API.auth.completeSetup({ gmail, password, app_password, property_name });
+        showNotification(res.message || "First-time setup completed successfully!", "success");
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userRole', 'owner');
+        location.reload();
+    } catch (e) {
+        showNotification(e.message || "Failed to complete setup", "error");
+    }
 }
 
 let activeRecoveryMode = 'admin';
@@ -279,19 +333,22 @@ function prepareSupportMailto() {
 }
 
 async function verifyPin() {
-    const input = document.getElementById('adminPasswordInput');
-    if (!input) return;
-    const password = input.value;
-    if (!password) return showNotification("PIN or Password required", "error");
+    const usernameInput = document.getElementById('adminUsernameInput');
+    const passwordInput = document.getElementById('adminPasswordInput');
+
+    const username = usernameInput ? usernameInput.value.trim() : '';
+    const pin = passwordInput ? passwordInput.value : '';
+
+    if (!pin) return showNotification("Admin Password required", "error");
 
     try {
-        const res = await API.auth.verify(password);
+        const res = await API.auth.verify({ username, pin });
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userRole', res.role || 'owner');
-        location.reload(); // Hard reload after login to ensure session cookie is sent correctly
+        location.reload();
     } catch (e) {
-        showNotification(e.message || "Invalid credentials", "error");
-        input.value = "";
+        showNotification(e.message || "Invalid Admin Username or Password", "error");
+        if (passwordInput) passwordInput.value = "";
     }
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"rentbill/api"
+	"rentbill/internal/api"
 )
 
 func main() {
@@ -19,7 +19,9 @@ func main() {
 	if err := api.InitDB(); err != nil {
 		panic(err)
 	}
+	api.WarnDefaultCredentials()
 	api.StartAutoBackup()
+	api.StartLoginBlockCleanup()
 	defer api.DB.Close()
 
 	r := gin.New()
@@ -44,7 +46,6 @@ func main() {
 	})
 	
 	// Root level assets
-	r.GET("/sw.js", func(c *gin.Context) { c.FileFromFS("sw.js", publicFS) })
 	r.GET("/manifest.json", func(c *gin.Context) { c.FileFromFS("manifest.json", publicFS) })
 	r.GET("/favicon.ico", func(c *gin.Context) { c.FileFromFS("icon.svg", publicFS) })
 	r.GET("/icon.svg", func(c *gin.Context) { c.FileFromFS("icon.svg", publicFS) })
@@ -55,11 +56,13 @@ func main() {
 	cssFS, _ := fs.Sub(UIAssets, "ui/css")
 	fontsFS, _ := fs.Sub(UIAssets, "ui/fonts")
 	libsFS, _ := fs.Sub(UIAssets, "ui/libs")
+	printFS, _ := fs.Sub(UIAssets, "ui/print")
 	
 	r.StaticFS("/js", http.FS(jsFS))
 	r.StaticFS("/css", http.FS(cssFS))
 	r.StaticFS("/fonts", http.FS(fontsFS))
 	r.StaticFS("/libs", http.FS(libsFS))
+	r.StaticFS("/print", http.FS(printFS))
 
 	// External storage
 	r.Static("/uploads", "./uploads")
@@ -67,7 +70,9 @@ func main() {
 	// API Routes
 	v1 := r.Group("/api")
 	{
-		// Public Auth
+		// Public Auth & Setup
+		v1.GET("/setup/status", api.GetSetupStatus)
+		v1.POST("/setup", api.CompleteFirstSetup)
 		v1.POST("/auth/verify", api.VerifyPin)
 		v1.POST("/auth/forgot-pin", api.ForgotPin)
 
@@ -101,6 +106,7 @@ func main() {
 			auth.POST("/renters", api.CreateRenter)
 			auth.GET("/renter/:id", api.GetRenter)
 			auth.PUT("/renters/:id", api.UpdateRenter)
+			auth.PUT("/renters/:id/password", api.UpdateTenantPasswordByAdmin)
 			auth.DELETE("/renters/:id", api.DeleteRenter)
 			auth.POST("/vacant", api.MarkVacant)
 			auth.POST("/restore", api.RestoreRenter)
@@ -135,20 +141,28 @@ func main() {
 			auth.PUT("/maintenance/:id", api.UpdateMaintenanceTask)
 			auth.DELETE("/maintenance/:id", api.DeleteMaintenanceTask)
 			auth.POST("/maintenance/:id/upload", api.UploadMaintenancePhoto)
+			auth.POST("/maintenance/:id/convert", api.ConvertMaintenanceTaskToExpense)
 
 			// Documents
 			auth.GET("/documents", api.GetDocuments)
 			auth.POST("/documents/upload", api.UploadDocument)
 			auth.DELETE("/documents/:id", api.DeleteDocument)
 
+			// Units
+			auth.GET("/units", api.GetUnits)
+			auth.POST("/units", api.CreateUnit)
+			auth.PUT("/units/:id", api.UpdateUnit)
+			auth.DELETE("/units/:id", api.DeleteUnit)
+
 			// Reports
 			auth.GET("/reports/financial-summary", api.GetFinancialSummary)
 			auth.GET("/reports/tenant-ledger", api.GetTenantLedger)
 			auth.GET("/reports/trends", api.GetTrendData)
-			auth.GET("/reports/audit", api.GetAuditReport)
 			auth.GET("/reports/monthly/:month", api.GetMonthlyReport)
 			auth.GET("/reports/pending-bills", api.GetAllPendingBills)
 			auth.GET("/reports/all-paid-bills", api.GetAllPaidBills)
+			auth.GET("/reports/billing-status", api.GetBillingStatus)
+			auth.GET("/reports/audit", api.GetAuditReport)
 		}
 	}
 
