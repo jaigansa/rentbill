@@ -831,15 +831,9 @@
                             </h2>
                             <div class="action-meta">
                                 <span class="badge badge-warning" id="countBilling">0</span>
-                                <button class="btn btn-primary btn-sm" onclick="openBatchBillingModal()">
-                                    <i data-lucide="plus" aria-hidden="true"></i> Batch
-                                </button>
                             </div>
                         </header>
                         <div class="action-list" id="queueBilling" role="list"></div>
-                        <footer class="action-footer">
-                            <button class="btn btn-outline" onclick="openBatchBillingModal()">View all billing</button>
-                        </footer>
                     </section>
 
                     <section class="action-card" aria-labelledby="payments-title">
@@ -851,10 +845,6 @@
                             <span class="badge badge-success" id="countPendingProofs">0</span>
                         </header>
                         <div class="action-list" id="queuePendingProofs" role="list"></div>
-                        <footer class="action-footer">
-                            <button class="btn btn-outline"
-                                onclick="showSection('tenants-section', 'tenants-billing')">Review all</button>
-                        </footer>
                     </section>
 
                     <section class="action-card" aria-labelledby="tasks-title">
@@ -866,10 +856,6 @@
                             <span class="badge badge-info" id="countTasks">0</span>
                         </header>
                         <div class="action-list" id="queueTasks" role="list"></div>
-                        <footer class="action-footer">
-                            <button class="btn btn-outline"
-                                onclick="showSection('settings-section', 'settings-maintenance')">Manage tasks</button>
-                        </footer>
                     </section>
                 </div>
 

@@ -1206,7 +1206,7 @@ async function populateActionQueues(tenants, ledger) {
             if (countEl) countEl.innerText = openTasks.length;
             
             qTasks.innerHTML = openTasks.length ? openTasks.map(t => `
-                <div onclick="showSection('settings-section', 'settings-maintenance')" class="tenant-row" style="padding: 0.75rem; cursor: pointer; border: 1.5px solid var(--border); border-radius: 10px;">
+                <div onclick="showSection('property-section', 'property-maintenance')" class="tenant-row" style="padding: 0.75rem; cursor: pointer; border: 1.5px solid var(--border); border-radius: 10px;">
                     <div style="font-weight: 800; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.title}</div>
                     <div style="display:flex; justify-content: space-between; margin-top: 4px;">
                         <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">${t.unit_room}</div>
