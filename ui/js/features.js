@@ -2922,8 +2922,8 @@ async function loadSettingsTenantAccounts() {
                     <td style="padding: 10px; font-weight: 700; color: var(--text-muted);">+91 ${r.mobile_number || 'N/A'}${userEmail}</td>
                     <td style="padding: 10px; font-family: monospace; font-weight: 800; color: var(--success);">${defaultPass}</td>
                     <td style="padding: 10px; text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openAdminTenantPasswordModal(${r.id}, '${r.name.replace(/'/g, "\\'")}', '${r.room_no}')" title="Set Custom Password" style="border-radius: 6px; padding: 4px 8px; font-size: 0.75rem;">
-                            <i data-lucide="key" style="width: 14px; height: 14px; color: var(--primary);"></i> Edit Pass
+                        <button type="button" class="btn btn-secondary btn-icon-sm" onclick="openAdminTenantPasswordModal(${r.id}, '${r.name.replace(/'/g, "\\'")}', '${r.room_no}')" title="Set Custom Password" style="border-radius: 6px; color: var(--primary);">
+                            <i data-lucide="key" style="width: 15px; height: 15px;"></i>
                         </button>
                     </td>
                 </tr>
