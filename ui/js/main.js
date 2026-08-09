@@ -1220,22 +1220,48 @@ async function populateActionQueues(tenants, ledger) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function updateMonthlyTracker(tenants) {
-    const container = document.getElementById('monthlyTracker');
+function updatePendingDues(pendingBills) {
+    const container = document.getElementById('queuePendingDues');
+    const countEl = document.getElementById('countPendingDues');
     if (!container) return;
 
-    const now = new Date();
-    const monthStr = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-    
-    API.bills.getMonthlyReport(monthStr).then(report => {
-        if (!report || report.length === 0) {
-            container.innerHTML = '<p style="text-align:center; font-size:0.7rem;">No data.</p>';
-            return;
-        }
-        container.innerHTML = report.map(u => `
-            <div title="Unit ${u.room_no}: ${u.is_paid ? 'Paid' : (u.is_billed ? 'Unpaid' : 'Not Billed')}" style="width: 14px; height: 14px; border-radius: 4px; background: ${u.is_paid ? 'var(--success)' : (u.is_billed ? 'var(--warning)' : 'var(--border)')};"></div>
-        `).join('');
-    }).catch(e => console.error(e));
+    const pending = Array.isArray(pendingBills) ? pendingBills.slice() : [];
+    if (countEl) countEl.innerText = pending.length;
+
+    if (pending.length === 0) {
+        container.innerHTML = '<p style="text-align:center; font-size:0.7rem; color:var(--text-muted); padding: 1rem;">No pending dues. All caught up!</p>';
+        return;
+    }
+
+    const monthOrder = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthRank = (label) => {
+        const parts = (label || '').split(' ');
+        const year = parseInt(parts[parts.length - 1], 10) || 0;
+        const month = monthOrder.indexOf(parts[0]);
+        return (year * 12) + (month >= 0 ? month : 0);
+    };
+    pending.sort((a, b) => monthRank(b.billing_month) - monthRank(a.billing_month));
+
+    container.innerHTML = pending.map(b => `
+        <div class="tenant-row" style="padding: 0.75rem; border: 1.5px solid var(--border); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+            <div style="min-width: 0; flex: 1;">
+                <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${b.tenant_name} <span style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted);">• Unit ${b.room_no}</span></div>
+                <div style="font-size: 0.62rem; color: var(--text-muted); font-weight: 700;">
+                    ${b.billing_month} • <span style="font-weight: 900; color: var(--danger);">${currencyFormatter.format(b.total_amount)}</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                <button onclick="sendWhatsAppReminder(${b.renter_id}, '${(b.billing_month || '').replace(/'/g, "\\'")}', ${b.total_amount})" class="btn btn-success btn-icon-sm" style="border-radius: 6px;" title="Send WhatsApp Reminder">
+                    <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button onclick="openHistoryPaymentModal(${b.id}, ${b.total_amount})" class="btn btn-secondary btn-icon-sm" style="border-radius: 6px; color: var(--primary);" title="Record Payment">
+                    <i data-lucide="banknote" style="width: 14px; height: 14px;"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function updateOwnerSettlements(paidBills, expenses, withdrawals) {
@@ -1386,7 +1412,7 @@ function filterDashboardByProperty() {
 
     populateActionQueues(filteredTenants, filteredLedger);
 
-    updateMonthlyTracker(filteredTenants);
+    updatePendingDues(filteredPendingBills);
     updateOwnerSettlements(filteredPaidBills, filteredExpenses, filteredWithdrawals);
     if (typeof loadTrendChart === 'function') loadTrendChart(filter);
     if (typeof loadCollectionsChart === 'function') loadCollectionsChart(filteredPendingBills, filteredPaidBills);
