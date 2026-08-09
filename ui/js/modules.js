@@ -437,12 +437,16 @@ async function printIncomeHistory(ownerFilter = null) {
     const filterAccount = accounts.find(a => a.owner_name === filterName);
     const accountName = filterAccount ? [filterAccount.label, filterAccount.upi].filter(Boolean).join(' · ') : (filterName || '');
 
+    const fromDate = document.getElementById('receivedFromDate')?.value || '';
+    const toDate = document.getElementById('receivedToDate')?.value || '';
+    const periodInfo = (fromDate || toDate) ? `${fromDate || '...'} to ${toDate || '...'}` : 'All records';
+
     let bills = [];
     let withdrawals = [];
     try {
         const [bRes, wRes] = await Promise.all([
-            API.bills.getAllPaidBills().catch(() => []),
-            API.request('/withdrawals').catch(() => [])
+            API.bills.getAllPaidBills(fromDate, toDate).catch(() => []),
+            API.withdrawals.getAll(500, 0, filterName, fromDate, toDate).catch(() => [])
         ]);
         bills = Array.isArray(bRes) ? bRes : [];
         withdrawals = Array.isArray(wRes) ? wRes : [];
@@ -480,7 +484,7 @@ async function printIncomeHistory(ownerFilter = null) {
         set('ownPropName', propName);
         set('ownPropAddr', propAddr);
         set('ownDate', new Date().toLocaleDateString('en-IN'));
-        set('ownPeriod', 'All records');
+        set('ownPeriod', periodInfo);
         set('ownName', filterName ? filterName.toUpperCase() : 'ALL PROPERTY OWNERS');
         set('ownAccount', filterName ? (accountName || filterName) : 'All Accounts');
         set('ownCount', paidBills.length + withdrawals.length);
