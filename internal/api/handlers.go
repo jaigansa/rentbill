@@ -1184,26 +1184,27 @@ func PayBill(c *gin.Context) {
 }
 
 func DeleteBill(c *gin.Context) {
-	var b struct {
-		RID int
-		Inc float64
-		Amt float64
-	}
-	err := DB.QueryRow("SELECT renter_id, COALESCE(arrears_included, 0), COALESCE(arrears_amount, 0) FROM bills WHERE id = ?", c.Param("id")).Scan(&b.RID, &b.Inc, &b.Amt)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
-		return
-	}
-
 	tx, err := DB.Begin()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
 	}
+	defer tx.Rollback()
+
+	var b struct {
+		RID int
+		Inc float64
+		Amt float64
+	}
+	err = tx.QueryRow("SELECT renter_id, COALESCE(arrears_included, 0), COALESCE(arrears_amount, 0) FROM bills WHERE id = ?", c.Param("id")).Scan(&b.RID, &b.Inc, &b.Amt)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
+		return
+	}
+
 	if b.Inc > 0 {
 		_, err = tx.Exec("UPDATE renters SET pending_arrears = pending_arrears + ? WHERE id = ?", b.Inc, b.RID)
 		if err != nil {
-			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revert arrears"})
 			return
 		}
@@ -1211,14 +1212,12 @@ func DeleteBill(c *gin.Context) {
 	if b.Amt > 0 {
 		_, err = tx.Exec("UPDATE renters SET pending_arrears = MAX(0, pending_arrears - ?) WHERE id = ?", b.Amt, b.RID)
 		if err != nil {
-			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revert arrears"})
 			return
 		}
 	}
 	_, err = tx.Exec("DELETE FROM bills WHERE id = ?", c.Param("id"))
 	if err != nil {
-		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete bill"})
 		return
 	}
@@ -1611,21 +1610,108 @@ func GetTenantLedger(c *gin.Context) {
 
 func GetTrendData(c *gin.Context) {
 	owner := c.Query("owner")
-	var trends []interface{}
+	
 	now := time.Now()
+	startMonth := now.AddDate(0, -5, 0)
+	startStr := startMonth.Format("2006-01")
+	endStr := now.Format("2006-01")
+
+	incomeMap := make(map[string]float64)
+	expenseMap := make(map[string]float64)
+	payoutMap := make(map[string]float64)
+
+	// Query incomes
+	var incRows *sql.Rows
+	var err error
+	if owner != "" {
+		incRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', b.payment_date) as m, SUM(b.paid_amount) 
+			FROM bills b 
+			JOIN renters r ON b.renter_id = r.id 
+			WHERE b.is_paid = 1 
+			  AND strftime('%Y-%m', b.payment_date) BETWEEN ? AND ? 
+			  AND COALESCE(NULLIF(b.payment_details, ''), r.assigned_upi) = ?
+			GROUP BY m`, startStr, endStr, owner)
+	} else {
+		incRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', payment_date) as m, SUM(paid_amount) 
+			FROM bills 
+			WHERE is_paid = 1 
+			  AND strftime('%Y-%m', payment_date) BETWEEN ? AND ?
+			GROUP BY m`, startStr, endStr)
+	}
+	if err == nil {
+		defer incRows.Close()
+		for incRows.Next() {
+			var m string
+			var val float64
+			if err := incRows.Scan(&m, &val); err == nil {
+				incomeMap[m] = val
+			}
+		}
+	}
+
+	// Query expenses
+	var expRows *sql.Rows
+	if owner != "" {
+		expRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', date) as m, SUM(amount) 
+			FROM expenses 
+			WHERE strftime('%Y-%m', date) BETWEEN ? AND ? 
+			  AND owner_name = ?
+			GROUP BY m`, startStr, endStr, owner)
+	} else {
+		expRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', date) as m, SUM(amount) 
+			FROM expenses 
+			WHERE strftime('%Y-%m', date) BETWEEN ? AND ?
+			GROUP BY m`, startStr, endStr)
+	}
+	if err == nil {
+		defer expRows.Close()
+		for expRows.Next() {
+			var m string
+			var val float64
+			if err := expRows.Scan(&m, &val); err == nil {
+				expenseMap[m] = val
+			}
+		}
+	}
+
+	// Query withdrawals
+	var wRows *sql.Rows
+	if owner != "" {
+		wRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', date) as m, SUM(amount) 
+			FROM owner_withdrawals 
+			WHERE strftime('%Y-%m', date) BETWEEN ? AND ? 
+			  AND owner_name = ?
+			GROUP BY m`, startStr, endStr, owner)
+	} else {
+		wRows, err = DB.Query(`
+			SELECT strftime('%Y-%m', date) as m, SUM(amount) 
+			FROM owner_withdrawals 
+			WHERE strftime('%Y-%m', date) BETWEEN ? AND ?
+			GROUP BY m`, startStr, endStr)
+	}
+	if err == nil {
+		defer wRows.Close()
+		for wRows.Next() {
+			var m string
+			var val float64
+			if err := wRows.Scan(&m, &val); err == nil {
+				payoutMap[m] = val
+			}
+		}
+	}
+
+	var trends []interface{}
 	for i := 5; i >= 0; i-- {
 		t := now.AddDate(0, -i, 0)
-		monthStr := t.Format("2006-01")
-		var inc, maint, payout float64
-		if owner != "" {
-			DB.QueryRow(`SELECT COALESCE(SUM(b.paid_amount), 0) FROM bills b JOIN renters r ON b.renter_id = r.id WHERE b.is_paid = 1 AND strftime('%Y-%m', b.payment_date) = ? AND COALESCE(NULLIF(b.payment_details, ''), r.assigned_upi) = ?`, monthStr, owner).Scan(&inc)
-			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ? AND owner_name = ?`, monthStr, owner).Scan(&maint)
-			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE strftime('%Y-%m', date) = ? AND owner_name = ?`, monthStr, owner).Scan(&payout)
-		} else {
-			DB.QueryRow(`SELECT COALESCE(SUM(paid_amount), 0) FROM bills WHERE is_paid = 1 AND strftime('%Y-%m', payment_date) = ?`, monthStr).Scan(&inc)
-			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE strftime('%Y-%m', date) = ?`, monthStr).Scan(&maint)
-			DB.QueryRow(`SELECT COALESCE(SUM(amount), 0) FROM owner_withdrawals WHERE strftime('%Y-%m', date) = ?`, monthStr).Scan(&payout)
-		}
+		monthKey := t.Format("2006-01")
+		inc := incomeMap[monthKey]
+		maint := expenseMap[monthKey]
+		payout := payoutMap[monthKey]
 		trends = append(trends, gin.H{ "month": t.Format("Jan"), "income": inc, "expenses": maint + payout })
 	}
 	c.JSON(http.StatusOK, trends)
