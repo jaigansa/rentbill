@@ -119,26 +119,10 @@ export async function checkAuth(passedSession = null) {
     if (dropRole) dropRole.textContent = activeUser.role || 'ADMIN';
     updateConnectionStatus(navigator.onLine);
 
-    // Handle Viewer Banner Element
-    let viewerBanner = document.getElementById('viewer-mode-banner');
-    if (activeUser.role === 'VIEWER') {
-      if (!viewerBanner) {
-        viewerBanner = document.createElement('div');
-        viewerBanner.id = 'viewer-mode-banner';
-        viewerBanner.style.cssText = 'background: linear-gradient(90deg, #0f172a, #1e293b); color: #38bdf8; border-bottom: 1px solid rgba(56, 189, 248, 0.25); padding: 8px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; z-index: 999;';
-        viewerBanner.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="eye"></i>
-            <span>Viewer Mode — Read-Only View Active (Data modifications disabled)</span>
-          </div>
-          <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">Viewer Mode</span>
-        `;
-        const appView = document.getElementById('app-view');
-        if (appView) appView.parentNode.insertBefore(viewerBanner, appView);
-      }
-      viewerBanner.style.display = 'flex';
-    } else if (viewerBanner) {
-      viewerBanner.style.display = 'none';
+    // Handle Viewer Mode Indicator (minimal top-bar pill)
+    const viewerBanner = document.getElementById('viewer-mode-banner');
+    if (viewerBanner) {
+      viewerBanner.style.display = (activeUser.role === 'VIEWER') ? 'inline-flex' : 'none';
     }
 
     document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');

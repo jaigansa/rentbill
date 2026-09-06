@@ -122,6 +122,26 @@
   background-color: var(--text-muted);
 }
 
+.viewer-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 50px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  white-space: nowrap;
+}
+
+.viewer-mode-pill i,
+.viewer-mode-pill svg {
+  width: 13px;
+  height: 13px;
+}
+
 .status-dot.online {
   background-color: var(--success);
 }
