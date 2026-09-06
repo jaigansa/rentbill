@@ -64,10 +64,8 @@ export async function loadDiagnosticsPage() {
     const ledgerBadgeNote = '';
 
     // Integrity Audit Calculations
-    const rentersWithUser = (renters || []).filter(r => r.user_id !== null).length;
     const rentersWithUnit = (renters || []).filter(r => r.unit_id !== null).length;
     const rentersNoUnit = activeRenterCount - rentersWithUnit;
-    const authAccountsCount = rentersWithUser;
 
     // Financial Totals
     const billStatusCounts = {};
@@ -85,11 +83,9 @@ export async function loadDiagnosticsPage() {
     const vacantUnits = (units || []).filter(u => (u.status || '').toUpperCase() === 'VACANT').length;
     const totalUnits = activeUnitCount;
     const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
-    const rentersNoLogin = activeRenterCount - authAccountsCount;
 
     const integrityIssues = [];
     if (rentersNoUnit > 0) integrityIssues.push(`${rentersNoUnit} tenants have no unit assigned`);
-    if (activeRenterCount > 0 && authAccountsCount === 0) integrityIssues.push('No tenant portal logins provisioned');
     if (outstanding < 0) integrityIssues.push('Collected amount exceeds total billed');
     if ((bills || []).length > 0 && statusUnpaid === 0 && activeRenterCount > 0) integrityIssues.push('No unpaid invoices recorded');
 
@@ -129,12 +125,6 @@ export async function loadDiagnosticsPage() {
         <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
           <span>Active Tenants:</span>
           <strong>${activeRenterCount}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
-          <span>Tenant Portal Logins Provisioned:</span>
-          <div><strong>${authAccountsCount} / ${activeRenterCount}</strong>
-            ${rentersNoLogin > 0 ? `<span class="badge badge-warning">${rentersNoLogin} Missing</span>` : ''}
-          </div>
         </div>
         <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border);">
           <span>Tenants Linked to Units:</span>
@@ -293,8 +283,6 @@ export async function runDiagnosticsCheck() {
     const vacantUnits = (units || []).filter(u => (u.status || '').toUpperCase() === 'VACANT').length;
     const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
     const totalRenters = renters ? renters.length : 0;
-    const rentersWithLogin = (renters || []).filter(r => r.user_id !== null).length;
-    const missingLogins = totalRenters - rentersWithLogin;
 
     const billStatus = {};
     (bills || []).forEach(b => {
@@ -328,7 +316,6 @@ export async function runDiagnosticsCheck() {
       <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>Total Units:</span><strong>${totalUnits}</strong></div>
       <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>Unit Occupancy:</span><strong>${occupancyRate}%</strong> <span class="badge badge-info">${occupiedUnits} Occ / ${vacantUnits} Vac</span></div>
       <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>Total Tenants:</span><strong>${totalRenters}</strong></div>
-      <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>Tenant Logins:</span><strong>${rentersWithLogin} / ${totalRenters}</strong> ${missingLogins > 0 ? `<span class="badge badge-warning">${missingLogins} Missing</span>` : ''}</div>
       <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);"><span>Invoices Generated:</span><strong>${bills ? bills.length : 0}</strong></div>
       <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
         <span>Invoice Breakdown:</span>

@@ -87,30 +87,6 @@ export function deriveBillStatusAfterPayment(netAmountPaise, newPaidPaise) {
   return deriveBillStatus(netAmountPaise, newPaidPaise);
 }
 
-// ---- Tenant login derivations (mirror tenantAuth.js / forms.js) -----------
-
-// Strip a phone number to its trailing 10 digits, or '' if too short.
-export function normalizeTenDigitMobile(mobile = '') {
-  const digits = String(mobile).replace(/[^0-9]/g, '');
-  return digits.length >= 10 ? digits.slice(-10) : digits;
-}
-
-// Build the deterministic tenant portal login email from a 10-digit phone.
-// Mirrors tensantAuth.js: `tenant_${tenDigitMobile}@rentbill.local`.
-export function tenantLoginEmailFromMobile(mobile = '') {
-  const ten = normalizeTenDigitMobile(mobile);
-  if (!ten || ten.length < 10) return '';
-  return `tenant_${ten}@rentbill.local`;
-}
-
-// Default tenant password: trailing 10 digits, or fallback if too short.
-// Mirrors forms.js default password logic.
-export function defaultTenantPassword(mobile = '', fallback = 'Tenant@123') {
-  const ten = normalizeTenDigitMobile(mobile);
-  if (ten && ten.length >= 6) return ten;
-  return fallback;
-}
-
 // Normalize a parsed backup JSON into an ordered table -> rows map.
 // Export writes tables under { data: { <table>: rows } }; older exports placed
 // them at the top level, so both are accepted. Returns only known tables that

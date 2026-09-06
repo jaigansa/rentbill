@@ -1,7 +1,7 @@
 // RentBill Pro — Billing Engine, Invoices & WhatsApp Automated Notifications (Pure Supabase)
 import { getSupabaseClient } from '../core/config.js';
 import { safeUpdate, safeDelete } from '../core/db.js';
-import { getCurrentUser } from '../core/state.js';
+import { getCurrentUser, assertCanModify } from '../core/state.js';
 import { formatCurrency, formatInvoiceNumber, numberToWordsINR, escapeStr, renderEmptyState, openModal, refreshLucideIcons } from '../core/ui.js';
 import { loadDashboard } from './dashboard.js';
 
@@ -63,7 +63,6 @@ export function syncBillPeriodDates(force = false) {
 
 export async function loadBillsPage() {
   const supabaseClient = getSupabaseClient();
-  const currentUser = getCurrentUser();
 
   try {
     if (!supabaseClient) return;
@@ -104,17 +103,7 @@ export async function loadBillsPage() {
 
     let bills = [];
     try {
-      let query = supabaseClient.from('bills').select('*').is('deleted_at', null).order('created_at', { ascending: false });
-      if (currentUser && currentUser.role === 'TENANT') {
-        if (currentUser.renter_id) {
-          query = query.eq('renter_id', currentUser.renter_id);
-        } else {
-          // A tenant with no resolved renter_id must NOT see every tenant's bills.
-          // Force an impossible filter to return an empty set instead of widening scope.
-          query = query.eq('renter_id', -1);
-        }
-      }
-      const { data: bData } = await query;
+      const { data: bData } = await supabaseClient.from('bills').select('*').is('deleted_at', null).order('created_at', { ascending: false });
       bills = bData || [];
     } catch (e) {
       console.warn('Bills fetch warning:', e);
@@ -146,10 +135,10 @@ export async function loadBillsPage() {
                 <button class="dropdown-item" onclick="printReceipt(${b.id})"><i data-lucide="printer"></i> View & Print Invoice</button>
                 <button class="dropdown-item" onclick="shareInvoiceWhatsApp(${b.id})"><i data-lucide="share-2"></i> Share Invoice</button>
                 <button class="dropdown-item" onclick="copyInvoiceToClipboard(${b.id})"><i data-lucide="copy"></i> Copy Invoice Text</button>
-                ${b.status !== 'PAID' && b.status !== 'VOID' && currentUser.role !== 'TENANT' ? `<button class="dropdown-item" style="color: #d97706;" onclick="sendOverdueReminderWhatsApp(${b.id})"><i data-lucide="alert-triangle"></i> Overdue Reminder</button>` : ''}
-                ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" onclick="openPaymentModal(${b.id}, ${due})"><i data-lucide="${currentUser.role === 'TENANT' ? 'upload-cloud' : 'credit-card'}"></i> ${currentUser.role === 'TENANT' ? 'Submit Payment Proof' : 'Record Payment'}</button>` : ''}
-                ${b.status !== 'VOID' && currentUser.role !== 'TENANT' ? `<button class="dropdown-item danger" onclick="voidBill(${b.id})"><i data-lucide="slash"></i> Void Invoice</button>` : ''}
-                ${currentUser.role !== 'TENANT' ? `<button class="dropdown-item danger" onclick="triggerDeleteBill(${b.id})"><i data-lucide="trash-2"></i> Delete Invoice</button>` : ''}
+                ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" style="color: #d97706;" onclick="sendOverdueReminderWhatsApp(${b.id})"><i data-lucide="alert-triangle"></i> Overdue Reminder</button>` : ''}
+                ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" onclick="openPaymentModal(${b.id}, ${due})"><i data-lucide="credit-card"></i> Record Payment</button>` : ''}
+                ${b.status !== 'VOID' ? `<button class="dropdown-item danger" onclick="voidBill(${b.id})"><i data-lucide="slash"></i> Void Invoice</button>` : ''}
+                <button class="dropdown-item danger" onclick="triggerDeleteBill(${b.id})"><i data-lucide="trash-2"></i> Delete Invoice</button>
               </div>
             </div>
           `;
@@ -164,7 +153,7 @@ export async function loadBillsPage() {
               </button>
               ${b.status !== 'PAID' && b.status !== 'VOID' ? `
                 <button type="button" class="btn-quick-action action-pay" onclick="openPaymentModal(${b.id}, ${due})">
-                  <i data-lucide="${currentUser.role === 'TENANT' ? 'upload-cloud' : 'credit-card'}"></i> ${currentUser.role === 'TENANT' ? 'Pay / Proof' : 'Record Pay'}
+                  <i data-lucide="credit-card"></i> Record Pay
                 </button>
               ` : ''}
             </div>
@@ -423,43 +412,19 @@ export async function updateLiveBillCalculation() {
 }
 
 export async function openPaymentModal(billId, duePaise) {
-  const currentUser = getCurrentUser();
   const supabaseClient = getSupabaseClient();
   const modalHeader = document.querySelector('#modal-add-payment .modal-header h2');
   const submitBtn = document.getElementById('pay-submit-btn');
 
-  if (currentUser && currentUser.role === 'TENANT') {
-    if (modalHeader) modalHeader.textContent = 'Submit Payment Proof';
-    if (submitBtn) submitBtn.innerHTML = '<i data-lucide="upload-cloud"></i> Submit Payment Screenshot';
-    const proofGroup = document.getElementById('pay-proof-group');
-    if (proofGroup) proofGroup.style.display = 'block';
-    const notesEl = document.getElementById('pay-notes');
-    if (notesEl) notesEl.placeholder = 'Optional transaction details, UPI ref, etc.';
-  } else {
-    if (modalHeader) modalHeader.textContent = 'Record Tenant Payment';
-    if (submitBtn) submitBtn.innerHTML = '<i data-lucide="check"></i> Confirm Payment';
-    const proofGroup = document.getElementById('pay-proof-group');
-    if (proofGroup) proofGroup.style.display = 'block';
-  }
+  if (modalHeader) modalHeader.textContent = 'Record Tenant Payment';
+  if (submitBtn) submitBtn.innerHTML = '<i data-lucide="check"></i> Confirm Payment';
 
   const payBillSelect = document.getElementById('pay-bill-id');
   if (payBillSelect) {
     payBillSelect.innerHTML = '<option value="">Loading invoices...</option>';
     try {
       if (supabaseClient) {
-        let query = supabaseClient.from('bills').select('id, uuid, billing_period, net_amount, paid_amount, renter_id, status').is('deleted_at', null).neq('status', 'PAID').neq('status', 'VOID').order('created_at', { ascending: false });
-        
-        if (currentUser && currentUser.role === 'TENANT') {
-          if (currentUser.renter_id) {
-            query = query.eq('renter_id', currentUser.renter_id);
-          } else {
-            // Do NOT fabricate a renter id from an arbitrary row (data leak):
-            // a tenant with no resolved renter_id gets an empty invoice list.
-            query = query.eq('renter_id', -1);
-          }
-        }
-
-        const { data: unpaidBills } = await query;
+        const { data: unpaidBills } = await supabaseClient.from('bills').select('id, uuid, billing_period, net_amount, paid_amount, renter_id, status').is('deleted_at', null).neq('status', 'PAID').neq('status', 'VOID').order('created_at', { ascending: false });
         const { data: renters } = await supabaseClient.from('renters').select('id, name');
         const renterMap = {};
         (renters || []).forEach(r => { renterMap[r.id] = r.name; });
@@ -508,6 +473,7 @@ export async function openPaymentModal(billId, duePaise) {
 }
 
 export async function voidBill(billId) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm('Are you sure you want to void this invoice? This will cancel the bill and zero its balance.')) return;
   try {
@@ -561,6 +527,7 @@ export async function voidBill(billId) {
 }
 
 export async function triggerDeleteBill(billId) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm('Are you sure you want to permanently delete this bill invoice?')) return;
   try {

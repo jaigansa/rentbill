@@ -1,7 +1,7 @@
 // RentBill Pro — Maintenance & Repair Task Management Engine (Pure Supabase)
 import { getSupabaseClient } from '../core/config.js';
 import { safeInsert, safeUpdate, safeDelete } from '../core/db.js';
-import { getCurrentUser } from '../core/state.js';
+import { assertCanModify } from '../core/state.js';
 import { formatCurrency, escapeStr, renderEmptyState, openModal, closeModal, refreshLucideIcons } from '../core/ui.js';
 
 let maintenanceCache = [];
@@ -11,7 +11,6 @@ let maintenanceCache = [];
  */
 export async function loadMaintenancePage() {
   const supabaseClient = getSupabaseClient();
-  const currentUser = getCurrentUser();
   const tbody = document.getElementById('table-body-maintenance');
   if (!tbody) return;
 
@@ -35,21 +34,11 @@ export async function loadMaintenancePage() {
         const opt = document.createElement('option');
         opt.value = r.id;
         opt.textContent = `${r.name} (Unit: ${r.unit_id || '-'})`;
-        if (currentUser && currentUser.role === 'TENANT' && currentUser.renter_id === r.id) {
-          opt.selected = true;
-        }
         tenantSelect.appendChild(opt);
       });
     }
 
-    let query = supabaseClient.from('maintenance_tasks').select('*').order('created_at', { ascending: false });
-
-    // If logged in as tenant, show only tenant's own requests
-    if (currentUser && currentUser.role === 'TENANT' && currentUser.renter_id) {
-      query = query.eq('renter_id', currentUser.renter_id);
-    }
-
-    const { data: tasks, error } = await query;
+    const { data: tasks, error } = await supabaseClient.from('maintenance_tasks').select('*').order('created_at', { ascending: false });
     if (error) throw error;
 
     // Fetch related maps for display
@@ -103,7 +92,6 @@ function renderMaintenanceTable(tasks) {
   const tbody = document.getElementById('table-body-maintenance');
   if (!tbody) return;
 
-  const currentUser = getCurrentUser();
   tbody.innerHTML = '';
 
   if (!tasks || tasks.length === 0) {
@@ -146,11 +134,9 @@ function renderMaintenanceTable(tasks) {
 
     const quickActionsHtml = `
       <div class="maint-mobile-quick-actions mobile-only">
-        ${currentUser.role !== 'TENANT' ? `
-          <button type="button" class="btn-quick-action action-status" onclick="triggerUpdateMaintenanceStatus(${t.id})">
-            <i data-lucide="check-circle-2"></i> Update Status
-          </button>
-        ` : ''}
+        <button type="button" class="btn-quick-action action-status" onclick="triggerUpdateMaintenanceStatus(${t.id})">
+          <i data-lucide="check-circle-2"></i> Update Status
+        </button>
         <button type="button" class="btn-quick-action" onclick="triggerEditMaintenance(${t.id})">
           <i data-lucide="edit-2"></i> Edit
         </button>
@@ -208,19 +194,15 @@ function renderMaintenanceTable(tasks) {
         <div class="dropdown">
           <button class="dropdown-btn" onclick="toggleDropdown(event, this)">⋮</button>
           <div class="dropdown-menu">
-            ${currentUser.role !== 'TENANT' ? `
-              <button class="dropdown-item" onclick="triggerUpdateMaintenanceStatus(${t.id})">
-                <i data-lucide="check-circle-2"></i> Update Status & Cost
-              </button>
-            ` : ''}
+            <button class="dropdown-item" onclick="triggerUpdateMaintenanceStatus(${t.id})">
+              <i data-lucide="check-circle-2"></i> Update Status & Cost
+            </button>
             <button class="dropdown-item" onclick="triggerEditMaintenance(${t.id})">
               <i data-lucide="edit-2"></i> Edit Details
             </button>
-            ${currentUser.role !== 'TENANT' ? `
-              <button class="dropdown-item danger" onclick="triggerDeleteMaintenance(${t.id}, '${escapeStr(t.title)}')">
-                <i data-lucide="trash-2"></i> Delete Request
-              </button>
-            ` : ''}
+            <button class="dropdown-item danger" onclick="triggerDeleteMaintenance(${t.id}, '${escapeStr(t.title)}')">
+              <i data-lucide="trash-2"></i> Delete Request
+            </button>
           </div>
         </div>
         ${quickActionsHtml}
@@ -308,6 +290,7 @@ export function triggerUpdateMaintenanceStatus(taskId) {
  * Deletes a maintenance task
  */
 export async function triggerDeleteMaintenance(taskId, title) {
+  if (!assertCanModify()) return;
   if (!confirm(`Are you sure you want to delete maintenance task "${title}"?`)) return;
 
   const supabaseClient = getSupabaseClient();

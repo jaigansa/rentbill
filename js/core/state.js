@@ -3,7 +3,7 @@
 export const state = {
   currentLang: 'en',
   translations: {},
-  currentUser: { id: null, username: '', role: 'TENANT', email: '' },
+  currentUser: { id: null, username: '', role: '', email: '' },
   currentActiveSubTab: 'properties',
   uploadedDocBase64: ''
 };
@@ -14,6 +14,27 @@ export function getCurrentUser() {
 
 export function setCurrentUser(user) {
   state.currentUser = { ...state.currentUser, ...user };
+}
+
+export function isAdmin() {
+  return getCurrentUser().role === 'ADMIN';
+}
+
+// Should always be the inverse of isAdmin while only ADMIN/VIEWER exist
+export function isViewer() {
+  return getCurrentUser().role === 'VIEWER';
+}
+
+export function canModify() {
+  return isAdmin();
+}
+
+export function assertCanModify() {
+  if (!canModify()) {
+    alert('🔒 Viewer Mode — Read-Only Access Active. Only ADMIN can modify data.');
+    return false;
+  }
+  return true;
 }
 
 export function getCurrentLang() {

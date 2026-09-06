@@ -23,17 +23,6 @@
   "stat_vacant": "காலியாக உள்ள வீடுகள்",
   "stat_maintenance": "சரிபார்க்கப்பட வேண்டிய சான்றுகள்",
 
-  "tenant_portal": "வாடகைதாரர் தளம்",
-  "tenant_my_unit": "எனது வாடகை வீடு",
-  "tenant_lease_details": "ஒப்பந்த விவரங்கள் & மாதாந்திர ரசீதுகள்",
-  "tenant_due": "தற்போதைய நிலுவைத் தொகை",
-  "tenant_base_rent": "மாதாந்திர வாடகை",
-  "tenant_deposit": "முன்பணம்",
-  "tenant_upi": "UPI மூலம் செலுத்தக்கூடியது",
-  "btn_view_invoices": "வாடகை ரசீதுகளைக் காண்க",
-  "btn_request_repair": "பராமரிப்பு கோரிக்கை",
-  "btn_submit_proof": "பணம் செலுத்திய சான்று அனுப்புக",
-
   "table_property": "சொத்தின் பெயர்",
   "table_address": "முகவரி",
   "table_owner": "உரிமையாளர் பெயர்",

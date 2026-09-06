@@ -1,7 +1,7 @@
 // RentBill Pro — Backup, JSON Export/Restore, CSV Engines & App Settings
 import { getSupabaseClient } from '../core/config.js';
 import { safeInsert } from '../core/db.js';
-import { getCurrentUser } from '../core/state.js';
+import { getCurrentUser, assertCanModify } from '../core/state.js';
 import { extractBackupTables, csvEscapeValue } from '../core/format.js';
 import { loadDashboard } from './dashboard.js';
 import { loadPropertiesPage, loadTenantsPage } from './properties.js';
@@ -172,6 +172,7 @@ export async function triggerManualBackup() {
 }
 
 export function triggerRestoreData() {
+  if (!assertCanModify()) return;
   const fileInput = document.getElementById('json-restore-file-input');
   if (fileInput) {
     fileInput.click();
@@ -225,6 +226,7 @@ export async function restoreTableData(tableName, rows) {
 }
 
 export async function triggerSeedSampleData() {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm('Would you like to insert realistic sample demo data (Owners, Property, Units, Tenants, Bills) into your Supabase database?')) return;
 

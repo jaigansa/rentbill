@@ -1,29 +1,19 @@
 // RentBill Pro — Payments Recording, Receipts & A4 Print Engine (Pure Supabase)
 import { getSupabaseClient } from '../core/config.js';
 import { safeUpdate, safeDelete } from '../core/db.js';
-import { getCurrentUser } from '../core/state.js';
+import { assertCanModify } from '../core/state.js';
 import { formatCurrency, formatInvoiceNumber, numberToWordsINR, renderEmptyState, openModal, refreshLucideIcons, escapeStr } from '../core/ui.js';
 import { loadBillsPage, shareInvoiceWhatsApp, copyInvoiceToClipboard, sharePaymentReceiptWhatsApp } from './bills.js';
 import { loadDashboard } from './dashboard.js';
 
 export async function loadPaymentsPage() {
   const supabaseClient = getSupabaseClient();
-  const currentUser = getCurrentUser();
   try {
     if (!supabaseClient) return;
 
     let payments = [];
     try {
-      let query = supabaseClient.from('payments').select('*').is('deleted_at', null).order('created_at', { ascending: false });
-      if (currentUser && currentUser.role === 'TENANT') {
-        if (currentUser.renter_id) {
-          query = query.eq('renter_id', currentUser.renter_id);
-        } else {
-          // No resolved renter_id -> force an empty result, never widen scope.
-          query = query.eq('renter_id', -1);
-        }
-      }
-      const { data: pData } = await query;
+      const { data: pData } = await supabaseClient.from('payments').select('*').is('deleted_at', null).order('created_at', { ascending: false });
       payments = pData || [];
     } catch (e) {
       console.warn('Payments fetch warning:', e);
@@ -90,7 +80,7 @@ export async function loadPaymentsPage() {
                   <i data-lucide="image"></i> Photo
                 </button>
               ` : ''}
-              ${currentUser && currentUser.role !== 'TENANT' && isPending ? `
+              ${isPending ? `
                 <button type="button" class="btn-quick-action action-approve" onclick="triggerApprovePaymentProof(${p.id}, ${p.bill_id})">
                   <i data-lucide="check-circle"></i> Approve
                 </button>
@@ -146,13 +136,13 @@ export async function loadPaymentsPage() {
                 <button class="dropdown-btn" onclick="toggleDropdown(event, this)">⋮</button>
                 <div class="dropdown-menu">
                   ${p.proof_photo ? `<button class="dropdown-item" onclick="viewPaymentProofImage(${p.id})"><i data-lucide="image"></i> View Receipt Photo</button>` : ''}
-                  ${currentUser && currentUser.role !== 'TENANT' && p.proof_status === 'PENDING' ? `<button class="dropdown-item success" onclick="triggerApprovePaymentProof(${p.id}, ${p.bill_id})"><i data-lucide="check-circle"></i> Approve Proof</button>` : ''}
-                  ${currentUser && currentUser.role !== 'TENANT' && p.proof_status === 'PENDING' ? `<button class="dropdown-item danger" onclick="triggerRejectPaymentProof(${p.id})"><i data-lucide="x-circle"></i> Reject Proof</button>` : ''}
+                  ${p.proof_status === 'PENDING' ? `<button class="dropdown-item success" onclick="triggerApprovePaymentProof(${p.id}, ${p.bill_id})"><i data-lucide="check-circle"></i> Approve Proof</button>` : ''}
+                  ${p.proof_status === 'PENDING' ? `<button class="dropdown-item danger" onclick="triggerRejectPaymentProof(${p.id})"><i data-lucide="x-circle"></i> Reject Proof</button>` : ''}
                   <button class="dropdown-item" onclick="printPaidReceipt(${p.bill_id}, ${p.id})"><i data-lucide="printer"></i> Print Payment Receipt</button>
                   <button class="dropdown-item" onclick="sharePaymentReceiptWhatsApp(${p.id})"><i data-lucide="share-2"></i> Share Receipt</button>
                   <button class="dropdown-item" onclick="shareInvoiceWhatsApp(${p.bill_id})"><i data-lucide="share-2"></i> Share Invoice</button>
                   <button class="dropdown-item" onclick="copyInvoiceToClipboard(${p.bill_id})"><i data-lucide="copy"></i> Copy Invoice Text</button>
-                  ${currentUser && currentUser.role !== 'TENANT' ? `<button class="dropdown-item danger" onclick="triggerDeletePayment(${p.id}, ${p.bill_id})"><i data-lucide="trash-2"></i> Delete Payment</button>` : ''}
+                  <button class="dropdown-item danger" onclick="triggerDeletePayment(${p.id}, ${p.bill_id})"><i data-lucide="trash-2"></i> Delete Payment</button>
                 </div>
               </div>
               ${quickActionsHtml}
@@ -209,6 +199,7 @@ async function syncPaymentArrears(client, billId) {
 }
 
 export async function triggerDeletePayment(paymentId, billId) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm('Are you sure you want to delete/revoke this payment record?')) return;
   try {
@@ -252,6 +243,7 @@ export async function printReceipt(billId) {
 }
 
 export async function triggerApprovePaymentProof(paymentId, billId) {
+  if (!assertCanModify()) return;
   if (!confirm('Approve this tenant payment proof verification?')) return;
   const client = getSupabaseClient();
   if (!client) return;
@@ -277,6 +269,7 @@ export async function triggerApprovePaymentProof(paymentId, billId) {
 }
 
 export async function triggerRejectPaymentProof(paymentId) {
+  if (!assertCanModify()) return;
   if (!confirm('Reject this tenant payment proof submission?')) return;
   const client = getSupabaseClient();
   if (!client) return;

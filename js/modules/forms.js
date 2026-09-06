@@ -17,13 +17,13 @@ import { submitMaintenanceForm, submitMaintenanceStatusForm } from './maintenanc
 export function setupFormSubmitHandlers() {
   const supabaseClient = getSupabaseClient();
   
-  // Guard: Intercept all form submissions for AUDITOR role (Read-Only Safety Shield)
+  // Guard: Intercept all form submissions for VIEWER role (Read-Only Safety Shield)
   document.addEventListener('submit', (e) => {
     const user = getCurrentUser();
-    if (user && user.role === 'AUDITOR' && e.target.id !== 'login-form') {
+    if (user && user.role === 'VIEWER' && e.target.id !== 'login-form') {
       e.preventDefault();
       e.stopPropagation();
-      alert('🔒 Financial Auditor View — Read-Only Mode Active. Data modifications are disabled.');
+      alert('🔒 Viewer Mode — Read-Only Access Active. Data modifications are disabled.');
       return false;
     }
   }, true);
@@ -477,9 +477,6 @@ export function setupFormSubmitHandlers() {
       const client = getSupabaseClient();
       if (!client) return;
 
-      const activeUser = getCurrentUser();
-      const isTenant = activeUser && activeUser.role === 'TENANT';
-
       const bill_id = document.getElementById('pay-bill-id').value;
       if (!bill_id) {
         alert('Please select an unpaid bill invoice before submitting payment.');
@@ -513,11 +510,6 @@ export function setupFormSubmitHandlers() {
       }
 
       if (payment_method === 'UNPAID') {
-        if (isTenant) {
-          alert('Tenants cannot mark bills as unpaid.');
-          return;
-        }
-
         await safeUpdate(client, 'bills', { paid_amount: 0, status: 'UNPAID' }, 'id', bill_id);
         if (bill.renter_id) {
           await safeUpdate(client, 'renters', { pending_arrears: bill.net_amount || 0 }, 'id', bill.renter_id);
@@ -541,7 +533,7 @@ export function setupFormSubmitHandlers() {
         transaction_reference: transaction_reference || null,
         notes: notes || null,
         proof_photo: proof_photo || null,
-        proof_status: isTenant ? 'PENDING' : 'VERIFIED'
+        proof_status: 'VERIFIED'
       }]);
 
       if (payErr) {
@@ -549,34 +541,28 @@ export function setupFormSubmitHandlers() {
         return;
       }
 
-      if (!isTenant) {
-        // The sync_bill_paid_amount trigger already recomputed bills.paid_amount
-        // (and status) to include this payment. Re-read the fresh value and sync
-        // the tenant's pending_arrears — never add amount to the pre-insert
-        // paid_amount manually (which drifted from the trigger's authoritative sum).
-        const { data: freshBill } = await client
-          .from('bills')
-          .select('id, renter_id, net_amount, paid_amount')
-          .eq('id', bill_id)
-          .single();
-        const remainingDue = Math.max(0, (Number(freshBill?.net_amount) || 0) - (Number(freshBill?.paid_amount) || 0));
-        if (freshBill && freshBill.renter_id) {
-          await safeUpdate(client, 'renters', { pending_arrears: remainingDue }, 'id', freshBill.renter_id);
-        }
+      // The sync_bill_paid_amount trigger already recomputed bills.paid_amount
+      // (and status) to include this payment. Re-read the fresh value and sync
+      // the tenant's pending_arrears — never add amount to the pre-insert
+      // paid_amount manually (which drifted from the trigger's authoritative sum).
+      const { data: freshBill } = await client
+        .from('bills')
+        .select('id, renter_id, net_amount, paid_amount')
+        .eq('id', bill_id)
+        .single();
+      const remainingDue = Math.max(0, (Number(freshBill?.net_amount) || 0) - (Number(freshBill?.paid_amount) || 0));
+      if (freshBill && freshBill.renter_id) {
+        await safeUpdate(client, 'renters', { pending_arrears: remainingDue }, 'id', freshBill.renter_id);
       }
 
-      if (isTenant) {
-        alert('✅ Payment proof screenshot submitted successfully! Your landlord will verify and confirm your invoice.');
-      } else {
-        alert('✅ Payment recorded successfully!');
-      }
+      alert('✅ Payment recorded successfully!');
 
       formAddPayment.reset();
       closeModal('modal-add-payment');
       loadBillsPage();
       loadPaymentsPage();
       loadDashboard();
-      if (!isTenant) loadTenantsPage();
+      loadTenantsPage();
     });
 
     const payMethodSelect = document.getElementById('pay-method');

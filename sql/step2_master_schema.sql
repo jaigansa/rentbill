@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     username TEXT,
     email TEXT,
-    role TEXT NOT NULL DEFAULT 'ADMIN' CHECK (role IN ('ADMIN', 'STAFF', 'AUDITOR', 'TENANT')),
+    role TEXT NOT NULL DEFAULT 'ADMIN' CHECK (role IN ('ADMIN', 'VIEWER')),
     is_disabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -485,17 +485,28 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-CREATE POLICY "Authenticated full access to profiles" ON public.profiles FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to owners" ON public.owners FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to properties" ON public.properties FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to units" ON public.units FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to renters" ON public.renters FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to bills" ON public.bills FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to payments" ON public.payments FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to expenses" ON public.expenses FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to owner_withdrawals" ON public.owner_withdrawals FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to maintenance_tasks" ON public.maintenance_tasks FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated full access to documents" ON public.documents FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated can read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read owners" ON public.owners FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write owners" ON public.owners FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read properties" ON public.properties FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write properties" ON public.properties FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read units" ON public.units FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write units" ON public.units FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read renters" ON public.renters FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write renters" ON public.renters FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read bills" ON public.bills FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write bills" ON public.bills FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read payments" ON public.payments FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write payments" ON public.payments FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read expenses" ON public.expenses FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write expenses" ON public.expenses FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read owner_withdrawals" ON public.owner_withdrawals FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write owner_withdrawals" ON public.owner_withdrawals FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read maintenance_tasks" ON public.maintenance_tasks FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write maintenance_tasks" ON public.maintenance_tasks FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Authenticated can read documents" ON public.documents FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Admins can write documents" ON public.documents FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE OR REPLACE FUNCTION public.resolve_login_email(p_identifier TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -534,14 +545,6 @@ BEGIN
   IF v_email IS NOT NULL AND v_email LIKE '%@%' THEN
     RETURN LOWER(v_email);
   END IF;
-
-  -- 4. Fallback lookup by renter name
-  SELECT email INTO v_email
-  FROM public.renters
-  WHERE LOWER(name) = LOWER(v_clean)
-    AND deleted_at IS NULL
-  ORDER BY is_active DESC
-  LIMIT 1;
 
   RETURN LOWER(v_email);
 END;

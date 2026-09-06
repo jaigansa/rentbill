@@ -17,13 +17,13 @@ npm run check     # syntax-check the modified app JS files
 
 | File | Purpose |
 |---|---|
-| `test/format.test.js` | Currencies, escaping, invoice numbers, **bill-status derivation**, and **tenant login email/password** rules (mirror the SQL triggers + auth flow) |
+| `test/format.test.js` | Currencies, escaping, invoice numbers, and **bill-status derivation** (mirror the SQL triggers + auth flow) |
 | `test/finance.test.js` | **Ledger reconciliation** (`billed/collected/outstanding/net cash-flow`) mirroring `fn_reconcile_ledger`, payment proof rules, and `paid_amount` invariant |
 | `test/sql-integrity.test.js` | Guards the `install/00_master_schema.sql` + `update/01_upgrade_existing_database.sql`: balanced `$$`, all RPCs/views/grants present, no duplicate policies |
 
 ## Golden-logic modules (pure, no browser/supabase deps)
 
-- `js/core/format.js` — formatters + bill status + tenant login derivations
+- `js/core/format.js` — formatters + bill status
   (re-exported by `js/core/ui.js`, used by the UI **and** the tests)
 - `js/core/finance.js` — pure ledger reconciliation mirroring the SQL contract
 

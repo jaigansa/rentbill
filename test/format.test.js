@@ -6,9 +6,6 @@ import {
   formatInvoiceNumber,
   deriveBillStatus,
   deriveBillStatusAfterPayment,
-  normalizeTenDigitMobile,
-  tenantLoginEmailFromMobile,
-  defaultTenantPassword,
   extractBackupTables,
   csvEscapeValue,
   parseFloorValue,
@@ -97,31 +94,6 @@ test('deriveBillStatusAfterPayment mirrors payments.js delete-payment logic', ()
   assert.equal(deriveBillStatusAfterPayment(1000, 1000), 'PAID');
   assert.equal(deriveBillStatusAfterPayment(1000, 500), 'PARTIAL');
   assert.equal(deriveBillStatusAfterPayment(1000, 0), 'UNPAID');
-});
-
-test('normalizeTenDigitMobile returns trailing 10 digits', () => {
-  assert.equal(normalizeTenDigitMobile('+91 98765 43210'), '9876543210');
-  assert.equal(normalizeTenDigitMobile('98765432101'), '8765432101');
-  assert.equal(normalizeTenDigitMobile('12345'), '12345'); // too short, unchanged
-  assert.equal(normalizeTenDigitMobile(''), '');
-});
-
-test('tenantLoginEmailFromMobile builds deterministic email', () => {
-  assert.equal(tenantLoginEmailFromMobile('9876543210'), 'tenant_9876543210@rentbill.local');
-  assert.equal(tenantLoginEmailFromMobile('+91 9876543210'), 'tenant_9876543210@rentbill.local');
-  // too short -> no email
-  assert.equal(tenantLoginEmailFromMobile('12345'), '');
-  assert.equal(tenantLoginEmailFromMobile(''), '');
-});
-
-test('defaultTenantPassword uses mobile digits when >= 6', () => {
-  assert.equal(defaultTenantPassword('9876543210'), '9876543210');
-  assert.equal(defaultTenantPassword('123456'), '123456');
-});
-
-test('defaultTenantPassword falls back when mobile too short', () => {
-  assert.equal(defaultTenantPassword('12345'), 'Tenant@123');
-  assert.equal(defaultTenantPassword('', 'Custom@1'), 'Custom@1');
 });
 
 test('extractBackupTables reads tables nested under data (current export format)', () => {

@@ -23,17 +23,6 @@
   "stat_vacant": "Vacant Units",
   "stat_maintenance": "Pending Proofs",
 
-  "tenant_portal": "Resident Tenant Portal",
-  "tenant_my_unit": "My Rental Unit",
-  "tenant_lease_details": "Lease Details & Monthly Invoices",
-  "tenant_due": "Current Outstanding Due",
-  "tenant_base_rent": "Monthly Base Rent",
-  "tenant_deposit": "Advance Deposit",
-  "tenant_upi": "Payable via UPI",
-  "btn_view_invoices": "View Invoices",
-  "btn_request_repair": "Request Repair",
-  "btn_submit_proof": "Submit Payment Proof",
-
   "table_property": "Property Name",
   "table_address": "Address",
   "table_owner": "Owner",

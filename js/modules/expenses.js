@@ -1,6 +1,7 @@
 // RentBill Pro — Operating Expenses & Owner Withdrawals Management
 import { getSupabaseClient } from '../core/config.js';
 import { safeDelete } from '../core/db.js';
+import { assertCanModify } from '../core/state.js';
 import { formatCurrency, escapeStr, renderEmptyState, refreshLucideIcons } from '../core/ui.js';
 import { populateOwnerSelects } from './owners.js';
 
@@ -119,6 +120,7 @@ export async function loadExpensesPage() {
 }
 
 export async function triggerDeleteExpense(id, category) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm(`Are you sure you want to delete expense "${category}"?`)) return;
   const { error } = await safeDelete(supabaseClient, 'expenses', id);
@@ -127,6 +129,7 @@ export async function triggerDeleteExpense(id, category) {
 }
 
 export async function triggerDeleteWithdrawal(id, ownerName) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm(`Are you sure you want to delete withdrawal record for "${ownerName}"?`)) return;
   const { error } = await safeDelete(supabaseClient, 'owner_withdrawals', id);

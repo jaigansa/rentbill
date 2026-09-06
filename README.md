@@ -32,7 +32,7 @@
 - 💳 **Payments, partial payments, arrears, credit/advance tracking**
 - 🔧 **Maintenance work orders**
 - 📊 **Dashboard & financial overviews**
-- 🔐 **Single-user Landlord architecture** backed by Supabase Auth
+- 🔐 **Landlord architecture with two roles**: `ADMIN` (full access) & `VIEWER` (read-only) backed by Supabase Auth
 - 🌐 **Bilingual**: English & Tamil (தமிழ்)
 - 📈 **Integer-based (paise) financial math** to prevent floating-point errors
 - ☁️ **Supabase-backed** database, auth, realtime & storage
@@ -116,8 +116,9 @@
 > - User profiles table & auto-trigger `handle_new_user()`
 > - Business tables (`properties`, `units`, `renters`, `owners`, `bills`, `payments`, `expenses`, `owner_withdrawals`, `documents`)
 > - Automated financial triggers (`calculate_bill_amounts()`, `sync_bill_paid_amount()`)
-> - Row Level Security (RLS) policies for Admins and Tenants
-> - Auth RPC functions (create tenant users, resolve login emails, manage/delete/toggle tenant logins, link leases)
+> - Row Level Security (RLS): every authenticated user can read, but only `ADMIN` can write (INSERT/UPDATE/DELETE)
+> - Roles: `ADMIN` (full access) and `VIEWER` (read-only)
+> - Auth RPC functions (`resolve_login_email` for username-based sign-in)
 > - Default Administrator user (`admin@rentbill.com` / `Admin@123`)
 
 ---
@@ -140,9 +141,9 @@
    - Ensure **Enable Email provider** is turned **ON**.
 2. Go to **Authentication** → **URL Configuration**:
    - Set **Site URL** to your web app location (e.g. `http://localhost:8080` or `https://your-domain.com`).
-3. **Optional (Recommended for Tenant Instant Sign-In)**:
-   - Go to **Authentication** → **Auth Providers / Sign Up Restrictions**.
-   - Turn **Confirm email** **OFF** if you want tenant login accounts to activate immediately without email confirmation links.
+3. **Notify Only (optional)**: Keep **Confirm email** **ON** for conservative account creation, or turn it **OFF** for instant sign-in without confirmation links.
+
+> **Note:** RentBill Pro no longer ships a Resident Tenant Portal. All sign-ups are owner/manager accounts (`ADMIN` or `VIEWER`).
 
 ---
 
@@ -166,12 +167,14 @@
 - **Email**: `admin@rentbill.com`
 - **Password**: `Admin@123`
 
-### Creating & Testing Tenant Logins
+### Adding a Viewer (Read-Only) Account
 1. Log in as Administrator.
-2. Go to **Settings** → **Tenant Logins** (or **Tenants Directory** → **Login & Password**).
-3. Click **Create Login Account** on any tenant row.
-4. Enter an Email and Password → click **Save Account**.
-5. Log out and test signing in with the Tenant's email/mobile and password to verify the Resident Tenant Portal.
+2. In your **Supabase Dashboard** → **Authentication** → **Users**, create a new user with their email/password.
+3. In **SQL Editor**, run:
+   ```sql
+   UPDATE public.profiles SET role = 'VIEWER' WHERE email = 'the-user@example.com';
+   ```
+4. The user can log in and view all data but is blocked from every write by the read-only banner, the front-end guard, and **database-level RLS** (only `ADMIN` can INSERT/UPDATE/DELETE).
 
 ---
 
@@ -204,7 +207,7 @@ RentBill Pro deploys to **Cloudflare Pages** for **100% Free**, lightning-fast g
 
 - **Edge CDN & Hosting**: [Cloudflare Pages](https://pages.cloudflare.com) (Free tier, Unlimited Bandwidth, Global Edge CDN, Free DDoS & WAF protection, automated SSL/TLS).
 - **Edge Security**: `_headers` injecting strict Content Security Policy (`CSP`), HSTS, anti-clickjacking (`X-Frame-Options: DENY`), and permission policies.
-- **Isolation Guarantee**: Multi-tenant Row Level Security (RLS) ensures tenants can only ever view their own unit's invoices and receipts. Landlord bank details, expenses, and other tenant profiles are completely blocked at the PostgreSQL engine level.
+- **Read-Only Isolation**: Row Level Security (RLS) allows any authenticated user to read, but restricts every write (INSERT/UPDATE/DELETE) to `ADMIN`. Landlord bank details, expenses, bills, and tenant profiles can never be modified by a `VIEWER` — enforced at the PostgreSQL engine level.
 
 ### Method 1: Git Integration (Recommended)
 
@@ -256,11 +259,14 @@ Once your Cloudflare URL is live (e.g. `https://rentbill.pages.dev`):
 
 ## Authentication & Landlord Login
 
-RentBill Pro uses a clean, secure **Single-User Landlord Architecture**:
+RentBill Pro uses a clean, secure **Landlord Architecture** with role-based access:
 
-1. **Create Landlord Account**: In your Supabase Dashboard under **Authentication** → **Users**, create your admin account with your email and password.
+1. **Create Landlord Account**: In your Supabase Dashboard under **Authentication** → **Users**, create your admin account with your email and password. The very first user is auto-promoted to `ADMIN` by the schema.
 2. **Log In**: Open the app, enter your email and password, and sign in.
-3. **Strict Data Privacy**: All tables and records are strictly protected behind authentication with Row Level Security (RLS). Anonymous access is completely disabled.
+3. **Roles**:
+   - `ADMIN` — full access: add/edit/delete properties, units, tenants, bills, payments, expenses, documents, and maintenance.
+   - `VIEWER` — read-only: sees everything the admin sees behind a "Viewer Mode" banner, but every write attempt is blocked by the front-end guard and database RLS.
+4. **Strict Data Privacy**: All tables and records are protected behind authentication with Row Level Security (RLS). Anonymous access is completely disabled.
 
 ---
 
@@ -277,9 +283,10 @@ RentBill Pro uses a clean, secure **Single-User Landlord Architecture**:
 | Security Control | Implementation | Verification Method |
 | :--- | :--- | :--- |
 | **Row Level Security (RLS)** | Enabled on all PostgreSQL tables | cURL test without auth returns `401` or empty `[]` |
-| **Tenant Data Isolation** | Filtered by `renter_id IN (SELECT id FROM renters WHERE user_id = auth.uid())` | Tenant login only returns bills for their assigned unit |
-| **Landlord Privacy** | `expenses`, `owners.account_number`, `owner_withdrawals` restricted to `ADMIN` | Tenant querying `/rest/v1/expenses` receives empty list |
+| **Write Protection** | INSERT/UPDATE/DELETE allowed only via `is_admin()` policy | VIEWER token INSERT/UPDATE/DELETE returns a `permission denied` RLS error |
+| **Read Access** | All authenticated users can SELECT | VIEWER can query `/rest/v1/bills` and receive all rows |
+| **Landlord Privacy** | `expenses`, `owners.account_number`, `owner_withdrawals` restricted to `ADMIN` writes | VIEWER token write to `/rest/v1/expenses` returns RLS rejection |
 | **Content Security Policy** | Configured in `_headers` at Cloudflare Edge | Inspect HTTP response headers for `Content-Security-Policy` |
 | **Anti-Clickjacking** | `X-Frame-Options: DENY` | Cannot be embedded in malicious iframes |
 | **Transport Security** | `Strict-Transport-Security: max-age=31536000` | Automated HTTPS enforcement across all browsers |
-| **Payment Verification** | Proof status marked `PENDING` until approved by landlord | Unverified tenant submissions do not alter bill status without admin confirmation |
+| **Payment Verification** | Payments recorded with proof status, approved by `ADMIN` | VIEWER cannot approve/reject proof records |

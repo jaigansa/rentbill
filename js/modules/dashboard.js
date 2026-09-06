@@ -1,100 +1,14 @@
 // RentBill Pro — Financial & Real-Time KPI Dashboard Engine (Pure Supabase)
 import { getSupabaseClient } from '../core/config.js';
-import { getCurrentUser } from '../core/state.js';
 import { formatCurrency, refreshLucideIcons } from '../core/ui.js';
 
 export async function loadDashboard() {
   const supabaseClient = getSupabaseClient();
-  const currentUser = getCurrentUser();
 
   try {
     if (!supabaseClient) return;
 
-    // 1. TENANT DASHBOARD VIEW
-    if (currentUser && currentUser.role === 'TENANT') {
-      const bannerEl = document.getElementById('tenant-portal-banner');
-      if (bannerEl) bannerEl.style.display = 'block';
-
-      const dashTitle = document.getElementById('i18n-dash-title');
-      if (dashTitle) dashTitle.textContent = 'Resident Tenant Portal';
-
-      let myRentersList = [];
-      let myBillsList = [];
-
-      try {
-        let { data: rData } = await supabaseClient.from('renters').select('*').is('deleted_at', null);
-        if (currentUser.renter_id) {
-          const { data: own } = await supabaseClient.from('renters').select('*').eq('id', currentUser.renter_id).is('deleted_at', null);
-          rData = own || [];
-        } else {
-          // Without a renter_id there is no own lease to show; never widen scope.
-          rData = [];
-        }
-        myRentersList = rData || [];
-      } catch (e) {
-        console.warn('Tenant lease fetch warning:', e);
-      }
-
-      try {
-        if (currentUser.renter_id) {
-          const { data: bData } = await supabaseClient.from('bills').select('*').eq('renter_id', currentUser.renter_id).is('deleted_at', null);
-          myBillsList = bData || [];
-        } else {
-          myBillsList = [];
-        }
-      } catch (e) {
-        console.warn('Tenant bills fetch warning:', e);
-      }
-
-      const myLease = (myRentersList && myRentersList.length > 0) ? myRentersList[0] : null;
-
-      let tenantDue = 0;
-      (myBillsList || []).forEach(b => {
-        if (b.status !== 'PAID' && b.status !== 'VOID') {
-          tenantDue += ((b.net_amount || 0) - (b.paid_amount || 0));
-        }
-      });
-
-      let unitLabel = 'My Rental Unit';
-      let upiId = '-';
-
-      if (myLease) {
-        if (myLease.unit_id) {
-          const { data: unitData } = await supabaseClient.from('units').select('*').eq('id', myLease.unit_id).maybeSingle();
-          if (unitData) {
-            const { data: propData } = await supabaseClient.from('properties').select('name').eq('id', unitData.property_id).maybeSingle();
-            const uName = unitData.unit_name || unitData.unit_number || 'Unit';
-            unitLabel = `${uName} — ${propData ? propData.name : 'Property'}`;
-          }
-        }
-
-        if (myLease.owner_id) {
-          const { data: ownerData } = await supabaseClient.from('owners').select('upi_id').eq('id', myLease.owner_id).maybeSingle();
-          if (ownerData && ownerData.upi_id) upiId = ownerData.upi_id;
-        } else if (myLease.assigned_upi) {
-          upiId = myLease.assigned_upi;
-        }
-
-        const dueEl = document.getElementById('tenant-banner-due');
-        const unitEl = document.getElementById('tenant-banner-unit');
-        const leaseEl = document.getElementById('tenant-banner-lease');
-        const rentEl = document.getElementById('tenant-banner-rent');
-        const advanceEl = document.getElementById('tenant-banner-advance');
-        const upiEl = document.getElementById('tenant-banner-upi');
-
-        if (dueEl) dueEl.textContent = formatCurrency(tenantDue > 0 ? tenantDue : 0);
-        if (unitEl) unitEl.textContent = unitLabel;
-        if (leaseEl) leaseEl.textContent = `Tenant: ${myLease.name} | Active Lease`;
-        if (rentEl) rentEl.textContent = formatCurrency(myLease.base_rent || 0);
-        if (advanceEl) advanceEl.textContent = formatCurrency(myLease.advance_amount || 0);
-        if (upiEl) upiEl.textContent = upiId;
-      }
-
-      refreshLucideIcons();
-      return;
-    }
-
-    // 2. LANDLORD ADMIN DASHBOARD VIEW
+    // LANDLORD DASHBOARD VIEW
     const bannerEl = document.getElementById('tenant-portal-banner');
     if (bannerEl) bannerEl.style.display = 'none';
 

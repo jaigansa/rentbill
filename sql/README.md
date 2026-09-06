@@ -26,13 +26,13 @@ sql/
 
 | File | What it does |
 |---|---|
-| [`install/00_master_schema.sql`](install/00_master_schema.sql) | **One file, everything.** Tables, security, roles (Admin/Tenant/Staff/Auditor), user management, and the default Admin login. Run the whole file in the SQL Editor. |
+| [`install/00_master_schema.sql`](install/00_master_schema.sql) | **One file, everything.** Tables, security, roles (ADMIN full access / VIEWER read-only), and the default Admin login. Run the whole file in the SQL Editor. |
 
 ## 🔄 update/ — Existing Database
 
 | File | What it does |
 |---|---|
-| [`update/01_upgrade_existing_database.sql`](update/01_upgrade_existing_database.sql) | **Safe upgrade.** Adds the newest features (maintenance, Staff/Auditor roles, user management, security fix) without touching your data. Idempotent — safe to re-run. |
+| [`update/01_upgrade_existing_database.sql`](update/01_upgrade_existing_database.sql) | **Safe upgrade.** Adds the newest features (maintenance, security fix) without touching your data. Consolidates legacy `STAFF`/`AUDITOR`/`TENANT` roles to `VIEWER` (former tenants are disabled) and locks down RLS to admin-only writes. Idempotent — safe to re-run. |
 
 ## 🗑️ delete/ — Cleanup
 

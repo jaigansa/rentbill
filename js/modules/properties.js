@@ -1,6 +1,7 @@
 // RentBill Pro — Property Buildings, Rental Units & Tenants Directory
 import { getSupabaseClient } from '../core/config.js';
 import { safeUpdate, safeDelete } from '../core/db.js';
+import { assertCanModify } from '../core/state.js';
 import { formatCurrency, escapeStr, renderEmptyState, openModal, closeModal, refreshLucideIcons, sortTenants, determineUnitStatus } from '../core/ui.js';
 import { loadOwnersPage, populateOwnerSelects } from './owners.js';
 import { loadDocumentsPage } from './documents.js';
@@ -306,6 +307,7 @@ export function triggerEditProperty(id, name, address) {
 }
 
 export async function triggerDeleteProperty(id, name) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm(`Are you sure you want to delete property "${name}"?`)) return;
   const { error } = await safeDelete(supabaseClient, 'properties', id);
@@ -322,6 +324,7 @@ export function triggerEditUnit(id, propertyId, unitName, floor) {
 }
 
 export async function triggerDeleteUnit(id, name) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm(`Are you sure you want to delete unit "${name}"?`)) return;
   const { error } = await safeDelete(supabaseClient, 'units', id);
@@ -369,15 +372,11 @@ export async function triggerEditTenant(tenantId) {
   document.getElementById('tenant-init-water').value = t.initial_water_reading ?? t.initial_water ?? 0;
   document.getElementById('tenant-start-date').value = t.agreement_start_date || '';
   document.getElementById('tenant-end-date').value = t.agreement_expiry_date || '';
-  const pwEl = document.getElementById('tenant-password');
-  if (pwEl) {
-    pwEl.value = '';
-    pwEl.placeholder = 'Leave blank to keep existing password';
-  }
   openModal('modal-add-tenant');
 }
 
 export async function triggerAdjustArrears(tenantId) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   const { data: t } = await supabaseClient.from('renters').select('name, pending_arrears').eq('id', tenantId).single();
   if (!t) return;
@@ -399,6 +398,7 @@ export async function triggerAdjustArrears(tenantId) {
 }
 
 export async function triggerDeleteTenant(id, name) {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   if (!confirm(`Are you sure you want to delete tenant "${name}"?`)) return;
 
@@ -473,6 +473,7 @@ export async function triggerTransferModal(tenantId, tenantName, currentUnitId) 
 }
 
 export async function submitTransfer() {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   const renter_id = document.getElementById('transfer-renter-id').value;
   const new_unit_id = document.getElementById('transfer-new-unit-id').value;
@@ -511,6 +512,7 @@ export function triggerMeterResetModal(tenantId, tenantName) {
 }
 
 export async function submitMeterReset() {
+  if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
   const renter_id = document.getElementById('reset-renter-id').value;
   const type = document.getElementById('reset-reading-type').value;

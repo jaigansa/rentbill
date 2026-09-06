@@ -10,9 +10,6 @@ import {
   formatInvoiceNumber,
   deriveBillStatus,
   deriveBillStatusAfterPayment,
-  normalizeTenDigitMobile,
-  tenantLoginEmailFromMobile,
-  defaultTenantPassword,
   sortTenants,
   determineUnitStatus
 } from './format.js';
@@ -23,9 +20,6 @@ export {
   formatInvoiceNumber,
   deriveBillStatus,
   deriveBillStatusAfterPayment,
-  normalizeTenDigitMobile,
-  tenantLoginEmailFromMobile,
-  defaultTenantPassword,
   sortTenants,
   determineUnitStatus
 };
@@ -205,11 +199,6 @@ export function closeModal(id) {
       if (editTenantEl) editTenantEl.value = '';
       const form = document.getElementById('form-add-tenant');
       if (form) form.reset();
-      const pwEl = document.getElementById('tenant-password');
-      if (pwEl) {
-        pwEl.value = '';
-        pwEl.placeholder = 'Min 6 chars to enable login';
-      }
     }
     if (id === 'modal-add-property') {
       const editPropEl = document.getElementById('edit-property-id');
