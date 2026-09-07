@@ -41,10 +41,13 @@ BEGIN
   DROP FUNCTION IF EXISTS public.get_login_email_for_identifier(TEXT) CASCADE;
   DROP FUNCTION IF EXISTS public.resolve_login_email(TEXT) CASCADE;
   DROP FUNCTION IF EXISTS public.admin_list_tenants_with_auth() CASCADE;
-  DROP FUNCTION IF EXISTS public.admin_create_tenant_user(TEXT, TEXT, TEXT, BIGINT) CASCADE;
+  DROP FUNCTION IF EXISTS public.admin_create_tenant_user CASCADE;
+  DROP FUNCTION IF EXISTS public.admin_update_tenant_user_password CASCADE;
   DROP FUNCTION IF EXISTS public.admin_reset_tenant_password(UUID, TEXT) CASCADE;
   DROP FUNCTION IF EXISTS public.admin_delete_tenant_login(BIGINT, UUID) CASCADE;
   DROP FUNCTION IF EXISTS public.admin_toggle_tenant_login_status(BIGINT, UUID, BOOLEAN) CASCADE;
+  DROP FUNCTION IF EXISTS public.prevent_profile_role_change CASCADE;
+  DROP FUNCTION IF EXISTS public.rls_auto_enable CASCADE;
   DROP FUNCTION IF EXISTS public.tenant_link_own_lease() CASCADE;
 
   -- 4. Drop all application tables in public schema

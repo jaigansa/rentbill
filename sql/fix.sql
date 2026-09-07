@@ -120,11 +120,43 @@ EXCEPTION WHEN OTHERS THEN
 END $$;
 
 -- ============================================================================
--- 3. SAFE DASHBOARD USER DELETION TRIGGERS
+-- 3. USER MANAGEMENT & DELETION TRIGGERS
 -- ============================================================================
 
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public.profiles (id, username, email, role)
+    VALUES (
+      NEW.id,
+      COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
+      NEW.email,
+      COALESCE(NEW.raw_user_meta_data->>'role', 'ADMIN')
+    )
+    ON CONFLICT (id) DO UPDATE 
+      SET email = EXCLUDED.email,
+          updated_at = NOW();
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.handle_profile_before_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
   UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
@@ -136,7 +168,9 @@ BEGIN
   UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_profile_before_delete() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_handle_profile_before_delete ON public.profiles;
 CREATE TRIGGER trg_handle_profile_before_delete
@@ -144,7 +178,11 @@ CREATE TRIGGER trg_handle_profile_before_delete
   FOR EACH ROW EXECUTE FUNCTION public.handle_profile_before_delete();
 
 CREATE OR REPLACE FUNCTION public.handle_auth_user_before_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
   UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
@@ -164,7 +202,9 @@ BEGIN
   DELETE FROM public.profiles WHERE id = OLD.id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_auth_user_before_delete() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_deleted ON auth.users;
 CREATE TRIGGER on_auth_user_deleted
@@ -176,7 +216,11 @@ CREATE TRIGGER on_auth_user_deleted
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.calculate_bill_amounts()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   NEW.gross_amount := COALESCE(NEW.rent_amount, 0) + 
                       COALESCE(NEW.maint_amount, 0) + 
@@ -200,7 +244,9 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.calculate_bill_amounts() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_calculate_bill_amounts ON public.bills;
 CREATE TRIGGER trg_calculate_bill_amounts
@@ -208,7 +254,11 @@ CREATE TRIGGER trg_calculate_bill_amounts
   FOR EACH ROW EXECUTE FUNCTION public.calculate_bill_amounts();
 
 CREATE OR REPLACE FUNCTION public.sync_bill_paid_amount()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
   v_bill_id BIGINT;
   v_total_paid BIGINT;
@@ -255,7 +305,9 @@ BEGIN
 
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sync_bill_paid_amount() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_sync_bill_paid_amount ON public.payments;
 CREATE TRIGGER trg_sync_bill_paid_amount
@@ -267,12 +319,16 @@ CREATE TRIGGER trg_sync_bill_paid_amount
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RETURN FALSE; END IF;
   RETURN COALESCE((SELECT role = 'ADMIN' FROM public.profiles WHERE id = auth.uid()), FALSE);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$;
 
 -- Clean up obsolete ledger views and reconciliation function
 DROP VIEW IF EXISTS public.v_ledger_accounts CASCADE;
@@ -289,10 +345,13 @@ DROP FUNCTION IF EXISTS public.admin_change_user_role(UUID, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_toggle_user_status(UUID, BOOLEAN) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_delete_user(UUID) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_list_tenants_with_auth() CASCADE;
-DROP FUNCTION IF EXISTS public.admin_create_tenant_user(TEXT, TEXT, TEXT, BIGINT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_create_tenant_user CASCADE;
 DROP FUNCTION IF EXISTS public.admin_reset_tenant_password(UUID, TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_delete_tenant_login(BIGINT, UUID) CASCADE;
 DROP FUNCTION IF EXISTS public.admin_toggle_tenant_login_status(BIGINT, UUID, BOOLEAN) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_update_tenant_user_password CASCADE;
+DROP FUNCTION IF EXISTS public.prevent_profile_role_change CASCADE;
+DROP FUNCTION IF EXISTS public.rls_auto_enable CASCADE;
 DROP FUNCTION IF EXISTS public.get_login_email_for_identifier(TEXT) CASCADE;
 DROP FUNCTION IF EXISTS public.tenant_link_own_lease() CASCADE;
 
@@ -300,7 +359,7 @@ CREATE OR REPLACE FUNCTION public.resolve_login_email(p_identifier TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
   v_clean TEXT := TRIM(COALESCE(p_identifier, ''));
@@ -343,7 +402,10 @@ $$;
 -- 6. PERMISSIONS & GRANTS
 -- ============================================================================
 
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.resolve_login_email(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_login_email(TEXT) TO authenticated, anon;
 
 -- ============================================================================

@@ -20,7 +20,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   BEGIN
     INSERT INTO public.profiles (id, username, email, role)
@@ -39,7 +43,9 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -193,7 +199,11 @@ CREATE INDEX IF NOT EXISTS idx_bills_due_date ON public.bills(due_date);
 
 -- Trigger: Automatic Financial Bill Calculation
 CREATE OR REPLACE FUNCTION public.calculate_bill_amounts()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   NEW.gross_amount := COALESCE(NEW.rent_amount, 0) + 
                       COALESCE(NEW.maint_amount, 0) + 
@@ -217,7 +227,9 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.calculate_bill_amounts() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_calculate_bill_amounts ON public.bills;
 CREATE TRIGGER trg_calculate_bill_amounts
@@ -256,7 +268,11 @@ CREATE INDEX IF NOT EXISTS idx_payments_date ON public.payments(payment_date);
 
 -- Trigger: Synchronize Bill Paid Amount & Status
 CREATE OR REPLACE FUNCTION public.sync_bill_paid_amount()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
   v_bill_id BIGINT;
   v_total_paid BIGINT;
@@ -303,7 +319,9 @@ BEGIN
 
   RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sync_bill_paid_amount() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_sync_bill_paid_amount ON public.payments;
 CREATE TRIGGER trg_sync_bill_paid_amount
@@ -391,7 +409,11 @@ CREATE TABLE IF NOT EXISTS public.documents (
 
 -- Nullifies references when a profile is removed
 CREATE OR REPLACE FUNCTION public.handle_profile_before_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
   UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
@@ -403,7 +425,9 @@ BEGIN
   UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_profile_before_delete() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_handle_profile_before_delete ON public.profiles;
 CREATE TRIGGER trg_handle_profile_before_delete
@@ -412,7 +436,11 @@ CREATE TRIGGER trg_handle_profile_before_delete
 
 -- Fires when a user is deleted from Supabase Dashboard (Authentication > Users)
 CREATE OR REPLACE FUNCTION public.handle_auth_user_before_delete()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
   UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
@@ -432,7 +460,9 @@ BEGIN
   DELETE FROM public.profiles WHERE id = OLD.id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_auth_user_before_delete() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_deleted ON auth.users;
 CREATE TRIGGER on_auth_user_deleted
@@ -480,12 +510,16 @@ ALTER TABLE public.maintenance_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   IF auth.uid() IS NULL THEN RETURN FALSE; END IF;
   RETURN COALESCE((SELECT role = 'ADMIN' FROM public.profiles WHERE id = auth.uid()), FALSE);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$;
 
 CREATE POLICY "Authenticated can read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Admins can write profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
@@ -513,7 +547,7 @@ CREATE OR REPLACE FUNCTION public.resolve_login_email(p_identifier TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth
+SET search_path = public, auth, pg_temp
 AS $$
 DECLARE
   v_clean TEXT := TRIM(COALESCE(p_identifier, ''));
@@ -556,7 +590,10 @@ $$;
 -- 11. EXPLICIT GRANTS
 -- ============================================================================
 
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+
+REVOKE EXECUTE ON FUNCTION public.resolve_login_email(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_login_email(TEXT) TO authenticated, anon;
 
 -- ============================================================================
