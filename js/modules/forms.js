@@ -76,19 +76,10 @@ export function setupFormSubmitHandlers() {
 
       let emailToLogin = identifierInput.trim().toLowerCase();
 
-      // If user typed a username without '@', resolve to email via RPC
+      // Standard Email & Password authentication
       if (!emailToLogin.includes('@')) {
-        try {
-          const { data: rpcEmail } = await client.rpc('resolve_login_email', { p_identifier: identifierInput.trim() });
-          if (rpcEmail && typeof rpcEmail === 'string' && rpcEmail.includes('@')) {
-            emailToLogin = rpcEmail.toLowerCase().trim();
-          }
-        } catch (e) {}
-
-        if (!emailToLogin.includes('@')) {
-          showError(`Could not find an account with username "${identifierInput.trim()}". Please use your email address or check the username.`);
-          return;
-        }
+        showError('Please enter your email address to sign in.');
+        return;
       }
 
       // Perform Supabase Authentication with Email & Password

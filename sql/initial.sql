@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS public.bills (
 CREATE INDEX IF NOT EXISTS idx_bills_renter_id ON public.bills(renter_id);
 CREATE INDEX IF NOT EXISTS idx_bills_status ON public.bills(status);
 CREATE INDEX IF NOT EXISTS idx_bills_due_date ON public.bills(due_date);
+CREATE INDEX IF NOT EXISTS idx_bills_voided_by ON public.bills(voided_by);
 
 -- Trigger: Automatic Financial Bill Calculation
 CREATE OR REPLACE FUNCTION public.calculate_bill_amounts()
@@ -265,6 +266,8 @@ CREATE TABLE IF NOT EXISTS public.payments (
 CREATE INDEX IF NOT EXISTS idx_payments_bill_id ON public.payments(bill_id);
 CREATE INDEX IF NOT EXISTS idx_payments_renter_id ON public.payments(renter_id);
 CREATE INDEX IF NOT EXISTS idx_payments_date ON public.payments(payment_date);
+CREATE INDEX IF NOT EXISTS idx_payments_verified_by ON public.payments(verified_by);
+CREATE INDEX IF NOT EXISTS idx_payments_reversed_by ON public.payments(reversed_by);
 
 -- Trigger: Synchronize Bill Paid Amount & Status
 CREATE OR REPLACE FUNCTION public.sync_bill_paid_amount()
@@ -403,6 +406,21 @@ CREATE TABLE IF NOT EXISTS public.documents (
     deleted_at TIMESTAMPTZ
 );
 
+-- Covering Indexes for Foreign Keys (Performance Optimization)
+CREATE INDEX IF NOT EXISTS idx_expenses_property_id ON public.expenses(property_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_created_by ON public.expenses(created_by);
+
+CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_owner_id ON public.owner_withdrawals(owner_id);
+CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_property_id ON public.owner_withdrawals(property_id);
+CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_created_by ON public.owner_withdrawals(created_by);
+
+CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_property_id ON public.maintenance_tasks(property_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_unit_id ON public.maintenance_tasks(unit_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_renter_id ON public.maintenance_tasks(renter_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_reported_by ON public.maintenance_tasks(reported_by);
+
+CREATE INDEX IF NOT EXISTS idx_documents_created_by ON public.documents(created_by);
+
 -- ============================================================================
 -- 8. SAFE USER DELETION TRIGGERS (SUPABASE DASHBOARD INTEGRATION)
 -- ============================================================================
@@ -522,69 +540,59 @@ END;
 $$;
 
 CREATE POLICY "Authenticated can read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write profiles" ON public.profiles FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert profiles" ON public.profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update profiles" ON public.profiles FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete profiles" ON public.profiles FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read owners" ON public.owners FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write owners" ON public.owners FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert owners" ON public.owners FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update owners" ON public.owners FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete owners" ON public.owners FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read properties" ON public.properties FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write properties" ON public.properties FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert properties" ON public.properties FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update properties" ON public.properties FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete properties" ON public.properties FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read units" ON public.units FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write units" ON public.units FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert units" ON public.units FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update units" ON public.units FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete units" ON public.units FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read renters" ON public.renters FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write renters" ON public.renters FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert renters" ON public.renters FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update renters" ON public.renters FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete renters" ON public.renters FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read bills" ON public.bills FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write bills" ON public.bills FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert bills" ON public.bills FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update bills" ON public.bills FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete bills" ON public.bills FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read payments" ON public.payments FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write payments" ON public.payments FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert payments" ON public.payments FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update payments" ON public.payments FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete payments" ON public.payments FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read expenses" ON public.expenses FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write expenses" ON public.expenses FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert expenses" ON public.expenses FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update expenses" ON public.expenses FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete expenses" ON public.expenses FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read owner_withdrawals" ON public.owner_withdrawals FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write owner_withdrawals" ON public.owner_withdrawals FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert owner_withdrawals" ON public.owner_withdrawals FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update owner_withdrawals" ON public.owner_withdrawals FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete owner_withdrawals" ON public.owner_withdrawals FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read maintenance_tasks" ON public.maintenance_tasks FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write maintenance_tasks" ON public.maintenance_tasks FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can insert maintenance_tasks" ON public.maintenance_tasks FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update maintenance_tasks" ON public.maintenance_tasks FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete maintenance_tasks" ON public.maintenance_tasks FOR DELETE TO authenticated USING (public.is_admin());
+
 CREATE POLICY "Authenticated can read documents" ON public.documents FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can write documents" ON public.documents FOR ALL TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE OR REPLACE FUNCTION public.resolve_login_email(p_identifier TEXT)
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, auth, pg_temp
-AS $$
-DECLARE
-  v_clean TEXT := TRIM(COALESCE(p_identifier, ''));
-  v_email TEXT;
-BEGIN
-  IF v_clean = '' THEN
-    RETURN NULL;
-  END IF;
-
-  -- 1. If identifier is already an email, return as-is
-  IF v_clean LIKE '%@%' THEN
-    RETURN LOWER(v_clean);
-  END IF;
-
-  -- 2. Lookup by username in public.profiles (case-insensitive)
-  SELECT email INTO v_email
-  FROM public.profiles
-  WHERE LOWER(username) = LOWER(v_clean)
-  LIMIT 1;
-
-  IF v_email IS NOT NULL AND v_email LIKE '%@%' THEN
-    RETURN LOWER(v_email);
-  END IF;
-
-  -- 3. Lookup in auth.users by raw_user_meta_data->>'username'
-  SELECT email INTO v_email
-  FROM auth.users
-  WHERE LOWER(COALESCE(raw_user_meta_data->>'username', '')) = LOWER(v_clean)
-  LIMIT 1;
-
-  IF v_email IS NOT NULL AND v_email LIKE '%@%' THEN
-    RETURN LOWER(v_email);
-  END IF;
-
-  RETURN LOWER(v_email);
-END;
-$$;
+CREATE POLICY "Admins can insert documents" ON public.documents FOR INSERT TO authenticated WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can update documents" ON public.documents FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
+CREATE POLICY "Admins can delete documents" ON public.documents FOR DELETE TO authenticated USING (public.is_admin());
 
 -- ============================================================================
 -- 11. EXPLICIT GRANTS
@@ -592,9 +600,6 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
-
-REVOKE EXECUTE ON FUNCTION public.resolve_login_email(TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.resolve_login_email(TEXT) TO authenticated, anon;
 
 -- ============================================================================
 -- 12. DEFAULT ADMIN PROFILE SETUP (IF USERS ALREADY EXIST)

@@ -100,13 +100,13 @@ test('install and update grant execute on is_admin to authenticated only', () =>
   }
 });
 
-test('install and update both define resolve_login_email granted to authenticated and anon', () => {
+test('install and update do not expose security-definer resolve_login_email RPC', () => {
   for (const [name, sql] of [['install', install], ['update', update]]) {
     const funcs = extractCreates(sql, 'FUNCTION');
-    assert.ok(funcs.has('resolve_login_email'), `${name} missing FUNCTION resolve_login_email`);
-    assert.ok(sql.includes('GRANT EXECUTE ON FUNCTION public.resolve_login_email(TEXT) TO authenticated, anon;'),
-      `${name} missing resolve_login_email grant to authenticated, anon`);
+    assert.ok(!funcs.has('resolve_login_email'), `${name} should not define resolve_login_email`);
   }
+  assert.ok(update.includes('DROP FUNCTION IF EXISTS public.resolve_login_email CASCADE;'),
+    'update must explicitly drop resolve_login_email');
 });
 
 test('no policies grant access to anon role (100% login required)', () => {
