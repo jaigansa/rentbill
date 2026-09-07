@@ -1,5 +1,5 @@
 // RentBill Pro — Pure ledger & reconciliation rules (no browser/supabase deps).
-// These mirror the SQL contract in install/00_master_schema.sql section 7.5
+// These mirror the SQL contract in initial.sql section 7.5
 // (views v_ledger_entries / v_ledger_accounts and fn_reconcile_ledger).
 // Unit-testable in isolation so the exact "billed vs collected vs spent"
 // figures can be guarded against regressions on both sides (JS + SQL).

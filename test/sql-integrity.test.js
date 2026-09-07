@@ -35,10 +35,11 @@ function extractCreates(sql, kind) {
   return new Set(Array.from(sql.matchAll(re), (m) => m[1]));
 }
 
-const install = readSql('install/00_master_schema.sql');
-const update = readSql('update/01_upgrade_existing_database.sql');
+const install = readSql('initial.sql');
+const update = readSql('fix.sql');
+const teardown = readSql('delete.sql');
 
-test('install schema has balanced dollar quotes', () => {
+test('install schema (initial.sql) has balanced dollar quotes', () => {
   const info = dollarQuoteInfo(install);
   assert.ok(info.even, 'dollar-quote count must be even (found ' + info.count + ')');
   assert.ok(info.balanced, 'dollar quotes must nest (open/close alternate)');
@@ -132,3 +133,21 @@ test('install and update SQL files are syntactically non-trivial (not empty)', (
   assert.ok(install.trim().length > 5000, 'install schema seems too short');
   assert.ok(update.trim().length > 5000, 'update migration seems too short');
 });
+
+test('delete script (delete.sql) has balanced dollar quotes', () => {
+  const info = dollarQuoteInfo(teardown);
+  assert.ok(info.even, 'dollar-quote count must be even (found ' + info.count + ')');
+  assert.ok(info.balanced, 'dollar quotes must nest (open/close alternate)');
+});
+
+test('delete script (delete.sql) fully tears down tables and deletes auth users', () => {
+  assert.ok(teardown.includes('DELETE FROM auth.users;'), 'delete.sql must delete from auth.users');
+  assert.ok(teardown.includes('DELETE FROM auth.identities;'), 'delete.sql must delete from auth.identities');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.renters CASCADE;'), 'delete.sql must drop renters table');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.bills CASCADE;'), 'delete.sql must drop bills table');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.payments CASCADE;'), 'delete.sql must drop payments table');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.units CASCADE;'), 'delete.sql must drop units table');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.properties CASCADE;'), 'delete.sql must drop properties table');
+  assert.ok(teardown.includes('DROP TABLE IF EXISTS public.profiles CASCADE;'), 'delete.sql must drop profiles table');
+});
+

@@ -11,7 +11,8 @@ import {
   deriveBillStatus,
   deriveBillStatusAfterPayment,
   sortTenants,
-  determineUnitStatus
+  determineUnitStatus,
+  determineMeterBaselines
 } from './format.js';
 
 export {
@@ -21,7 +22,8 @@ export {
   deriveBillStatus,
   deriveBillStatusAfterPayment,
   sortTenants,
-  determineUnitStatus
+  determineUnitStatus,
+  determineMeterBaselines
 };
 
 export function refreshLucideIcons() {
@@ -223,6 +225,14 @@ export function closeModal(id) {
       if (form) form.reset();
       updateLiveBillCalculation();
     }
+    if (id === 'modal-reset-meter') {
+      const form = document.getElementById('form-reset-meter');
+      if (form) form.reset();
+      if (typeof window !== 'undefined') {
+        window._activeResetTenant = null;
+        window._activeResetLastBill = null;
+      }
+    }
   }
 }
 
@@ -280,3 +290,4 @@ export function numberToWordsINR(paise) {
   }
   return words.trim() + ' Only';
 }
+

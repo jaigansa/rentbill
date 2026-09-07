@@ -2,7 +2,7 @@
 import { getSupabaseClient } from '../core/config.js';
 import { safeInsert, safeUpdate, safeDelete } from '../core/db.js';
 import { getCurrentUser, setCurrentUser, getUploadedDocBase64, setUploadedDocBase64 } from '../core/state.js';
-import { closeModal, refreshLucideIcons } from '../core/ui.js';
+import { closeModal, refreshLucideIcons, determineMeterBaselines } from '../core/ui.js';
 import { parseFloorValue } from '../core/format.js';
 import { checkAuth, showLogin } from './auth.js';
 import { loadDashboard } from './dashboard.js';
@@ -333,23 +333,15 @@ export function setupFormSubmitHandlers() {
       const { data: lastBills } = await client.from('bills')
         .select('*').eq('renter_id', renter_id).is('deleted_at', null).order('created_at', { ascending: false }).limit(1);
 
-      let prev_eb = tenant.initial_eb_reading ?? tenant.initial_eb ?? 0;
-      let prev_water = tenant.initial_water_reading ?? tenant.initial_water ?? 0;
-
-      if (lastBills && lastBills.length > 0) {
-        const lastBill = lastBills[0];
-        const lastBillDate = new Date(lastBill.created_at || lastBill.bill_date || 0);
-
-        const ebResetDate = tenant.eb_reset_at ? new Date(tenant.eb_reset_at) : null;
-        if (!ebResetDate || ebResetDate <= lastBillDate) {
-          prev_eb = lastBill.curr_eb_reading ?? tenant.initial_eb_reading ?? tenant.initial_eb ?? 0;
+      let localResets = null;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
         }
+      } catch (e) {}
 
-        const waterResetDate = tenant.water_reset_at ? new Date(tenant.water_reset_at) : null;
-        if (!waterResetDate || waterResetDate <= lastBillDate) {
-          prev_water = lastBill.curr_water_reading ?? tenant.initial_water_reading ?? tenant.initial_water ?? 0;
-        }
-      }
+      const lastBill = (lastBills && lastBills.length > 0) ? lastBills[0] : null;
+      const { prevEb: prev_eb, prevWater: prev_water } = determineMeterBaselines(tenant, lastBill, localResets);
 
       const eb_units = Math.max(0, curr_eb - prev_eb);
       const ebUnitPricePaise = (tenant.eb_per_unit_price !== undefined && tenant.eb_per_unit_price !== null)

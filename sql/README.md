@@ -1,53 +1,42 @@
 # 🗄️ SQL Database Scripts
 
-These scripts build and manage the RentBill Pro **Supabase** database.
-They are split into three folders — pick the one that matches what you're doing.
+These scripts build, upgrade, and manage the RentBill Pro **Supabase** database.
+Designed for simple, direct, error-free operation in the Supabase SQL Editor.
 
 ```
 sql/
-├── step1_reset_database.sql   → Step 1: Wipe & reset database + auth users
-├── step2_master_schema.sql    → Step 2: Fresh master schema install
-├── install/                   → master schema source
-├── update/                    → upgrade existing database
-└── delete/                    → teardown scripts
+├── initial.sql    → Fresh Installation: Master schema, tables, triggers, and security
+├── fix.sql        → Safe Upgrade: Idempotent migration for existing databases
+└── delete.sql     → Full Teardown: Drops all tables, triggers, and deletes all auth users
 ```
 
 ---
 
-## ⚡ Quick Fresh Setup (2 Steps)
+## ⚡ Which script should I run?
 
-1. **Step 1:** Run [`sql/step1_reset_database.sql`](step1_reset_database.sql) in Supabase SQL Editor (wipes all tables, storage, and auth users).
-2. **Step 2:** Run [`sql/step2_master_schema.sql`](step2_master_schema.sql) in Supabase SQL Editor (creates clean tables, triggers, and secure policies).
-3. **Step 3:** Go to Supabase Dashboard → **Authentication** → **Users** → **Add User** (Create user with your email & password) to create your Landlord Admin account!
-
----
-
-## 📥 install/ — Brand-New Database
-
-| File | What it does |
-|---|---|
-| [`install/00_master_schema.sql`](install/00_master_schema.sql) | **One file, everything.** Tables, security, roles (ADMIN full access / VIEWER read-only), and the default Admin login. Run the whole file in the SQL Editor. |
-
-## 🔄 update/ — Existing Database
-
-| File | What it does |
-|---|---|
-| [`update/01_upgrade_existing_database.sql`](update/01_upgrade_existing_database.sql) | **Safe upgrade.** Adds the newest features (maintenance, security fix) without touching your data. Consolidates legacy `STAFF`/`AUDITOR`/`TENANT` roles to `VIEWER` (former tenants are disabled) and locks down RLS to admin-only writes. Idempotent — safe to re-run. |
-
-## 🗑️ delete/ — Cleanup
-
-| File | What it does |
-|---|---|
-| [`delete/01_clear_all_data.sql`](delete/01_clear_all_data.sql) | Deletes **all business data** (properties, bills, tenants...) but keeps tables + Admin login. Starts fresh, keeps structure. |
-| [`delete/02_reset_database.sql`](delete/02_reset_database.sql) | **Full teardown.** Drops every table, trigger, policy, and function. Completely empty database. |
+| File | Operation | When to use | What it does |
+|---|---|---|---|
+| [`initial.sql`](initial.sql) | **Fresh Setup** | Setting up a new Supabase project or starting from scratch | Builds all 11 tables, indexes, constraints, trigger functions, RLS policies, and admin auth helpers. |
+| [`fix.sql`](fix.sql) | **Upgrade / Fix** | You already have data and want latest features & fixes | Adds newly introduced columns (`eb_reset_at`, `water_reset_at`, `initial_eb_reading`, etc.), updates RLS policies, locks down admin security, and cleans obsolete functions. **Preserves all existing data.** |
+| [`delete.sql`](delete.sql) | **Full Teardown** | Complete wipe to start completely over | Drops all tables, views, triggers, functions, storage objects, and **fully deletes all auth users & identities**. |
 
 ---
 
-## 💡 Quick guide
+## 🚀 Step-by-Step Instructions
 
-- **Never had a database?** → `install/00_master_schema.sql`
-- **Already have data, want the latest features?** → `update/01_upgrade_existing_database.sql`
-- **Just testing, want clean data?** → `delete/01_clear_all_data.sql`
-- **Delete everything and restart?** → `delete/02_reset_database.sql`
+### 1. Fresh Project Setup
+1. Open Supabase Dashboard → **SQL Editor**.
+2. Copy and paste the entire content of [`sql/initial.sql`](initial.sql) and click **Run**.
+3. Go to **Authentication** → **Users** → **Add User** (Create user with your email & password) to create your Landlord Admin login!
 
-> ⚠️ **Delete scripts are destructive.** Back up your data before running them.
+### 2. Updating an Existing Database
+1. Open Supabase Dashboard → **SQL Editor**.
+2. Copy and paste [`sql/fix.sql`](fix.sql) and click **Run**.
+3. Your database schema is instantly updated without altering any of your tenant, property, or billing records.
+
+### 3. Full Reset & Wipe
+1. Open Supabase Dashboard → **SQL Editor**.
+2. Copy and paste [`sql/delete.sql`](delete.sql) and click **Run**.
+3. ⚠️ **Warning:** This drops all tables and permanently deletes all auth users.
+4. Run [`sql/initial.sql`](initial.sql) afterwards to rebuild a clean schema.
+

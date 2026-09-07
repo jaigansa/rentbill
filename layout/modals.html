@@ -506,17 +506,20 @@
             <label>Tenant Name</label>
             <div id="reset-renter-name" style="font-weight: 700; font-size: 16px; padding: 6px 0; color: var(--text-main);"></div>
           </div>
+          <div id="reset-meter-current-info" style="font-size: 13px; line-height: 1.4; color: var(--text-muted); background: var(--bg-surface, #f8fafc); padding: 10px 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--border-color, #e2e8f0);">
+            Loading current baseline reading...
+          </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label>Meter Type *</label>
-              <select id="reset-reading-type" class="form-control" required>
+              <select id="reset-reading-type" class="form-control" required onchange="updateResetModalInfo()">
                 <option value="EB">Electricity (EB)</option>
                 <option value="WATER">Water</option>
               </select>
             </div>
             <div class="form-group">
               <label>New Initial Reading *</label>
-              <input type="number" id="reset-new-reading" class="form-control" value="0" required autocomplete="off">
+              <input type="number" id="reset-new-reading" class="form-control" value="0" min="0" required autocomplete="off">
             </div>
           </div>
           <div class="form-group">

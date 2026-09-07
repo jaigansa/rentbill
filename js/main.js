@@ -56,6 +56,7 @@ import {
   triggerTransferModal,
   submitTransfer,
   triggerMeterResetModal,
+  updateResetModalInfo,
   submitMeterReset
 } from './modules/properties.js';
 import { populateOwnerSelects, loadOwnersPage, triggerEditOwner, triggerDeleteOwner } from './modules/owners.js';
@@ -126,6 +127,7 @@ window.triggerVacateModal = triggerVacateModal;
 window.triggerTransferModal = triggerTransferModal;
 window.submitTransfer = submitTransfer;
 window.triggerMeterResetModal = triggerMeterResetModal;
+window.updateResetModalInfo = updateResetModalInfo;
 window.submitMeterReset = submitMeterReset;
 window.triggerManualBackup = triggerManualBackup;
 window.loadDiagnosticsPage = loadDiagnosticsPage;

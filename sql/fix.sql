@@ -27,6 +27,8 @@ ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS water_calc_mode TEXT NOT NUL
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS water_fixed_charge BIGINT NOT NULL DEFAULT 150;
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS water_per_unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00;
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS initial_water_reading BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS eb_reset_at TIMESTAMPTZ;
+ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS water_reset_at TIMESTAMPTZ;
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS agreement_start_date DATE;
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS agreement_expiry_date DATE;
 ALTER TABLE public.renters ADD COLUMN IF NOT EXISTS vacate_date DATE;

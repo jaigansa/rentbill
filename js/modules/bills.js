@@ -2,7 +2,7 @@
 import { getSupabaseClient } from '../core/config.js';
 import { safeUpdate, safeDelete } from '../core/db.js';
 import { getCurrentUser, assertCanModify } from '../core/state.js';
-import { formatCurrency, formatInvoiceNumber, numberToWordsINR, escapeStr, renderEmptyState, openModal, refreshLucideIcons } from '../core/ui.js';
+import { formatCurrency, formatInvoiceNumber, numberToWordsINR, escapeStr, renderEmptyState, openModal, refreshLucideIcons, determineMeterBaselines } from '../core/ui.js';
 import { loadDashboard } from './dashboard.js';
 
 export function populateBillingPeriods() {
@@ -309,23 +309,15 @@ export async function updateLiveBillCalculation() {
     .is('deleted_at', null)
     .order('created_at', { ascending: false }).limit(1);
 
-  let prevEb = tenant.initial_eb_reading ?? tenant.initial_eb ?? 0;
-  let prevWater = tenant.initial_water_reading ?? tenant.initial_water ?? 0;
-
-  if (lastBills && lastBills.length > 0) {
-    const lastBill = lastBills[0];
-    const lastBillDate = new Date(lastBill.created_at || lastBill.bill_date || 0);
-
-    const ebResetDate = tenant.eb_reset_at ? new Date(tenant.eb_reset_at) : null;
-    if (!ebResetDate || ebResetDate <= lastBillDate) {
-      prevEb = lastBill.curr_eb_reading ?? tenant.initial_eb_reading ?? tenant.initial_eb ?? 0;
+  let localResets = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
     }
+  } catch (e) {}
 
-    const waterResetDate = tenant.water_reset_at ? new Date(tenant.water_reset_at) : null;
-    if (!waterResetDate || waterResetDate <= lastBillDate) {
-      prevWater = lastBill.curr_water_reading ?? tenant.initial_water_reading ?? tenant.initial_water ?? 0;
-    }
-  }
+  const lastBill = (lastBills && lastBills.length > 0) ? lastBills[0] : null;
+  const { prevEb, prevWater } = determineMeterBaselines(tenant, lastBill, localResets);
 
   // Set dynamic placeholders showing previous meter readings
   const ebInput = document.getElementById('bill-eb');

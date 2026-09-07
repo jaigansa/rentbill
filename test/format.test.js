@@ -10,7 +10,8 @@ import {
   csvEscapeValue,
   parseFloorValue,
   sortTenants,
-  determineUnitStatus
+  determineUnitStatus,
+  determineMeterBaselines
 } from '../js/core/format.js';
 import { cleanPayload } from '../js/core/db.js';
 import { formatBillInvoiceMessage, formatOverdueReminderMessage, formatPaymentReceiptMessage, shareMessage } from '../js/modules/bills.js';
@@ -492,4 +493,65 @@ test('determineUnitStatus handles invalid or empty unitId safely', () => {
   assert.equal(determineUnitStatus(null, 'MAINTENANCE'), 'MAINTENANCE');
   assert.equal(determineUnitStatus(undefined, undefined), 'VACANT');
 });
+
+test('determineMeterBaselines returns initial readings when no prior bill exists', () => {
+  const tenant = { initial_eb_reading: 150, initial_water_reading: 40 };
+  const baselines = determineMeterBaselines(tenant, null);
+  assert.equal(baselines.prevEb, 150);
+  assert.equal(baselines.prevWater, 40);
+});
+
+test('determineMeterBaselines returns last bill readings when no reset occurred', () => {
+  const tenant = { initial_eb_reading: 100, initial_water_reading: 20 };
+  const lastBill = { curr_eb_reading: 240, curr_water_reading: 55, created_at: '2026-08-01T10:00:00Z' };
+  const baselines = determineMeterBaselines(tenant, lastBill);
+  assert.equal(baselines.prevEb, 240);
+  assert.equal(baselines.prevWater, 55);
+});
+
+test('determineMeterBaselines respects meter reset timestamp newer than last bill', () => {
+  const tenant = {
+    initial_eb_reading: 0,
+    initial_water_reading: 10,
+    eb_reset_at: '2026-08-15T12:00:00Z',
+    water_reset_at: '2026-08-15T12:00:00Z'
+  };
+  const lastBill = { curr_eb_reading: 300, curr_water_reading: 80, created_at: '2026-08-01T10:00:00Z' };
+  const baselines = determineMeterBaselines(tenant, lastBill);
+  // Both meters were reset after the last bill, so baselines should be the reset initial readings
+  assert.equal(baselines.prevEb, 0);
+  assert.equal(baselines.prevWater, 10);
+});
+
+test('determineMeterBaselines reverts to last bill readings once a bill is generated after reset', () => {
+  const tenant = {
+    initial_eb_reading: 0,
+    initial_water_reading: 10,
+    eb_reset_at: '2026-08-15T12:00:00Z'
+  };
+  // Next bill created on Sept 1, which is after the reset on Aug 15
+  const lastBill = { curr_eb_reading: 45, curr_water_reading: 80, created_at: '2026-09-01T10:00:00Z' };
+  const baselines = determineMeterBaselines(tenant, lastBill);
+  // EB reset is now older than the latest bill, so consumption starts from curr_eb_reading (45)
+  assert.equal(baselines.prevEb, 45);
+  assert.equal(baselines.prevWater, 80);
+});
+
+test('determineMeterBaselines handles localStorage fallback when DB column is unmigrated', () => {
+  const tenant = {
+    id: 42,
+    initial_eb_reading: 0,
+    initial_water_reading: 0
+  };
+  const lastBill = { curr_eb_reading: 500, curr_water_reading: 120, created_at: '2026-08-01T10:00:00Z' };
+  const localResets = {
+    42: { eb_reset_at: '2026-08-20T10:00:00Z' }
+  };
+  const baselines = determineMeterBaselines(tenant, lastBill, localResets);
+  // EB reset date comes from local fallback and is newer than lastBill, so prevEb is initial reading 0
+  assert.equal(baselines.prevEb, 0);
+  // Water was not reset, so it uses last bill 120
+  assert.equal(baselines.prevWater, 120);
+});
+
 

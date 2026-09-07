@@ -159,3 +159,40 @@ export function determineUnitStatus(unitId, currentStatus, activeRenters = []) {
   return 'VACANT';
 }
 
+/**
+ * Accurately determines the effective previous meter readings (EB and Water)
+ * for a tenant, accounting for any meter reset timestamps vs the last bill date.
+ */
+export function determineMeterBaselines(tenant, lastBill, localResets = null) {
+  let prevEb = tenant?.initial_eb_reading ?? tenant?.initial_eb ?? 0;
+  let prevWater = tenant?.initial_water_reading ?? tenant?.initial_water ?? 0;
+
+  let ebResetAt = tenant?.eb_reset_at;
+  let waterResetAt = tenant?.water_reset_at;
+
+  if (localResets) {
+    const rId = tenant?.id;
+    if (rId && localResets[rId]) {
+      if (!ebResetAt && localResets[rId].eb_reset_at) ebResetAt = localResets[rId].eb_reset_at;
+      if (!waterResetAt && localResets[rId].water_reset_at) waterResetAt = localResets[rId].water_reset_at;
+    }
+  }
+
+  if (lastBill) {
+    const lastBillDate = new Date(lastBill.created_at || lastBill.bill_date || 0);
+
+    const ebResetDate = ebResetAt ? new Date(ebResetAt) : null;
+    if (!ebResetDate || ebResetDate <= lastBillDate) {
+      prevEb = lastBill.curr_eb_reading ?? tenant?.initial_eb_reading ?? tenant?.initial_eb ?? 0;
+    }
+
+    const waterResetDate = waterResetAt ? new Date(waterResetAt) : null;
+    if (!waterResetDate || waterResetDate <= lastBillDate) {
+      prevWater = lastBill.curr_water_reading ?? tenant?.initial_water_reading ?? tenant?.initial_water ?? 0;
+    }
+  }
+
+  return { prevEb: Number(prevEb) || 0, prevWater: Number(prevWater) || 0 };
+}
+
+

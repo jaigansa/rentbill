@@ -118,6 +118,8 @@ CREATE TABLE IF NOT EXISTS public.renters (
     water_fixed_charge BIGINT NOT NULL DEFAULT 150,
     water_per_unit_price NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     initial_water_reading BIGINT NOT NULL DEFAULT 0,
+    eb_reset_at TIMESTAMPTZ,
+    water_reset_at TIMESTAMPTZ,
     agreement_start_date DATE,
     agreement_expiry_date DATE,
     vacate_date DATE,

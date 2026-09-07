@@ -2,7 +2,7 @@
 import { getSupabaseClient } from '../core/config.js';
 import { safeUpdate, safeDelete } from '../core/db.js';
 import { assertCanModify } from '../core/state.js';
-import { formatCurrency, escapeStr, renderEmptyState, openModal, closeModal, refreshLucideIcons, sortTenants, determineUnitStatus } from '../core/ui.js';
+import { formatCurrency, escapeStr, renderEmptyState, openModal, closeModal, refreshLucideIcons, sortTenants, determineUnitStatus, determineMeterBaselines } from '../core/ui.js';
 import { loadOwnersPage, populateOwnerSelects } from './owners.js';
 import { loadDocumentsPage } from './documents.js';
 
@@ -505,18 +505,80 @@ export async function submitTransfer() {
   }
 }
 
-export function triggerMeterResetModal(tenantId, tenantName) {
-  document.getElementById('reset-renter-id').value = tenantId;
-  document.getElementById('reset-renter-name').textContent = tenantName;
+export async function triggerMeterResetModal(tenantId, tenantName) {
+  const idEl = document.getElementById('reset-renter-id');
+  if (idEl) idEl.value = tenantId;
+  const nameEl = document.getElementById('reset-renter-name');
+  if (nameEl) nameEl.textContent = tenantName;
+
+  const typeSelect = document.getElementById('reset-reading-type');
+  if (typeSelect) typeSelect.value = 'EB';
+  const newReadingInput = document.getElementById('reset-new-reading');
+  if (newReadingInput) {
+    newReadingInput.value = '0';
+    newReadingInput.min = '0';
+  }
+  const reasonInput = document.getElementById('reset-reason');
+  if (reasonInput) reasonInput.value = '';
+
+  const infoEl = document.getElementById('reset-meter-current-info');
+  if (infoEl) infoEl.textContent = 'Loading current baseline reading...';
+
   openModal('modal-reset-meter');
+
+  try {
+    const supabaseClient = getSupabaseClient();
+    if (supabaseClient) {
+      const [{ data: tenant }, { data: lastBills }] = await Promise.all([
+        supabaseClient.from('renters').select('*').eq('id', tenantId).single(),
+        supabaseClient.from('bills').select('curr_eb_reading, curr_water_reading, created_at, bill_date').eq('renter_id', tenantId).is('deleted_at', null).order('created_at', { ascending: false }).limit(1)
+      ]);
+
+      if (tenant && typeof window !== 'undefined') {
+        window._activeResetTenant = tenant;
+        window._activeResetLastBill = (lastBills && lastBills.length > 0) ? lastBills[0] : null;
+        updateResetModalInfo();
+      }
+    }
+  } catch (err) {
+    console.warn('Could not fetch tenant meter context:', err);
+  }
+}
+
+export function updateResetModalInfo() {
+  const infoEl = document.getElementById('reset-meter-current-info');
+  if (!infoEl) return;
+  const tenant = typeof window !== 'undefined' ? window._activeResetTenant : null;
+  if (!tenant) return;
+
+  const type = document.getElementById('reset-reading-type')?.value || 'EB';
+  const lastBill = typeof window !== 'undefined' ? window._activeResetLastBill : null;
+  let localResets = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
+    }
+  } catch (e) {}
+
+  const { prevEb, prevWater } = determineMeterBaselines(tenant, lastBill, localResets);
+
+  if (type === 'EB') {
+    const lastBilledStr = lastBill?.curr_eb_reading != null ? ` (Last Billed: ${lastBill.curr_eb_reading})` : '';
+    infoEl.innerHTML = `Current Active EB Baseline: <strong>${prevEb}</strong>${lastBilledStr}. New bills will measure units from the new reading entered below.`;
+  } else {
+    const isFixed = tenant.water_calc_mode !== 'METERED';
+    const modeNotice = isFixed ? ' <span style="color:var(--warning-color,#f59e0b);">(Tenant is currently set to Fixed Flat Rate)</span>' : '';
+    const lastBilledStr = lastBill?.curr_water_reading != null ? ` (Last Billed: ${lastBill.curr_water_reading})` : '';
+    infoEl.innerHTML = `Current Active Water Baseline: <strong>${prevWater}</strong>${lastBilledStr}.${modeNotice}`;
+  }
 }
 
 export async function submitMeterReset() {
   if (!assertCanModify()) return;
   const supabaseClient = getSupabaseClient();
-  const renter_id = document.getElementById('reset-renter-id').value;
-  const type = document.getElementById('reset-reading-type').value;
-  const new_reading = parseInt(document.getElementById('reset-new-reading').value || '0', 10);
+  const renter_id = document.getElementById('reset-renter-id')?.value;
+  const type = document.getElementById('reset-reading-type')?.value || 'EB';
+  const new_reading = parseInt(document.getElementById('reset-new-reading')?.value || '0', 10);
   const reason = (document.getElementById('reset-reason')?.value || '').trim();
 
   if (!renter_id) {
@@ -524,21 +586,41 @@ export async function submitMeterReset() {
     return;
   }
 
-  const field = type === 'EB' ? 'initial_eb' : 'initial_water';
-  const resetTimeField = type === 'EB' ? 'eb_reset_at' : 'water_reset_at';
+  if (isNaN(new_reading) || new_reading < 0) {
+    alert('Please enter a valid non-negative reading value.');
+    return;
+  }
 
+  const standardField = type === 'EB' ? 'initial_eb_reading' : 'initial_water_reading';
+  const legacyField = type === 'EB' ? 'initial_eb' : 'initial_water';
+  const resetTimeField = type === 'EB' ? 'eb_reset_at' : 'water_reset_at';
+  const nowIso = new Date().toISOString();
+
+  // Support both standard schema (initial_*_reading) and legacy/variant schema
   const updateObj = {
-    [field]: new_reading,
-    [resetTimeField]: new Date().toISOString()
+    [standardField]: new_reading,
+    [legacyField]: new_reading,
+    [resetTimeField]: nowIso
   };
 
   const { error } = await safeUpdate(supabaseClient, 'renters', updateObj, 'id', renter_id);
   if (error) {
     alert('Meter reset failed: ' + error.message);
   } else {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
+        if (!localResets[renter_id]) localResets[renter_id] = {};
+        localResets[renter_id][resetTimeField] = nowIso;
+        localResets[renter_id][standardField] = new_reading;
+        localStorage.setItem('rentbill_meter_resets', JSON.stringify(localResets));
+      }
+    } catch (e) {}
+
     closeModal('modal-reset-meter');
     alert(`✅ ${type === 'EB' ? 'Electricity (EB)' : 'Water'} meter baseline reset to ${new_reading}${reason ? ` (${reason})` : ''}. Upcoming bills will start from this reading.`);
     loadTenantsPage();
     loadPropertiesPage();
   }
 }
+

@@ -4,7 +4,7 @@
 -- ⚠️ WARNING: THIS SCRIPT DROPS ALL TABLES, POLICIES, TRIGGERS, AND FUNCTIONS
 -- IN THE PUBLIC SCHEMA TO RESET THE DATABASE TO A CLEAN BLANK SLATE.
 --
--- AFTER RUNNING THIS SCRIPT, YOU CAN RE-RUN 00_master_schema.sql TO REBUILD
+-- AFTER RUNNING THIS SCRIPT, YOU CAN RE-RUN initial.sql TO REBUILD
 -- THE ENTIRE DATABASE SCHEMA AND INITIAL ADMIN ACCOUNT FROM SCRATCH.
 -- ============================================================================
 
@@ -79,5 +79,5 @@ BEGIN
   SET session_replication_role = 'origin';
 
   RAISE NOTICE '✅ Database teardown complete! All public tables, triggers, storage files, and auth users have been completely deleted.';
-  RAISE NOTICE '👉 Run 00_master_schema.sql now to initialize a fresh database schema.';
+  RAISE NOTICE '👉 Run initial.sql now to initialize a fresh database schema.';
 END $$;

@@ -19,7 +19,7 @@ npm run check     # syntax-check the modified app JS files
 |---|---|
 | `test/format.test.js` | Currencies, escaping, invoice numbers, and **bill-status derivation** (mirror the SQL triggers + auth flow) |
 | `test/finance.test.js` | **Ledger reconciliation** (`billed/collected/outstanding/net cash-flow`) mirroring `fn_reconcile_ledger`, payment proof rules, and `paid_amount` invariant |
-| `test/sql-integrity.test.js` | Guards the `install/00_master_schema.sql` + `update/01_upgrade_existing_database.sql`: balanced `$$`, all RPCs/views/grants present, no duplicate policies |
+| `test/sql-integrity.test.js` | Guards `initial.sql`, `fix.sql`, and `delete.sql`: balanced `$$`, all RPCs/views/grants present, no duplicate policies, auth user deletion |
 
 ## Golden-logic modules (pure, no browser/supabase deps)
 
