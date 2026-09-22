@@ -8,8 +8,6 @@ import {
   formatCurrency,
   escapeStr,
   formatInvoiceNumber,
-  deriveBillStatus,
-  deriveBillStatusAfterPayment,
   sortTenants,
   determineUnitStatus,
   determineMeterBaselines
@@ -19,8 +17,6 @@ export {
   formatCurrency,
   escapeStr,
   formatInvoiceNumber,
-  deriveBillStatus,
-  deriveBillStatusAfterPayment,
   sortTenants,
   determineUnitStatus,
   determineMeterBaselines

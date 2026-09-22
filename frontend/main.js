@@ -1,7 +1,7 @@
 // RentBill Pro — Master Modular Application Entry Point
-import { loadLayout } from './core/layout.js';
-import { initSupabaseClient, getSupabaseClient, resetSupabaseConfig } from './core/config.js';
-import { getCurrentUser, setCurrentUser, getCurrentLang, setCurrentLang } from './core/state.js';
+import { loadLayout } from './functions/core/layout.js';
+import { initSupabaseClient, getSupabaseClient, resetSupabaseConfig } from './functions/core/config.js';
+import { getCurrentUser, setCurrentUser, getCurrentLang, setCurrentLang } from './functions/core/state.js';
 import {
   formatCurrency,
   formatInvoiceNumber,
@@ -13,9 +13,9 @@ import {
   openModal,
   closeModal,
   refreshLucideIcons
-} from './core/ui.js';
-import { initTheme, applyThemeMode, toggleTheme, setTheme } from './core/theme.js';
-import { loadTranslations, applyTranslations, toggleLanguage } from './core/i18n.js';
+} from './functions/core/ui.js';
+import { initTheme, applyThemeMode, toggleTheme, setTheme } from './functions/core/theme.js';
+import { loadTranslations, applyTranslations, toggleLanguage } from './functions/core/i18n.js';
 import {
   showLogin,
   hideLoader,
@@ -28,7 +28,7 @@ import {
   closeUserProfileDropdown,
   openProfileSettings,
   openProfileDiagnostics
-} from './modules/auth.js';
+} from './functions/modules/auth.js';
 import {
   openMobileMenu,
   closeMobileMenu,
@@ -39,8 +39,8 @@ import {
   handleMobileFabClick,
   triggerDynamicSubTabAdd,
   switchSettingsSubTab
-} from './modules/navigation.js';
-import { loadDashboard } from './modules/dashboard.js';
+} from './functions/modules/navigation.js';
+import { loadDashboard } from './functions/modules/dashboard.js';
 import {
   populateTenantUnitSelect,
   loadPropertiesPage,
@@ -58,8 +58,8 @@ import {
   triggerMeterResetModal,
   updateResetModalInfo,
   submitMeterReset
-} from './modules/properties.js';
-import { populateOwnerSelects, loadOwnersPage, triggerEditOwner, triggerDeleteOwner } from './modules/owners.js';
+} from './functions/modules/properties.js';
+import { populateOwnerSelects, loadOwnersPage, triggerEditOwner, triggerDeleteOwner } from './functions/modules/owners.js';
 import {
   populateBillingPeriods,
   loadBillsPage,
@@ -75,9 +75,9 @@ import {
   sendOverdueReminderWhatsApp,
   sharePaymentReceiptWhatsApp,
   shareMessage
-} from './modules/bills.js';
-import { loadPaymentsPage, filterPaymentsTable, triggerDeletePayment, printReceipt, printPaidReceipt, triggerApprovePaymentProof, triggerRejectPaymentProof, viewPaymentProofImage } from './modules/payments.js';
-import { loadExpensesPage, triggerDeleteExpense, triggerDeleteWithdrawal } from './modules/expenses.js';
+} from './functions/modules/bills.js';
+import { loadPaymentsPage, filterPaymentsTable, triggerDeletePayment, printReceipt, printPaidReceipt, triggerApprovePaymentProof, triggerRejectPaymentProof, viewPaymentProofImage } from './functions/modules/payments.js';
+import { loadExpensesPage, triggerDeleteExpense, triggerDeleteWithdrawal } from './functions/modules/expenses.js';
 import {
   loadMaintenancePage,
   filterMaintenanceTable,
@@ -85,7 +85,7 @@ import {
   triggerUpdateMaintenanceStatus,
   triggerDeleteMaintenance,
   exportMaintenanceCSV
-} from './modules/maintenance.js';
+} from './functions/modules/maintenance.js';
 import {
   handleDocFileUpload,
   openAddDocumentModal,
@@ -95,8 +95,8 @@ import {
   viewDocument,
   triggerDeleteDocument,
   filterDocumentsTable
-} from './modules/documents.js';
-import { loadDiagnosticsPage, runDiagnosticsCheck } from './modules/diagnostics.js';
+} from './functions/modules/documents.js';
+import { loadDiagnosticsPage, runDiagnosticsCheck } from './functions/modules/diagnostics.js';
 import {
   exportToCSV,
   exportBillsCSV,
@@ -112,9 +112,9 @@ import {
   testSupabaseConnection,
   saveAppSettings,
   clearAppCache
-} from './modules/backups.js';
-import { setupFormSubmitHandlers } from './modules/forms.js';
-import { setupRealtimeSubscriptions } from './modules/realtime.js';
+} from './functions/modules/backups.js';
+import { setupFormSubmitHandlers } from './functions/modules/forms.js';
+import { setupRealtimeSubscriptions } from './functions/modules/realtime.js';
 
 // Register public handlers to window for HTML inline event listeners
 window.openModal = openModal;
@@ -252,27 +252,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   updateSyncIndicator();
 
-  if (!initSupabaseClient()) {
-    showSetupConfigModal();
-  } else {
-    const supabaseClient = getSupabaseClient();
-    if (supabaseClient && supabaseClient.auth) {
-      supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          await checkAuth(session);
-        } else if (event === 'SIGNED_OUT') {
-          showLogin();
-        }
-      });
-    }
-    checkAuth();
-  }
+  await initSupabaseClient();
+  await checkAuth();
 
   refreshLucideIcons();
 
   const langBtn = document.getElementById('lang-switch-btn');
   if (langBtn) langBtn.addEventListener('click', toggleLanguage);
-
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 });

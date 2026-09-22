@@ -4,7 +4,7 @@ import { refreshLucideIcons } from './ui.js';
 
 export async function loadTranslations(lang) {
   try {
-    const res = await fetch(`i18n/${lang}.json`);
+    const res = await fetch(`ui/i18n/${lang}.json`);
     const data = await res.json();
     setTranslations(data);
     applyTranslations();

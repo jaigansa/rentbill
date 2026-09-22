@@ -283,11 +283,11 @@ export function filterBillsTable() {
 }
 
 export async function updateLiveBillCalculation() {
-  const supabaseClient = getSupabaseClient();
+  const client = getSupabaseClient();
   const renterId = document.getElementById('bill-renter-id')?.value;
   const hintEl = document.getElementById('live-calc-hint-text');
 
-  if (!renterId || !supabaseClient) {
+  if (!renterId || !client) {
     const elNet = document.getElementById('live-calc-net'); if (elNet) elNet.textContent = '₹0.00';
     const elRent = document.getElementById('live-calc-rent'); if (elRent) elRent.textContent = '₹0.00';
     const elEb = document.getElementById('live-calc-eb'); if (elEb) elEb.textContent = '₹0.00';
@@ -300,106 +300,55 @@ export async function updateLiveBillCalculation() {
     return;
   }
 
-  const { data: tenant } = await supabaseClient.from('renters').select('*').eq('id', renterId).single();
+  // 1. Fetch tenant basic metadata for placeholders
+  const { data: tenant } = await client.from('renters').select('*').eq('id', renterId).single();
   if (!tenant) return;
 
-  const { data: lastBills } = await supabaseClient.from('bills')
-    .select('curr_eb_reading, curr_water_reading, created_at, bill_date')
-    .eq('renter_id', renterId)
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false }).limit(1);
-
-  let localResets = null;
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
-    }
-  } catch (e) {}
-
-  const lastBill = (lastBills && lastBills.length > 0) ? lastBills[0] : null;
-  const { prevEb, prevWater } = determineMeterBaselines(tenant, lastBill, localResets);
-
-  // Set dynamic placeholders showing previous meter readings
-  const ebInput = document.getElementById('bill-eb');
-  if (ebInput && !ebInput.value) {
-    ebInput.placeholder = `Prev Reading: ${prevEb}`;
-  }
-  const waterInput = document.getElementById('bill-water');
-  if (waterInput && !waterInput.value) {
-    waterInput.placeholder = tenant.water_calc_mode === 'METERED' ? `Prev Reading: ${prevWater}` : 'Fixed Flat Rate';
-  }
-
-  const rentInputVal = document.getElementById('bill-rent-amount')?.value;
-  const rentRupees = (rentInputVal !== undefined && rentInputVal !== '' && !isNaN(parseFloat(rentInputVal)))
-    ? Math.max(0, parseFloat(rentInputVal))
-    : ((tenant.base_rent || 0) / 100);
-
   const rawEb = document.getElementById('bill-eb')?.value;
-  const currEb = (rawEb !== undefined && rawEb !== '' && !isNaN(parseInt(rawEb, 10)))
-    ? parseInt(rawEb, 10)
-    : prevEb;
-
   const rawWater = document.getElementById('bill-water')?.value;
-  const currWater = (rawWater !== undefined && rawWater !== '' && !isNaN(parseInt(rawWater, 10)))
-    ? parseInt(rawWater, 10)
-    : prevWater;
-
+  const rawRent = document.getElementById('bill-rent-amount')?.value;
+  const rawArrears = document.getElementById('bill-arrears')?.value;
   const lateRupees = Math.max(0, parseFloat(document.getElementById('bill-late')?.value) || 0);
   const discountRupees = Math.max(0, parseFloat(document.getElementById('bill-discount')?.value) || 0);
   const othersRupees = Math.max(0, parseFloat(document.getElementById('bill-others')?.value) || 0);
 
-  const inputArrears = document.getElementById('bill-arrears')?.value;
-  const arrearsRupees = (inputArrears !== undefined && inputArrears !== '' && !isNaN(parseFloat(inputArrears)))
-    ? parseFloat(inputArrears)
-    : ((tenant.pending_arrears || 0) / 100);
+  // 2. Delegate Calculation to Go Accounting Engine (Zero Client-Side Math)
+  if (client.calculateBill) {
+    const calcParams = {
+      renter_id: renterId,
+      curr_eb_reading: rawEb ? parseInt(rawEb, 10) : (tenant.initial_eb_reading || 0),
+      curr_water_reading: rawWater ? parseInt(rawWater, 10) : (tenant.initial_water_reading || 0),
+      late_fee: Math.round(lateRupees * 100),
+      discount_amount: Math.round(discountRupees * 100),
+      others: Math.round(othersRupees * 100)
+    };
+    if (rawRent && !isNaN(parseFloat(rawRent))) {
+      calcParams.base_rent_override = Math.round(parseFloat(rawRent) * 100);
+    }
+    if (rawArrears && !isNaN(parseFloat(rawArrears))) {
+      calcParams.arrears_override = Math.round(parseFloat(rawArrears) * 100);
+    }
 
-  // Rate in rupees per unit
-  const ebUnitPriceRupees = (tenant.eb_per_unit_price !== undefined && tenant.eb_per_unit_price !== null)
-    ? parseFloat(tenant.eb_per_unit_price)
-    : (((tenant.eb_unit_price !== undefined && tenant.eb_unit_price !== null) ? tenant.eb_unit_price : 800) / 100);
+    const { data: res } = await client.calculateBill(calcParams);
+    if (res) {
+      // Direct presentation of Go server-calculated numbers
+      const elNet = document.getElementById('live-calc-net'); if (elNet) elNet.textContent = formatCurrency(res.net_amount);
+      const elRent = document.getElementById('live-calc-rent'); if (elRent) elRent.textContent = formatCurrency(res.rent_amount);
+      const elEb = document.getElementById('live-calc-eb'); if (elEb) elEb.textContent = formatCurrency(res.eb_amount);
+      const elEbUnits = document.getElementById('live-calc-eb-units'); if (elEbUnits) elEbUnits.textContent = res.eb_units;
+      const elWater = document.getElementById('live-calc-water'); if (elWater) elWater.textContent = formatCurrency(res.water_amount);
+      const elMaint = document.getElementById('live-calc-maint'); if (elMaint) elMaint.textContent = formatCurrency(res.maint_amount);
+      const elExtra = document.getElementById('live-calc-extra'); if (elExtra) elExtra.textContent = formatCurrency(res.arrears_included + res.late_fee + res.others);
+      const elDiscount = document.getElementById('live-calc-discount');
+      if (elDiscount) {
+        elDiscount.textContent = res.discount_amount > 0 ? `-${formatCurrency(res.discount_amount)}` : '₹0.00';
+      }
 
-  const waterUnitPriceRupees = (tenant.water_per_unit_price !== undefined && tenant.water_per_unit_price !== null)
-    ? parseFloat(tenant.water_per_unit_price)
-    : (((tenant.water_unit_price !== undefined && tenant.water_unit_price !== null) ? tenant.water_unit_price : 0) / 100);
-
-  const waterFixedRupees = (tenant.water_fixed_charge !== undefined && tenant.water_fixed_charge !== null)
-    ? (tenant.water_fixed_charge > 500 ? tenant.water_fixed_charge / 100 : tenant.water_fixed_charge)
-    : 0;
-
-  const ebUnits = Math.max(0, currEb - prevEb);
-  const ebRupees = ebUnits * ebUnitPriceRupees;
-
-  let waterUnits = 0;
-  let waterRupees = waterFixedRupees;
-  if (tenant.water_calc_mode === 'METERED') {
-    waterUnits = Math.max(0, currWater - prevWater);
-    waterRupees = waterUnits * waterUnitPriceRupees;
-  }
-
-  const maintRupees = (tenant.maint_charge || 0) / 100;
-  const extraRupees = arrearsRupees + lateRupees + othersRupees;
-
-  const grossRupees = rentRupees + maintRupees + ebRupees + waterRupees + extraRupees;
-  const netRupees = Math.max(0, grossRupees - discountRupees);
-
-  const elNet = document.getElementById('live-calc-net'); if (elNet) elNet.textContent = formatCurrency(Math.round(netRupees * 100));
-  const elRent = document.getElementById('live-calc-rent'); if (elRent) elRent.textContent = formatCurrency(Math.round(rentRupees * 100));
-  const elEb = document.getElementById('live-calc-eb'); if (elEb) elEb.textContent = formatCurrency(Math.round(ebRupees * 100));
-  const elEbUnits = document.getElementById('live-calc-eb-units'); if (elEbUnits) elEbUnits.textContent = ebUnits;
-  const elWater = document.getElementById('live-calc-water'); if (elWater) elWater.textContent = formatCurrency(Math.round(waterRupees * 100));
-  const elMaint = document.getElementById('live-calc-maint'); if (elMaint) elMaint.textContent = formatCurrency(Math.round(maintRupees * 100));
-  const elExtra = document.getElementById('live-calc-extra'); if (elExtra) elExtra.textContent = formatCurrency(Math.round(extraRupees * 100));
-  const elDiscount = document.getElementById('live-calc-discount');
-  if (elDiscount) {
-    elDiscount.textContent = discountRupees > 0 ? `-${formatCurrency(Math.round(discountRupees * 100))}` : '₹0.00';
-  }
-
-  if (hintEl) {
-    const ebPart = `EB: Prev ${prevEb} → Curr ${currEb} (${ebUnits}u @ ₹${ebUnitPriceRupees.toFixed(2)}/u)`;
-    const waterPart = tenant.water_calc_mode === 'METERED'
-      ? `Water: Prev ${prevWater} → Curr ${currWater} (${waterUnits}u @ ₹${waterUnitPriceRupees.toFixed(2)}/u)`
-      : `Water: Fixed ₹${waterFixedRupees.toFixed(2)}`;
-    hintEl.textContent = `${ebPart} | ${waterPart}`;
+      if (hintEl) {
+        hintEl.textContent = `EB: Prev ${res.prev_eb_reading} → Curr ${res.curr_eb_reading} (${res.eb_units} units) | Water: ${formatCurrency(res.water_amount)}`;
+      }
+      return;
+    }
   }
 }
 

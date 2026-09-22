@@ -1,56 +1,22 @@
 -- ============================================================================
--- RentBill Pro — Master Database Schema (Single-User Architecture)
+-- RentBill Pro — Master Database Schema (Local-First / No Auth & No Role)
 -- Production PostgreSQL Schema for Supabase
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- 1. USER PROFILES & AUTH SIGNUP TRIGGER
+-- 1. USER PROFILES (STANDALONE DIRECT ADMIN - NO AUTH.USERS REQUIRED)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    username TEXT,
-    email TEXT,
-    role TEXT NOT NULL DEFAULT 'ADMIN' CHECK (role IN ('ADMIN', 'VIEWER')),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT DEFAULT 'Admin',
+    email TEXT DEFAULT 'admin@rentbill.local',
     is_disabled BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  BEGIN
-    INSERT INTO public.profiles (id, username, email, role)
-    VALUES (
-      NEW.id,
-      COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
-      NEW.email,
-      COALESCE(NEW.raw_user_meta_data->>'role', 'ADMIN')
-    )
-    ON CONFLICT (id) DO UPDATE 
-      SET email = EXCLUDED.email,
-          updated_at = NOW();
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
-
-  RETURN NEW;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================================================
 -- 2. OWNERS TABLE
@@ -110,7 +76,7 @@ CREATE TABLE IF NOT EXISTS public.renters (
     unit_id BIGINT NOT NULL REFERENCES public.units(id) ON DELETE RESTRICT,
     owner_id BIGINT REFERENCES public.owners(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    user_id UUID,
     mobile_number TEXT,
     email TEXT,
     aadhar_number TEXT,
@@ -185,7 +151,7 @@ CREATE TABLE IF NOT EXISTS public.bills (
     proof_date TIMESTAMPTZ,
     notes TEXT,
     voided_at TIMESTAMPTZ,
-    voided_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    voided_by UUID,
     void_reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -253,9 +219,9 @@ CREATE TABLE IF NOT EXISTS public.payments (
     proof_status TEXT NOT NULL DEFAULT 'NONE' CHECK (proof_status IN ('NONE', 'PENDING', 'VERIFIED', 'REJECTED')),
     proof_photo TEXT,
     verified_at TIMESTAMPTZ,
-    verified_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    verified_by UUID,
     reversed_at TIMESTAMPTZ,
-    reversed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    reversed_by UUID,
     reversal_reason TEXT,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -301,22 +267,21 @@ BEGIN
 
   IF v_bill_status != 'VOID' THEN
     IF v_total_paid >= v_net_amount AND v_net_amount > 0 THEN
-      v_bill_status := 'PAID';
+      UPDATE public.bills
+      SET paid_amount = v_total_paid, status = 'PAID', updated_at = NOW()
+      WHERE id = v_bill_id;
     ELSIF v_total_paid > 0 THEN
-      v_bill_status := 'PARTIAL';
+      UPDATE public.bills
+      SET paid_amount = v_total_paid, status = 'PARTIAL', updated_at = NOW()
+      WHERE id = v_bill_id;
     ELSE
-      v_bill_status := 'UNPAID';
+      UPDATE public.bills
+      SET paid_amount = 0, status = 'UNPAID', updated_at = NOW()
+      WHERE id = v_bill_id;
     END IF;
-
-    UPDATE public.bills
-    SET paid_amount = v_total_paid,
-        status = v_bill_status,
-        updated_at = NOW()
-    WHERE id = v_bill_id;
   ELSE
     UPDATE public.bills
-    SET paid_amount = v_total_paid,
-        updated_at = NOW()
+    SET paid_amount = v_total_paid, updated_at = NOW()
     WHERE id = v_bill_id;
   END IF;
 
@@ -332,7 +297,7 @@ CREATE TRIGGER trg_sync_bill_paid_amount
   FOR EACH ROW EXECUTE FUNCTION public.sync_bill_paid_amount();
 
 -- ============================================================================
--- 7. EXPENSES, WITHDRAWALS, MAINTENANCE & DOCUMENTS
+-- 7. EXPENSES & OWNER WITHDRAWALS (CASH OUTFLOWS)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.expenses (
@@ -340,31 +305,40 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     property_id BIGINT REFERENCES public.properties(id) ON DELETE SET NULL,
     category TEXT NOT NULL,
+    description TEXT NOT NULL,
     amount BIGINT NOT NULL,
     expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    description TEXT,
+    created_by UUID,
     receipt_photo TEXT,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
 );
 
+CREATE INDEX IF NOT EXISTS idx_expenses_property ON public.expenses(property_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON public.expenses(expense_date);
+
 CREATE TABLE IF NOT EXISTS public.owner_withdrawals (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     owner_id BIGINT NOT NULL REFERENCES public.owners(id) ON DELETE RESTRICT,
-    property_id BIGINT REFERENCES public.properties(id) ON DELETE SET NULL,
     amount BIGINT NOT NULL,
     withdrawal_date DATE NOT NULL DEFAULT CURRENT_DATE,
     payment_method TEXT,
-    transaction_ref TEXT,
+    reference_number TEXT,
     notes TEXT,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_by UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
 );
+
+CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_owner ON public.owner_withdrawals(owner_id);
+CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_date ON public.owner_withdrawals(withdrawal_date);
+
+-- ============================================================================
+-- 8. MAINTENANCE TASKS & DOCUMENTS
+-- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.maintenance_tasks (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
@@ -378,7 +352,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_tasks (
     status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
     estimated_cost BIGINT DEFAULT 0,
     actual_cost BIGINT DEFAULT 0,
-    reported_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    reported_by UUID,
     assigned_to TEXT,
     due_date DATE,
     completed_at TIMESTAMPTZ,
@@ -388,104 +362,26 @@ CREATE TABLE IF NOT EXISTS public.maintenance_tasks (
     deleted_at TIMESTAMPTZ
 );
 
+CREATE INDEX IF NOT EXISTS idx_maint_property ON public.maintenance_tasks(property_id);
+CREATE INDEX IF NOT EXISTS idx_maint_unit ON public.maintenance_tasks(unit_id);
+CREATE INDEX IF NOT EXISTS idx_maint_renter ON public.maintenance_tasks(renter_id);
+
 CREATE TABLE IF NOT EXISTS public.documents (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
-    entity_type TEXT NOT NULL CHECK (entity_type IN ('PROPERTY', 'UNIT', 'RENTER', 'OWNER', 'GENERAL')),
-    entity_id BIGINT,
-    document_name TEXT NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('LEASE_AGREEMENT', 'IDENTITY_PROOF', 'PROPERTY_TAX', 'OWNERSHIP_DEED', 'MAINTENANCE', 'ELECTRICITY_DEED', 'OTHER')),
-    file_path TEXT NOT NULL,
-    file_size INTEGER,
-    mime_type TEXT,
-    expiry_date DATE,
-    notes TEXT,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    entity_type TEXT NOT NULL CHECK (entity_type IN ('PROPERTY', 'UNIT', 'RENTER', 'EXPENSE', 'BILL', 'GENERAL')),
+    entity_id BIGINT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_data TEXT,
+    file_type TEXT,
+    file_size BIGINT DEFAULT 0,
+    created_by UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
 );
 
--- Covering Indexes for Foreign Keys (Performance Optimization)
-CREATE INDEX IF NOT EXISTS idx_expenses_property_id ON public.expenses(property_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_created_by ON public.expenses(created_by);
-
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_owner_id ON public.owner_withdrawals(owner_id);
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_property_id ON public.owner_withdrawals(property_id);
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_created_by ON public.owner_withdrawals(created_by);
-
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_property_id ON public.maintenance_tasks(property_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_unit_id ON public.maintenance_tasks(unit_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_renter_id ON public.maintenance_tasks(renter_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_reported_by ON public.maintenance_tasks(reported_by);
-
-CREATE INDEX IF NOT EXISTS idx_documents_created_by ON public.documents(created_by);
-
--- ============================================================================
--- 8. SAFE USER DELETION TRIGGERS (SUPABASE DASHBOARD INTEGRATION)
--- ============================================================================
-
--- Nullifies references when a profile is removed
-CREATE OR REPLACE FUNCTION public.handle_profile_before_delete()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
-  UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
-  UPDATE public.payments SET verified_by = NULL WHERE verified_by = OLD.id;
-  UPDATE public.payments SET reversed_by = NULL WHERE reversed_by = OLD.id;
-  UPDATE public.expenses SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.owner_withdrawals SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.documents SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
-  RETURN OLD;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_profile_before_delete() FROM PUBLIC, anon, authenticated;
-
-DROP TRIGGER IF EXISTS trg_handle_profile_before_delete ON public.profiles;
-CREATE TRIGGER trg_handle_profile_before_delete
-  BEFORE DELETE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.handle_profile_before_delete();
-
--- Fires when a user is deleted from Supabase Dashboard (Authentication > Users)
-CREATE OR REPLACE FUNCTION public.handle_auth_user_before_delete()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
-  UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
-  UPDATE public.payments SET verified_by = NULL WHERE verified_by = OLD.id;
-  UPDATE public.payments SET reversed_by = NULL WHERE reversed_by = OLD.id;
-  UPDATE public.expenses SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.owner_withdrawals SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.documents SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
-
-  BEGIN
-    UPDATE storage.objects SET owner = NULL WHERE owner = OLD.id;
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
-
-  DELETE FROM public.profiles WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_auth_user_before_delete() FROM PUBLIC, anon, authenticated;
-
-DROP TRIGGER IF EXISTS on_auth_user_deleted ON auth.users;
-CREATE TRIGGER on_auth_user_deleted
-  BEFORE DELETE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_auth_user_before_delete();
+CREATE INDEX IF NOT EXISTS idx_documents_entity ON public.documents(entity_type, entity_id);
 
 -- ============================================================================
 -- 9. STORAGE BUCKET FOR PROOFS & ATTACHMENTS
@@ -503,8 +399,10 @@ END $$;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
-    EXECUTE 'CREATE POLICY "Authenticated upload proofs" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = ''proofs'');';
-    EXECUTE 'CREATE POLICY "Authenticated view proofs" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public upload proofs" ON storage.objects FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public view proofs" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public update proofs" ON storage.objects FOR UPDATE TO anon, authenticated USING (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public delete proofs" ON storage.objects FOR DELETE TO anon, authenticated USING (bucket_id = ''proofs'');';
   END IF;
 EXCEPTION
   WHEN duplicate_object THEN NULL;
@@ -512,7 +410,7 @@ EXCEPTION
 END $$;
 
 -- ============================================================================
--- 10. ROW LEVEL SECURITY (RLS) POLICIES
+-- 10. ROW LEVEL SECURITY (RLS) POLICIES — OPEN ACCESS (NO AUTH & NO ROLE)
 -- ============================================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -529,92 +427,37 @@ ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = public, pg_temp
+LANGUAGE sql
+IMMUTABLE
 AS $$
-BEGIN
-  IF auth.uid() IS NULL THEN RETURN FALSE; END IF;
-  RETURN COALESCE((SELECT role = 'ADMIN' FROM public.profiles WHERE id = auth.uid()), FALSE);
-END;
+  SELECT TRUE;
 $$;
 
-CREATE POLICY "Authenticated can read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert profiles" ON public.profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update profiles" ON public.profiles FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete profiles" ON public.profiles FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read owners" ON public.owners FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert owners" ON public.owners FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update owners" ON public.owners FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete owners" ON public.owners FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read properties" ON public.properties FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert properties" ON public.properties FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update properties" ON public.properties FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete properties" ON public.properties FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read units" ON public.units FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert units" ON public.units FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update units" ON public.units FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete units" ON public.units FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read renters" ON public.renters FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert renters" ON public.renters FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update renters" ON public.renters FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete renters" ON public.renters FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read bills" ON public.bills FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert bills" ON public.bills FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update bills" ON public.bills FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete bills" ON public.bills FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read payments" ON public.payments FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert payments" ON public.payments FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update payments" ON public.payments FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete payments" ON public.payments FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read expenses" ON public.expenses FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert expenses" ON public.expenses FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update expenses" ON public.expenses FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete expenses" ON public.expenses FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read owner_withdrawals" ON public.owner_withdrawals FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert owner_withdrawals" ON public.owner_withdrawals FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update owner_withdrawals" ON public.owner_withdrawals FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete owner_withdrawals" ON public.owner_withdrawals FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read maintenance_tasks" ON public.maintenance_tasks FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert maintenance_tasks" ON public.maintenance_tasks FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update maintenance_tasks" ON public.maintenance_tasks FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete maintenance_tasks" ON public.maintenance_tasks FOR DELETE TO authenticated USING (public.is_admin());
-
-CREATE POLICY "Authenticated can read documents" ON public.documents FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Admins can insert documents" ON public.documents FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can update documents" ON public.documents FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-CREATE POLICY "Admins can delete documents" ON public.documents FOR DELETE TO authenticated USING (public.is_admin());
+CREATE POLICY "Allow public all profiles" ON public.profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all owners" ON public.owners FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all properties" ON public.properties FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all units" ON public.units FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all renters" ON public.renters FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all bills" ON public.bills FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all payments" ON public.payments FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all expenses" ON public.expenses FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all owner_withdrawals" ON public.owner_withdrawals FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all maintenance_tasks" ON public.maintenance_tasks FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all documents" ON public.documents FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 -- ============================================================================
 -- 11. EXPLICIT GRANTS
 -- ============================================================================
 
-REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- ============================================================================
--- 12. DEFAULT ADMIN PROFILE SETUP (IF USERS ALREADY EXIST)
+-- 12. DEFAULT ADMIN PROFILE SEED
 -- ============================================================================
 
-DO $$
-DECLARE
-  v_first_user_id UUID;
-BEGIN
-  SELECT id INTO v_first_user_id FROM auth.users ORDER BY created_at ASC LIMIT 1;
-  IF v_first_user_id IS NOT NULL THEN
-    INSERT INTO public.profiles (id, username, email, role)
-    SELECT id, SPLIT_PART(email, '@', 1), email, 'ADMIN'
-    FROM auth.users
-    WHERE id = v_first_user_id
-    ON CONFLICT (id) DO UPDATE SET role = 'ADMIN';
-  END IF;
-END $$;
+INSERT INTO public.profiles (id, username, email)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Admin', 'admin@rentbill.local')
+ON CONFLICT (id) DO NOTHING;

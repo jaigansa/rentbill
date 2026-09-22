@@ -1,5 +1,7 @@
 # Build & Distribution Output
 dist/
+*.exe
+data/
 
 # Dependencies & Node (if used)
 node_modules/

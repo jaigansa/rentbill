@@ -43,17 +43,6 @@ function saveUnsupportedColumns() {
   } catch (e) {}
 }
 
-export function clearUnsupportedColumnsCache() {
-  unsupportedColumns.clear();
-  for (const [tbl, cols] of Object.entries(DEFAULT_UNSUPPORTED_COLUMNS)) {
-    unsupportedColumns.set(tbl, new Set(cols));
-  }
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem('rentbill_unsupported_cols');
-    }
-  } catch (e) {}
-}
 // Columns known to be integer, bigint, or numeric in the database schema.
 // Passing an empty string "" to these columns causes Postgres type-casting failure:
 // "invalid input syntax for type integer: """

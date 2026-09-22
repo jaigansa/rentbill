@@ -1,5 +1,5 @@
 -- ============================================================================
--- RentBill Pro — Safe Database Upgrade Migration (Single-User Architecture)
+-- RentBill Pro — Safe Database Upgrade Migration (No Auth & No Role)
 -- Run this in Supabase SQL Editor to upgrade an existing database without losing data.
 -- ============================================================================
 
@@ -11,6 +11,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Profiles
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_disabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
 
 -- Units (ensure both unit_name and unit_number exist and are kept in sync)
 ALTER TABLE public.units ADD COLUMN IF NOT EXISTS unit_name TEXT;
@@ -64,7 +66,7 @@ CREATE TABLE IF NOT EXISTS public.maintenance_tasks (
     status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')),
     estimated_cost BIGINT DEFAULT 0,
     actual_cost BIGINT DEFAULT 0,
-    reported_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    reported_by UUID,
     assigned_to TEXT,
     due_date DATE,
     completed_at TIMESTAMPTZ,
@@ -75,164 +77,52 @@ CREATE TABLE IF NOT EXISTS public.maintenance_tasks (
 );
 
 -- ============================================================================
--- 2. SAFE FOREIGN KEY CONSTRAINT UPGRADE (ON DELETE SET NULL)
+-- 2. DROP AUTH.USERS FOREIGN KEYS & CONSTRAINTS
 -- ============================================================================
 
 DO $$
 BEGIN
   ALTER TABLE public.renters DROP CONSTRAINT IF EXISTS renters_user_id_fkey;
-  ALTER TABLE public.renters ADD CONSTRAINT renters_user_id_fkey 
-    FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
   ALTER TABLE public.bills DROP CONSTRAINT IF EXISTS bills_voided_by_fkey;
-  ALTER TABLE public.bills ADD CONSTRAINT bills_voided_by_fkey 
-    FOREIGN KEY (voided_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
   ALTER TABLE public.payments DROP CONSTRAINT IF EXISTS payments_verified_by_fkey;
-  ALTER TABLE public.payments ADD CONSTRAINT payments_verified_by_fkey 
-    FOREIGN KEY (verified_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-  
   ALTER TABLE public.payments DROP CONSTRAINT IF EXISTS payments_reversed_by_fkey;
-  ALTER TABLE public.payments ADD CONSTRAINT payments_reversed_by_fkey 
-    FOREIGN KEY (reversed_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
   ALTER TABLE public.expenses DROP CONSTRAINT IF EXISTS expenses_created_by_fkey;
-  ALTER TABLE public.expenses ADD CONSTRAINT expenses_created_by_fkey 
-    FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
   ALTER TABLE public.owner_withdrawals DROP CONSTRAINT IF EXISTS owner_withdrawals_created_by_fkey;
-  ALTER TABLE public.owner_withdrawals ADD CONSTRAINT owner_withdrawals_created_by_fkey 
-    FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
   ALTER TABLE public.documents DROP CONSTRAINT IF EXISTS documents_created_by_fkey;
-  ALTER TABLE public.documents ADD CONSTRAINT documents_created_by_fkey 
-    FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-
-  ALTER TABLE public.documents DROP CONSTRAINT IF EXISTS documents_entity_type_check;
-  ALTER TABLE public.documents ADD CONSTRAINT documents_entity_type_check 
-    CHECK (entity_type IN ('PROPERTY', 'UNIT', 'RENTER', 'OWNER', 'GENERAL'));
-
   ALTER TABLE public.maintenance_tasks DROP CONSTRAINT IF EXISTS maintenance_tasks_reported_by_fkey;
-  ALTER TABLE public.maintenance_tasks ADD CONSTRAINT maintenance_tasks_reported_by_fkey 
-    FOREIGN KEY (reported_by) REFERENCES public.profiles(id) ON DELETE SET NULL;
-EXCEPTION WHEN OTHERS THEN
-  NULL;
+  ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_id_fkey;
+EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
--- Covering Indexes for Foreign Keys (Fixes Advisor lint 0001_unindexed_foreign_keys)
-CREATE INDEX IF NOT EXISTS idx_bills_voided_by ON public.bills(voided_by);
-
-CREATE INDEX IF NOT EXISTS idx_payments_verified_by ON public.payments(verified_by);
-CREATE INDEX IF NOT EXISTS idx_payments_reversed_by ON public.payments(reversed_by);
-
-CREATE INDEX IF NOT EXISTS idx_expenses_property_id ON public.expenses(property_id);
-CREATE INDEX IF NOT EXISTS idx_expenses_created_by ON public.expenses(created_by);
-
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_owner_id ON public.owner_withdrawals(owner_id);
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_property_id ON public.owner_withdrawals(property_id);
-CREATE INDEX IF NOT EXISTS idx_owner_withdrawals_created_by ON public.owner_withdrawals(created_by);
-
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_property_id ON public.maintenance_tasks(property_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_unit_id ON public.maintenance_tasks(unit_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_renter_id ON public.maintenance_tasks(renter_id);
-CREATE INDEX IF NOT EXISTS idx_maintenance_tasks_reported_by ON public.maintenance_tasks(reported_by);
-
-CREATE INDEX IF NOT EXISTS idx_documents_created_by ON public.documents(created_by);
-
 -- ============================================================================
--- 3. USER MANAGEMENT & DELETION TRIGGERS
+-- 3. DROP OBSOLETE AUTH TRIGGERS & FUNCTIONS
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  BEGIN
-    INSERT INTO public.profiles (id, username, email, role)
-    VALUES (
-      NEW.id,
-      COALESCE(NEW.raw_user_meta_data->>'username', SPLIT_PART(NEW.email, '@', 1)),
-      NEW.email,
-      COALESCE(NEW.raw_user_meta_data->>'role', 'ADMIN')
-    )
-    ON CONFLICT (id) DO UPDATE 
-      SET email = EXCLUDED.email,
-          updated_at = NOW();
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
-
-  RETURN NEW;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
-
-CREATE OR REPLACE FUNCTION public.handle_profile_before_delete()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
-  UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
-  UPDATE public.payments SET verified_by = NULL WHERE verified_by = OLD.id;
-  UPDATE public.payments SET reversed_by = NULL WHERE reversed_by = OLD.id;
-  UPDATE public.expenses SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.owner_withdrawals SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.documents SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
-  RETURN OLD;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_profile_before_delete() FROM PUBLIC, anon, authenticated;
-
-DROP TRIGGER IF EXISTS trg_handle_profile_before_delete ON public.profiles;
-CREATE TRIGGER trg_handle_profile_before_delete
-  BEFORE DELETE ON public.profiles
-  FOR EACH ROW EXECUTE FUNCTION public.handle_profile_before_delete();
-
-CREATE OR REPLACE FUNCTION public.handle_auth_user_before_delete()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $$
-BEGIN
-  UPDATE public.renters SET user_id = NULL WHERE user_id = OLD.id;
-  UPDATE public.bills SET voided_by = NULL WHERE voided_by = OLD.id;
-  UPDATE public.payments SET verified_by = NULL WHERE verified_by = OLD.id;
-  UPDATE public.payments SET reversed_by = NULL WHERE reversed_by = OLD.id;
-  UPDATE public.expenses SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.owner_withdrawals SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.documents SET created_by = NULL WHERE created_by = OLD.id;
-  UPDATE public.maintenance_tasks SET reported_by = NULL WHERE reported_by = OLD.id;
-
-  BEGIN
-    UPDATE storage.objects SET owner = NULL WHERE owner = OLD.id;
-  EXCEPTION WHEN OTHERS THEN
-    NULL;
-  END;
-
-  DELETE FROM public.profiles WHERE id = OLD.id;
-  RETURN OLD;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.handle_auth_user_before_delete() FROM PUBLIC, anon, authenticated;
-
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP TRIGGER IF EXISTS on_auth_user_deleted ON auth.users;
-CREATE TRIGGER on_auth_user_deleted
-  BEFORE DELETE ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_auth_user_before_delete();
+DROP TRIGGER IF EXISTS trg_handle_profile_before_delete ON public.profiles;
+
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_auth_user_before_delete() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_profile_before_delete() CASCADE;
+DROP FUNCTION IF EXISTS public.resolve_login_email CASCADE;
+DROP FUNCTION IF EXISTS public.prevent_profile_role_change CASCADE;
+
+DROP VIEW IF EXISTS public.v_ledger_accounts CASCADE;
+DROP VIEW IF EXISTS public.v_ledger_entries CASCADE;
+DROP FUNCTION IF EXISTS public.fn_reconcile_ledger() CASCADE;
+DROP FUNCTION IF EXISTS public.is_staff() CASCADE;
+DROP FUNCTION IF EXISTS public.is_auditor() CASCADE;
+DROP FUNCTION IF EXISTS public.admin_list_all_users() CASCADE;
+DROP POLICY IF EXISTS "Anon read public bills" ON public.bills;
+DROP FUNCTION IF EXISTS public.admin_delete_user(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_create_user(TEXT, TEXT, TEXT, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_update_user_password(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_change_user_role(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.admin_toggle_user_status(UUID, BOOLEAN) CASCADE;
 
 -- ============================================================================
--- 4. FINANCIAL TRIGGERS (CALCULATIONS & RECONCILIATION)
+-- 4. FINANCIAL TRIGGERS
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.calculate_bill_amounts()
@@ -265,8 +155,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-REVOKE EXECUTE ON FUNCTION public.calculate_bill_amounts() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS trg_calculate_bill_amounts ON public.bills;
 CREATE TRIGGER trg_calculate_bill_amounts
@@ -304,22 +192,21 @@ BEGIN
 
   IF v_bill_status != 'VOID' THEN
     IF v_total_paid >= v_net_amount AND v_net_amount > 0 THEN
-      v_bill_status := 'PAID';
+      UPDATE public.bills
+      SET paid_amount = v_total_paid, status = 'PAID', updated_at = NOW()
+      WHERE id = v_bill_id;
     ELSIF v_total_paid > 0 THEN
-      v_bill_status := 'PARTIAL';
+      UPDATE public.bills
+      SET paid_amount = v_total_paid, status = 'PARTIAL', updated_at = NOW()
+      WHERE id = v_bill_id;
     ELSE
-      v_bill_status := 'UNPAID';
+      UPDATE public.bills
+      SET paid_amount = 0, status = 'UNPAID', updated_at = NOW()
+      WHERE id = v_bill_id;
     END IF;
-
-    UPDATE public.bills
-    SET paid_amount = v_total_paid,
-        status = v_bill_status,
-        updated_at = NOW()
-    WHERE id = v_bill_id;
   ELSE
     UPDATE public.bills
-    SET paid_amount = v_total_paid,
-        updated_at = NOW()
+    SET paid_amount = v_total_paid, updated_at = NOW()
     WHERE id = v_bill_id;
   END IF;
 
@@ -327,243 +214,108 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.sync_bill_paid_amount() FROM PUBLIC, anon, authenticated;
-
 DROP TRIGGER IF EXISTS trg_sync_bill_paid_amount ON public.payments;
 CREATE TRIGGER trg_sync_bill_paid_amount
   AFTER INSERT OR UPDATE OR DELETE ON public.payments
   FOR EACH ROW EXECUTE FUNCTION public.sync_bill_paid_amount();
 
 -- ============================================================================
--- 5. SECURITY RPC FUNCTIONS & CLEANUP OF OBSOLETE FUNCTIONS
+-- 5. SIMPLIFIED IS_ADMIN FUNCTION
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = public, pg_temp
+LANGUAGE sql
+IMMUTABLE
 AS $$
-BEGIN
-  IF auth.uid() IS NULL THEN RETURN FALSE; END IF;
-  RETURN COALESCE((SELECT role = 'ADMIN' FROM public.profiles WHERE id = auth.uid()), FALSE);
-END;
+  SELECT TRUE;
 $$;
 
--- Clean up obsolete ledger views and reconciliation function
-DROP VIEW IF EXISTS public.v_ledger_accounts CASCADE;
-DROP VIEW IF EXISTS public.v_ledger_entries CASCADE;
-DROP FUNCTION IF EXISTS public.fn_reconcile_ledger() CASCADE;
-
--- Clean up obsolete multi-user, staff, auditor, and tenant RPC functions
-DROP FUNCTION IF EXISTS public.is_staff() CASCADE;
-DROP FUNCTION IF EXISTS public.is_auditor() CASCADE;
-DROP FUNCTION IF EXISTS public.admin_list_all_users() CASCADE;
-DROP FUNCTION IF EXISTS public.admin_create_user(TEXT, TEXT, TEXT, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_update_user_password(UUID, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_change_user_role(UUID, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_toggle_user_status(UUID, BOOLEAN) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_delete_user(UUID) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_list_tenants_with_auth() CASCADE;
-DROP FUNCTION IF EXISTS public.admin_create_tenant_user CASCADE;
-DROP FUNCTION IF EXISTS public.admin_reset_tenant_password(UUID, TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_delete_tenant_login(BIGINT, UUID) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_toggle_tenant_login_status(BIGINT, UUID, BOOLEAN) CASCADE;
-DROP FUNCTION IF EXISTS public.admin_update_tenant_user_password CASCADE;
-DROP FUNCTION IF EXISTS public.prevent_profile_role_change CASCADE;
-DROP FUNCTION IF EXISTS public.rls_auto_enable CASCADE;
-DROP FUNCTION IF EXISTS public.get_login_email_for_identifier(TEXT) CASCADE;
-DROP FUNCTION IF EXISTS public.tenant_link_own_lease() CASCADE;
-DROP FUNCTION IF EXISTS public.resolve_login_email CASCADE;
-
 -- ============================================================================
--- 6. PERMISSIONS & GRANTS
+-- 6. RESET & UPDATE RLS POLICIES FOR OPEN ACCESS (NO AUTH & NO ROLE)
 -- ============================================================================
 
-REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
+DO $$
+DECLARE
+  pol RECORD;
+BEGIN
+  -- Drop existing legacy policies across all public tables
+  FOR pol IN 
+    SELECT schemaname, tablename, policyname 
+    FROM pg_policies 
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I;', pol.policyname, pol.schemaname, pol.tablename);
+  END LOOP;
+END $$;
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.owners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.renters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.owner_withdrawals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.maintenance_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public all profiles" ON public.profiles FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all owners" ON public.owners FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all properties" ON public.properties FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all units" ON public.units FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all renters" ON public.renters FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all bills" ON public.bills FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all payments" ON public.payments FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all expenses" ON public.expenses FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all owner_withdrawals" ON public.owner_withdrawals FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all maintenance_tasks" ON public.maintenance_tasks FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all documents" ON public.documents FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- ============================================================================
+-- 7. STORAGE BUCKET POLICIES
+-- ============================================================================
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'buckets') THEN
+    INSERT INTO storage.buckets (id, name, public) 
+    VALUES ('proofs', 'proofs', true)
+    ON CONFLICT (id) DO UPDATE SET public = true;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+    DROP POLICY IF EXISTS "Authenticated upload proofs" ON storage.objects;
+    DROP POLICY IF EXISTS "Authenticated view proofs" ON storage.objects;
+    DROP POLICY IF EXISTS "Allow public upload proofs" ON storage.objects;
+    DROP POLICY IF EXISTS "Allow public view proofs" ON storage.objects;
+    DROP POLICY IF EXISTS "Allow public update proofs" ON storage.objects;
+    DROP POLICY IF EXISTS "Allow public delete proofs" ON storage.objects;
+
+    EXECUTE 'CREATE POLICY "Allow public upload proofs" ON storage.objects FOR INSERT TO anon, authenticated WITH CHECK (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public view proofs" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public update proofs" ON storage.objects FOR UPDATE TO anon, authenticated USING (bucket_id = ''proofs'');';
+    EXECUTE 'CREATE POLICY "Allow public delete proofs" ON storage.objects FOR DELETE TO anon, authenticated USING (bucket_id = ''proofs'');';
+  END IF;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN undefined_table THEN NULL;
+END $$;
+
+-- ============================================================================
+-- 8. GRANTS
+-- ============================================================================
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
 
 -- ============================================================================
--- 7. ROW LEVEL SECURITY REFRESH
+-- 9. DEFAULT ADMIN PROFILE SEED
 -- ============================================================================
 
-DO $$
-BEGIN
-  -- Safe RLS enable
-  ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.owners ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.properties ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.units ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.renters ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.owner_withdrawals ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.maintenance_tasks ENABLE ROW LEVEL SECURITY;
-  ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
-
-  -- Drop public anonymous access policies (ensure 100% login required)
-  DROP POLICY IF EXISTS "Anon read public bills" ON public.bills;
-  DROP POLICY IF EXISTS "Anon read public payments" ON public.payments;
-  DROP POLICY IF EXISTS "Anon read public renters" ON public.renters;
-  DROP POLICY IF EXISTS "Anon read public units" ON public.units;
-  DROP POLICY IF EXISTS "Anon read public properties" ON public.properties;
-  DROP POLICY IF EXISTS "Anon read public owners" ON public.owners;
-
-  -- Drop legacy multi-user and blanket policies
-  DROP POLICY IF EXISTS "Authenticated full access to profiles" ON public.profiles;
-  DROP POLICY IF EXISTS "Authenticated full access to owners" ON public.owners;
-  DROP POLICY IF EXISTS "Authenticated full access to properties" ON public.properties;
-  DROP POLICY IF EXISTS "Authenticated full access to units" ON public.units;
-  DROP POLICY IF EXISTS "Authenticated full access to renters" ON public.renters;
-  DROP POLICY IF EXISTS "Authenticated full access to bills" ON public.bills;
-  DROP POLICY IF EXISTS "Authenticated full access to payments" ON public.payments;
-  DROP POLICY IF EXISTS "Authenticated full access to expenses" ON public.expenses;
-  DROP POLICY IF EXISTS "Authenticated full access to owner_withdrawals" ON public.owner_withdrawals;
-  DROP POLICY IF EXISTS "Authenticated full access to maintenance_tasks" ON public.maintenance_tasks;
-  DROP POLICY IF EXISTS "Authenticated full access to documents" ON public.documents;
-
-  -- Drop existing role policies
-  DROP POLICY IF EXISTS "Authenticated can read profiles" ON public.profiles;
-  DROP POLICY IF EXISTS "Admins can write profiles" ON public.profiles;
-  DROP POLICY IF EXISTS "Admins can insert profiles" ON public.profiles;
-  DROP POLICY IF EXISTS "Admins can update profiles" ON public.profiles;
-  DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
-
-  DROP POLICY IF EXISTS "Authenticated can read owners" ON public.owners;
-  DROP POLICY IF EXISTS "Admins can write owners" ON public.owners;
-  DROP POLICY IF EXISTS "Admins can insert owners" ON public.owners;
-  DROP POLICY IF EXISTS "Admins can update owners" ON public.owners;
-  DROP POLICY IF EXISTS "Admins can delete owners" ON public.owners;
-
-  DROP POLICY IF EXISTS "Authenticated can read properties" ON public.properties;
-  DROP POLICY IF EXISTS "Admins can write properties" ON public.properties;
-  DROP POLICY IF EXISTS "Admins can insert properties" ON public.properties;
-  DROP POLICY IF EXISTS "Admins can update properties" ON public.properties;
-  DROP POLICY IF EXISTS "Admins can delete properties" ON public.properties;
-
-  DROP POLICY IF EXISTS "Authenticated can read units" ON public.units;
-  DROP POLICY IF EXISTS "Admins can write units" ON public.units;
-  DROP POLICY IF EXISTS "Admins can insert units" ON public.units;
-  DROP POLICY IF EXISTS "Admins can update units" ON public.units;
-  DROP POLICY IF EXISTS "Admins can delete units" ON public.units;
-
-  DROP POLICY IF EXISTS "Authenticated can read renters" ON public.renters;
-  DROP POLICY IF EXISTS "Admins can write renters" ON public.renters;
-  DROP POLICY IF EXISTS "Admins can insert renters" ON public.renters;
-  DROP POLICY IF EXISTS "Admins can update renters" ON public.renters;
-  DROP POLICY IF EXISTS "Admins can delete renters" ON public.renters;
-
-  DROP POLICY IF EXISTS "Authenticated can read bills" ON public.bills;
-  DROP POLICY IF EXISTS "Admins can write bills" ON public.bills;
-  DROP POLICY IF EXISTS "Admins can insert bills" ON public.bills;
-  DROP POLICY IF EXISTS "Admins can update bills" ON public.bills;
-  DROP POLICY IF EXISTS "Admins can delete bills" ON public.bills;
-
-  DROP POLICY IF EXISTS "Authenticated can read payments" ON public.payments;
-  DROP POLICY IF EXISTS "Admins can write payments" ON public.payments;
-  DROP POLICY IF EXISTS "Admins can insert payments" ON public.payments;
-  DROP POLICY IF EXISTS "Admins can update payments" ON public.payments;
-  DROP POLICY IF EXISTS "Admins can delete payments" ON public.payments;
-
-  DROP POLICY IF EXISTS "Authenticated can read expenses" ON public.expenses;
-  DROP POLICY IF EXISTS "Admins can write expenses" ON public.expenses;
-  DROP POLICY IF EXISTS "Admins can insert expenses" ON public.expenses;
-  DROP POLICY IF EXISTS "Admins can update expenses" ON public.expenses;
-  DROP POLICY IF EXISTS "Admins can delete expenses" ON public.expenses;
-
-  DROP POLICY IF EXISTS "Authenticated can read owner_withdrawals" ON public.owner_withdrawals;
-  DROP POLICY IF EXISTS "Admins can write owner_withdrawals" ON public.owner_withdrawals;
-  DROP POLICY IF EXISTS "Admins can insert owner_withdrawals" ON public.owner_withdrawals;
-  DROP POLICY IF EXISTS "Admins can update owner_withdrawals" ON public.owner_withdrawals;
-  DROP POLICY IF EXISTS "Admins can delete owner_withdrawals" ON public.owner_withdrawals;
-
-  DROP POLICY IF EXISTS "Authenticated can read maintenance_tasks" ON public.maintenance_tasks;
-  DROP POLICY IF EXISTS "Admins can write maintenance_tasks" ON public.maintenance_tasks;
-  DROP POLICY IF EXISTS "Admins can insert maintenance_tasks" ON public.maintenance_tasks;
-  DROP POLICY IF EXISTS "Admins can update maintenance_tasks" ON public.maintenance_tasks;
-  DROP POLICY IF EXISTS "Admins can delete maintenance_tasks" ON public.maintenance_tasks;
-
-  DROP POLICY IF EXISTS "Authenticated can read documents" ON public.documents;
-  DROP POLICY IF EXISTS "Admins can write documents" ON public.documents;
-  DROP POLICY IF EXISTS "Admins can insert documents" ON public.documents;
-  DROP POLICY IF EXISTS "Admins can update documents" ON public.documents;
-  DROP POLICY IF EXISTS "Admins can delete documents" ON public.documents;
-
-  CREATE POLICY "Authenticated can read profiles" ON public.profiles FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert profiles" ON public.profiles FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update profiles" ON public.profiles FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete profiles" ON public.profiles FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read owners" ON public.owners FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert owners" ON public.owners FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update owners" ON public.owners FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete owners" ON public.owners FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read properties" ON public.properties FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert properties" ON public.properties FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update properties" ON public.properties FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete properties" ON public.properties FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read units" ON public.units FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert units" ON public.units FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update units" ON public.units FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete units" ON public.units FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read renters" ON public.renters FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert renters" ON public.renters FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update renters" ON public.renters FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete renters" ON public.renters FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read bills" ON public.bills FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert bills" ON public.bills FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update bills" ON public.bills FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete bills" ON public.bills FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read payments" ON public.payments FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert payments" ON public.payments FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update payments" ON public.payments FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete payments" ON public.payments FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read expenses" ON public.expenses FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert expenses" ON public.expenses FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update expenses" ON public.expenses FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete expenses" ON public.expenses FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read owner_withdrawals" ON public.owner_withdrawals FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert owner_withdrawals" ON public.owner_withdrawals FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update owner_withdrawals" ON public.owner_withdrawals FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete owner_withdrawals" ON public.owner_withdrawals FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read maintenance_tasks" ON public.maintenance_tasks FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert maintenance_tasks" ON public.maintenance_tasks FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update maintenance_tasks" ON public.maintenance_tasks FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete maintenance_tasks" ON public.maintenance_tasks FOR DELETE TO authenticated USING (public.is_admin());
-
-  CREATE POLICY "Authenticated can read documents" ON public.documents FOR SELECT TO authenticated USING (true);
-  CREATE POLICY "Admins can insert documents" ON public.documents FOR INSERT TO authenticated WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can update documents" ON public.documents FOR UPDATE TO authenticated USING (public.is_admin()) WITH CHECK (public.is_admin());
-  CREATE POLICY "Admins can delete documents" ON public.documents FOR DELETE TO authenticated USING (public.is_admin());
-EXCEPTION WHEN OTHERS THEN
-  NULL;
-END $$;
-
--- ============================================================================
--- 8. ROLE CONSOLIDATION TO ADMIN + VIEWER (READ-ONLY)
---    Removes STAFF, AUDITOR, and TENANT roles. Former tenant logins are
---    converted to VIEWER but disabled so they can no longer sign in.
--- ============================================================================
-
--- Map legacy roles to VIEWER (admin stays admin)
-UPDATE public.profiles SET role = 'VIEWER'              WHERE role IN ('STAFF', 'AUDITOR');
-UPDATE public.profiles SET role = 'VIEWER', is_disabled = TRUE WHERE role = 'TENANT';
-
--- Replace the legacy CHECK constraint (dropping by the standard auto-generated name)
-DO $$
-BEGIN
-  ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
-  ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check
-    CHECK (role IN ('ADMIN', 'VIEWER'));
-EXCEPTION WHEN OTHERS THEN
-  NULL;
-END $$;
+INSERT INTO public.profiles (id, username, email)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Admin', 'admin@rentbill.local')
+ON CONFLICT (id) DO NOTHING;

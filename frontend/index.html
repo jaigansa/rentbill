@@ -5,33 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RentBill Pro — Rental & Property Management System</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>">
-  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="ui/css/app.css">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script defer src="js/vendor/lucide.min.js"></script>
+  <script defer src="library/lucide.min.js"></script>
 </head>
 <body>
 
-  <!-- 0. App Loader & Auth Mount (Loaded dynamically from layout/auth.html) -->
-  <div id="auth-mount"></div>
-
-  <!-- 1. Main Application Workspace -->
-  <div id="app-view" class="app-container" style="display: none;">
-    <!-- Mobile Navigation Menu Mount (Loaded dynamically from layout/mobile-nav.html) -->
+  <!-- Main Application Workspace (Direct Local-First Access, No Auth Gating) -->
+  <div id="app-view" class="app-container">
+    <!-- Mobile Navigation Menu Mount (Loaded dynamically from ui/layout/mobile-nav.html) -->
     <div id="mobile-nav-mount"></div>
 
     <!-- Main Workspace Content Panel -->
     <main class="main-content">
-      <!-- Top Bar Header Mount (Loaded dynamically from layout/header.html) -->
+      <!-- Top Bar Header Mount (Loaded dynamically from ui/layout/header.html) -->
       <div id="header-mount"></div>
 
-      <!-- Scrollable Workspace Page Sections Container (Loaded dynamically from layout/pages/*.html) -->
+      <!-- Scrollable Workspace Page Sections Container (Loaded dynamically from ui/layout/pages/*.html) -->
       <div class="page-container" id="pages-container"></div>
     </main>
   </div>
 
-  <!-- 2. Global Dialog Modals Mount (Loaded dynamically from layout/modals.html) -->
+  <!-- 2. Global Dialog Modals Mount (Loaded dynamically from ui/layout/modals.html) -->
   <div id="modals-mount"></div>
 
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>

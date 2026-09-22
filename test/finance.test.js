@@ -5,7 +5,7 @@ import {
   paymentCashInEntry,
   reconcileLedger,
   billPaidAmountMatches
-} from '../js/core/finance.js';
+} from '../frontend/functions/core/finance.js';
 
 test('billReceivableEntry includes a live non-voided bill', () => {
   const entry = billReceivableEntry({ net_amount: 100000, status: 'UNPAID' });

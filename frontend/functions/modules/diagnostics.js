@@ -1,7 +1,6 @@
 // RentBill Pro — Database Diagnostics, Latency & Storage Usage
 import { getSupabaseClient } from '../core/config.js';
 import { refreshLucideIcons, formatCurrency, escapeStr } from '../core/ui.js';
-import { reconcileLedger } from '../core/finance.js';
 
 export async function loadDiagnosticsPage() {
   const supabaseClient = getSupabaseClient();

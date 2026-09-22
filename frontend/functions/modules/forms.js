@@ -4,7 +4,6 @@ import { safeInsert, safeUpdate, safeDelete } from '../core/db.js';
 import { getCurrentUser, setCurrentUser, getUploadedDocBase64, setUploadedDocBase64 } from '../core/state.js';
 import { closeModal, refreshLucideIcons, determineMeterBaselines } from '../core/ui.js';
 import { parseFloorValue } from '../core/format.js';
-import { checkAuth, showLogin } from './auth.js';
 import { loadDashboard } from './dashboard.js';
 import { loadPropertiesPage, loadTenantsPage } from './properties.js';
 import { loadOwnersPage } from './owners.js';
@@ -20,98 +19,13 @@ export function setupFormSubmitHandlers() {
   // Guard: Intercept all form submissions for VIEWER role (Read-Only Safety Shield)
   document.addEventListener('submit', (e) => {
     const user = getCurrentUser();
-    if (user && user.role === 'VIEWER' && e.target.id !== 'login-form') {
+    if (user && user.role === 'VIEWER') {
       e.preventDefault();
       e.stopPropagation();
       alert('🔒 Viewer Mode — Read-Only Access Active. Data modifications are disabled.');
       return false;
     }
   }, true);
-
-  // 1. LOGIN FORM SUBMIT HANDLER
-  const loginForm = document.getElementById('login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const errorDiv = document.getElementById('login-error');
-      if (errorDiv) errorDiv.style.display = 'none';
-
-      const loginBtn = document.getElementById('i18n-btn-login');
-      const origBtnHtml = loginBtn ? loginBtn.innerHTML : 'Login';
-
-      function showError(msg) {
-        if (loginBtn) {
-          loginBtn.disabled = false;
-          loginBtn.innerHTML = origBtnHtml;
-          refreshLucideIcons();
-        }
-        if (errorDiv) {
-          const errText = document.getElementById('login-error-text');
-          if (errText) errText.textContent = msg;
-          else errorDiv.textContent = msg;
-          errorDiv.style.display = 'flex';
-          refreshLucideIcons();
-        }
-      }
-
-      if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Logging in...';
-        refreshLucideIcons();
-      }
-
-      const identifierInput = (document.getElementById('login-email')?.value || document.getElementById('login-username')?.value || '').trim();
-      const passwordInput = document.getElementById('login-password').value.trim();
-
-      if (!identifierInput || !passwordInput) {
-        showError('Please enter both email/username and password');
-        return;
-      }
-
-      const client = getSupabaseClient();
-      if (!client || !client.auth) {
-        showError('Supabase client is not initialized. Please configure your Supabase Project URL & Anon Key.');
-        return;
-      }
-
-      let emailToLogin = identifierInput.trim().toLowerCase();
-
-      // Standard Email & Password authentication
-      if (!emailToLogin.includes('@')) {
-        showError('Please enter your email address to sign in.');
-        return;
-      }
-
-      // Perform Supabase Authentication with Email & Password
-      try {
-        const { data, error } = await client.auth.signInWithPassword({
-          email: emailToLogin,
-          password: passwordInput
-        });
-
-        if (error) {
-          let msg = error.message || 'Invalid login credentials.';
-          if (msg.toLowerCase().includes('database error') || msg.toLowerCase().includes('querying schema') || msg.toLowerCase().includes('invalid login credentials')) {
-            msg = 'Invalid username/email or password. Please verify your credentials or ask the property manager to reset your password.';
-          }
-          showError(msg);
-          return;
-        }
-
-        // onAuthStateChange will fire SIGNED_IN and call checkAuth automatically.
-        if (data && data.session && loginBtn) {
-          loginBtn.disabled = false;
-          loginBtn.innerHTML = origBtnHtml;
-        }
-      } catch (err) {
-        let msg = err.message || String(err);
-        if (msg.toLowerCase().includes('database error') || msg.toLowerCase().includes('querying schema')) {
-          msg = 'Invalid username/email or password. Please verify your credentials or ask the property manager to reset your password.';
-        }
-        showError(msg);
-      }
-    });
-  }
 
   // 2. ADD / EDIT PROPERTY
   const formAddProp = document.getElementById('form-add-property');
@@ -321,51 +235,23 @@ export function setupFormSubmitHandlers() {
       const { data: tenant } = await client.from('renters').select('*').eq('id', renter_id).single();
       if (!tenant) { alert('Tenant not found'); return; }
 
-      const { data: lastBills } = await client.from('bills')
-        .select('*').eq('renter_id', renter_id).is('deleted_at', null).order('created_at', { ascending: false }).limit(1);
-
-      let localResets = null;
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localResets = JSON.parse(localStorage.getItem('rentbill_meter_resets') || '{}');
-        }
-      } catch (e) {}
-
-      const lastBill = (lastBills && lastBills.length > 0) ? lastBills[0] : null;
-      const { prevEb: prev_eb, prevWater: prev_water } = determineMeterBaselines(tenant, lastBill, localResets);
-
-      const eb_units = Math.max(0, curr_eb - prev_eb);
-      const ebUnitPricePaise = (tenant.eb_per_unit_price !== undefined && tenant.eb_per_unit_price !== null)
-        ? Math.round(parseFloat(tenant.eb_per_unit_price) * 100)
-        : (tenant.eb_unit_price || 800);
-      const eb_amount = eb_units * ebUnitPricePaise;
-
-      const waterUnitPricePaise = (tenant.water_per_unit_price !== undefined && tenant.water_per_unit_price !== null)
-        ? Math.round(parseFloat(tenant.water_per_unit_price) * 100)
-        : (tenant.water_unit_price || 0);
-
-      const waterFixedPaise = (tenant.water_fixed_charge !== undefined && tenant.water_fixed_charge !== null)
-        ? (tenant.water_fixed_charge > 500 ? tenant.water_fixed_charge : Math.round(tenant.water_fixed_charge * 100))
-        : 0;
-
-      let water_amount = waterFixedPaise;
-      if (tenant.water_calc_mode === 'METERED') {
-        const water_units = Math.max(0, curr_water - prev_water);
-        water_amount = water_units * waterUnitPricePaise;
-      }
-
       const inputRentRupees = parseFloat(document.getElementById('bill-rent-amount')?.value || '0');
-      const rent_amount = !isNaN(inputRentRupees) && inputRentRupees > 0 
-        ? Math.round(inputRentRupees * 100) 
-        : (tenant.base_rent || 0);
-      const maint_amount = tenant.maint_charge || 0;
       const inputArrearsRupees = parseFloat(document.getElementById('bill-arrears')?.value || '0');
-      const arrears_included = !isNaN(inputArrearsRupees) && inputArrearsRupees >= 0
-        ? Math.round(inputArrearsRupees * 100)
-        : (tenant.pending_arrears || 0);
 
-      const gross_amount = rent_amount + maint_amount + eb_amount + water_amount + arrears_included + late_fee + others;
-      const net_amount = Math.max(0, gross_amount - discount_amount);
+      let calc = null;
+      if (client.calculateBill) {
+        const { data: cRes } = await client.calculateBill({
+          renter_id,
+          curr_eb_reading: curr_eb,
+          curr_water_reading: curr_water,
+          late_fee,
+          discount_amount,
+          others,
+          base_rent_override: !isNaN(inputRentRupees) && inputRentRupees > 0 ? Math.round(inputRentRupees * 100) : null,
+          arrears_override: !isNaN(inputArrearsRupees) && inputArrearsRupees >= 0 ? Math.round(inputArrearsRupees * 100) : null
+        });
+        calc = cRes;
+      }
 
       let billPayload = {
         renter_id,
@@ -374,29 +260,24 @@ export function setupFormSubmitHandlers() {
         period_end_date,
         bill_date,
         due_date,
-        prev_eb_reading: prev_eb,
-        curr_eb_reading: curr_eb,
-        eb_units: eb_units,
-        eb_rate: parseFloat((ebUnitPricePaise / 100).toFixed(2)),
-        eb_unit_price: ebUnitPricePaise,
-        eb_amount,
-        prev_water_reading: prev_water,
-        curr_water_reading: curr_water,
-        water_units: tenant.water_calc_mode === 'METERED' ? Math.max(0, curr_water - prev_water) : 0,
-        water_rate: parseFloat((waterUnitPricePaise / 100).toFixed(2)),
-        water_unit_price: waterUnitPricePaise,
-        water_calc_mode: tenant.water_calc_mode,
-        water_amount,
-        rent_amount,
-        maint_amount,
-        others,
-        arrears_included,
-        late_fee,
-        discount_amount,
-        gross_amount,
-        net_amount,
+        prev_eb_reading: calc ? calc.prev_eb_reading : 0,
+        curr_eb_reading: calc ? calc.curr_eb_reading : curr_eb,
+        eb_units: calc ? calc.eb_units : 0,
+        eb_amount: calc ? calc.eb_amount : 0,
+        prev_water_reading: calc ? calc.prev_water_reading : 0,
+        curr_water_reading: calc ? calc.curr_water_reading : curr_water,
+        water_units: calc ? calc.water_units : 0,
+        water_amount: calc ? calc.water_amount : 0,
+        rent_amount: calc ? calc.rent_amount : (tenant.base_rent || 0),
+        maint_amount: calc ? calc.maint_amount : (tenant.maint_charge || 0),
+        others: calc ? calc.others : others,
+        arrears_included: calc ? calc.arrears_included : 0,
+        late_fee: calc ? calc.late_fee : late_fee,
+        discount_amount: calc ? calc.discount_amount : discount_amount,
+        gross_amount: calc ? calc.gross_amount : 0,
+        net_amount: calc ? calc.net_amount : 0,
         paid_amount: 0,
-        status: 'UNPAID'
+        status: calc ? calc.status : 'UNPAID'
       };
 
       // Check if a bill (active or soft-deleted) already exists for this renter & billing period
@@ -508,6 +389,32 @@ export function setupFormSubmitHandlers() {
         return;
       }
 
+      // Process Payment through Go Accounting Engine
+      if (client.recordPayment) {
+        const { data: recRes, error: payErr } = await client.recordPayment({
+          bill_id,
+          renter_id: bill.renter_id,
+          amount,
+          payment_method,
+          reference_no: transaction_reference || null,
+          notes: notes || null
+        });
+
+        if (payErr) {
+          alert('Error saving payment: ' + payErr.message);
+          return;
+        }
+
+        alert('✅ Payment recorded successfully!');
+        formAddPayment.reset();
+        closeModal('modal-add-payment');
+        loadBillsPage();
+        loadPaymentsPage();
+        loadDashboard();
+        loadTenantsPage();
+        return;
+      }
+
       const { error: payErr } = await safeInsert(client, 'payments', [{
         bill_id,
         renter_id: bill.renter_id,
@@ -524,10 +431,6 @@ export function setupFormSubmitHandlers() {
         return;
       }
 
-      // The sync_bill_paid_amount trigger already recomputed bills.paid_amount
-      // (and status) to include this payment. Re-read the fresh value and sync
-      // the tenant's pending_arrears — never add amount to the pre-insert
-      // paid_amount manually (which drifted from the trigger's authoritative sum).
       const { data: freshBill } = await client
         .from('bills')
         .select('id, renter_id, net_amount, paid_amount')

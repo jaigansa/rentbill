@@ -5,20 +5,19 @@
  */
 export async function loadLayout() {
   const replaceMounts = [
-    { id: 'auth-mount', url: 'layout/auth.html' },
-    { id: 'mobile-nav-mount', url: 'layout/mobile-nav.html' },
-    { id: 'header-mount', url: 'layout/header.html' },
-    { id: 'modals-mount', url: 'layout/modals.html' }
+    { id: 'mobile-nav-mount', url: 'ui/layout/mobile-nav.html' },
+    { id: 'header-mount', url: 'ui/layout/header.html' },
+    { id: 'modals-mount', url: 'ui/layout/modals.html' }
   ];
 
   const pageMounts = [
-    'layout/pages/dashboard.html',
-    'layout/pages/properties.html',
-    'layout/pages/bills.html',
-    'layout/pages/payments.html',
-    'layout/pages/maintenance.html',
-    'layout/pages/finances.html',
-    'layout/pages/settings.html'
+    'ui/layout/pages/dashboard.html',
+    'ui/layout/pages/properties.html',
+    'ui/layout/pages/bills.html',
+    'ui/layout/pages/payments.html',
+    'ui/layout/pages/maintenance.html',
+    'ui/layout/pages/finances.html',
+    'ui/layout/pages/settings.html'
   ];
 
   // 1. Load and replace structural mounts

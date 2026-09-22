@@ -12,9 +12,9 @@ import {
   sortTenants,
   determineUnitStatus,
   determineMeterBaselines
-} from '../js/core/format.js';
-import { cleanPayload } from '../js/core/db.js';
-import { formatBillInvoiceMessage, formatOverdueReminderMessage, formatPaymentReceiptMessage, shareMessage } from '../js/modules/bills.js';
+} from '../frontend/functions/core/format.js';
+import { cleanPayload } from '../frontend/functions/core/db.js';
+import { formatBillInvoiceMessage, formatOverdueReminderMessage, formatPaymentReceiptMessage, shareMessage } from '../frontend/functions/modules/bills.js';
 
 test('formatCurrency converts paise to INR rupees', () => {
   assert.equal(formatCurrency(0), '₹0.00');

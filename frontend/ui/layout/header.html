@@ -46,9 +46,9 @@
           </div>
           <div class="user-dropdown-divider"></div>
           <div class="user-dropdown-footer">
-            <button type="button" class="user-dropdown-item danger" onclick="document.getElementById('logout-btn').click()">
-              <i data-lucide="log-out"></i>
-              <span>Logout Session</span>
+            <button type="button" class="user-dropdown-item" onclick="window.location.reload()">
+              <i data-lucide="refresh-cw"></i>
+              <span>Refresh Application</span>
             </button>
           </div>
         </div>
@@ -59,6 +59,10 @@
       </span>
     </div>
     <div class="top-bar-actions">
+      <button id="sync-status-btn" class="sync-status-pill online" title="Local SQLite Synced • Click to force cloud sync" onclick="triggerManualSync(event)">
+        <span class="sync-status-dot"></span>
+        <span id="sync-status-text">SQLite Synced</span>
+      </button>
       <button id="theme-toggle-btn" class="circle-icon-btn" title="Toggle Theme (Dark / Light)" onclick="toggleTheme()">
         <i data-lucide="moon" id="theme-icon"></i>
       </button>

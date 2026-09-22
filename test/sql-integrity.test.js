@@ -109,11 +109,11 @@ test('install and update do not expose security-definer resolve_login_email RPC'
     'update must explicitly drop resolve_login_email');
 });
 
-test('no policies grant access to anon role (100% login required)', () => {
+test('policies grant open access to anon and authenticated (no auth required)', () => {
   for (const [name, sql] of [['install', install], ['update', update]]) {
     const re = /CREATE POLICY[^\n]+TO\s+anon/gi;
     const matches = Array.from(sql.matchAll(re));
-    assert.equal(matches.length, 0, `${name} should have 0 policies granting access to anon`);
+    assert.ok(matches.length > 0, `${name} should have policies granting access to anon`);
   }
 });
 
