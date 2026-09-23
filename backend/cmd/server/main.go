@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"rentbills/backend/internal/api"
-	"rentbills/backend/internal/db"
-	"rentbills/backend/internal/sync"
+	"rentbills/backend/pkg/api"
+	"rentbills/backend/pkg/db"
+	"rentbills/backend/pkg/sync"
 )
 
 const (

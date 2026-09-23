@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"rentbills/backend/internal/db"
-	"rentbills/backend/internal/sync"
+	"rentbills/backend/pkg/db"
+	"rentbills/backend/pkg/sync"
 )
 
 func setupTestRouter(t *testing.T) (*Router, func()) {

@@ -20,15 +20,16 @@
 
 ```
 rentbills/
+├── main.go                          # Wails desktop app entrypoint & asset embedder
+├── app.go                           # Wails lifecycle, dynamic DB path & internal API proxy
+├── wails.json                       # Wails project & build configuration
 ├── backend/
-│   ├── cmd/server/main.go           # Go HTTP server (serves frontend, REST API)
-│   ├── internal/
-│   │   ├── accounting/              # Pure Go integer paise calculation engine
-│   │   ├── api/                     # REST API endpoints (/api/accounting, /api/data, /api/sync)
-│   │   ├── db/                      # Pure-Go SQLite WAL database & sync_outbox
-│   │   └── sync/                    # Supabase background sync worker
-│   ├── go.mod
-│   └── go.sum
+│   ├── cmd/server/main.go           # Headless Go HTTP server (serves frontend, REST API)
+│   └── pkg/
+│       ├── accounting/              # Pure Go integer paise calculation engine
+│       ├── api/                     # REST API endpoints (/api/accounting, /api/data, /api/sync)
+│       ├── db/                      # Pure-Go SQLite WAL database & sync_outbox
+│       └── sync/                    # Supabase background sync worker
 │
 ├── frontend/
 │   ├── index.html                   # Master application entrypoint
@@ -43,11 +44,8 @@ rentbills/
 │       ├── core/                    # Core libraries (db, format, config, state, theme, ui)
 │       └── modules/                 # UI controllers (bills, dashboard, properties, payments, etc.)
 │
-├── outputs/
-│   ├── builds/
-│   │   └── rentbill-server.exe      # Compiled cross-platform Go executable
-│   └── data/
-│       └── rentbill.db              # Embedded SQLite WAL database
+├── build/bin/
+│   └── rentbill-pro                 # Compiled lightweight cross-platform desktop binary
 │
 ├── manuals/
 │   ├── USER_MANUAL.md               # User guide for rental management & billing

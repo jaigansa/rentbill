@@ -1,7 +1,9 @@
 # Build & Distribution Output
 dist/
+build/bin/
 *.exe
 data/
+frontend/wailsjs/
 
 # Dependencies & Node (if used)
 node_modules/

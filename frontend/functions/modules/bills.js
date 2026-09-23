@@ -61,6 +61,42 @@ export function syncBillPeriodDates(force = false) {
   }
 }
 
+export async function populateBillTenantSelect() {
+  const supabaseClient = getSupabaseClient();
+  const billRenterSelect = document.getElementById('bill-renter-id');
+  if (!billRenterSelect || !supabaseClient) return;
+
+  try {
+    const { data: tenants } = await supabaseClient.from('renters').select('*').eq('is_active', true).is('deleted_at', null);
+    const currentVal = billRenterSelect.value;
+    billRenterSelect.innerHTML = '<option value="">Select Tenant</option>';
+    (tenants || []).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = `${t.name} (Unit: ${t.unit_id})`;
+      if (String(t.id) === String(currentVal)) opt.selected = true;
+      billRenterSelect.appendChild(opt);
+    });
+
+    billRenterSelect.onchange = async function() {
+      const selId = this.value;
+      const selTenant = (tenants || []).find(t => String(t.id) === String(selId));
+      const rentEl = document.getElementById('bill-rent-amount');
+      if (rentEl && selTenant) {
+        rentEl.value = ((selTenant.base_rent || 0) / 100).toFixed(2);
+      }
+      const arrearsEl = document.getElementById('bill-arrears');
+      if (arrearsEl && selTenant) {
+        arrearsEl.value = ((selTenant.pending_arrears || 0) / 100).toFixed(2);
+      }
+      syncBillPeriodDates();
+      await updateLiveBillCalculation();
+    };
+  } catch (err) {
+    console.error('Failed to populate bill renter select:', err);
+  }
+}
+
 export async function loadBillsPage() {
   const supabaseClient = getSupabaseClient();
 
@@ -75,31 +111,7 @@ export async function loadBillsPage() {
     const renterMap = {};
     allRenters.forEach(r => { renterMap[r.id] = r.name; });
 
-    const { data: tenants } = await supabaseClient.from('renters').select('*').eq('is_active', true).is('deleted_at', null);
-    const billRenterSelect = document.getElementById('bill-renter-id');
-    if (billRenterSelect) {
-      billRenterSelect.innerHTML = '<option value="">Select Tenant</option>';
-      (tenants || []).forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = `${t.name} (Unit: ${t.unit_id})`;
-        billRenterSelect.appendChild(opt);
-      });
-      billRenterSelect.onchange = async function() {
-        const selId = this.value;
-        const selTenant = (tenants || []).find(t => String(t.id) === String(selId));
-        const rentEl = document.getElementById('bill-rent-amount');
-        if (rentEl && selTenant) {
-          rentEl.value = ((selTenant.base_rent || 0) / 100).toFixed(2);
-        }
-        const arrearsEl = document.getElementById('bill-arrears');
-        if (arrearsEl && selTenant) {
-          arrearsEl.value = ((selTenant.pending_arrears || 0) / 100).toFixed(2);
-        }
-        syncBillPeriodDates();
-        await updateLiveBillCalculation();
-      };
-    }
+    await populateBillTenantSelect();
 
     let bills = [];
     try {
@@ -129,16 +141,26 @@ export async function loadBillsPage() {
           const tenantDisplayName = renterMap[b.renter_id] || (b.renter_id ? `Tenant #${b.renter_id}` : '-');
 
           let actionHtml = `
-            <div class="dropdown">
-              <button class="dropdown-btn" onclick="toggleDropdown(event, this)">⋮</button>
-              <div class="dropdown-menu">
-                <button class="dropdown-item" onclick="printReceipt(${b.id})"><i data-lucide="printer"></i> View & Print Invoice</button>
-                <button class="dropdown-item" onclick="shareInvoiceWhatsApp(${b.id})"><i data-lucide="share-2"></i> Share Invoice</button>
-                <button class="dropdown-item" onclick="copyInvoiceToClipboard(${b.id})"><i data-lucide="copy"></i> Copy Invoice Text</button>
-                ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" style="color: #d97706;" onclick="sendOverdueReminderWhatsApp(${b.id})"><i data-lucide="alert-triangle"></i> Overdue Reminder</button>` : ''}
-                ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" onclick="openPaymentModal(${b.id}, ${due})"><i data-lucide="credit-card"></i> Record Payment</button>` : ''}
-                ${b.status !== 'VOID' ? `<button class="dropdown-item danger" onclick="voidBill(${b.id})"><i data-lucide="slash"></i> Void Invoice</button>` : ''}
-                <button class="dropdown-item danger" onclick="triggerDeleteBill(${b.id})"><i data-lucide="trash-2"></i> Delete Invoice</button>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" title="View & Print Invoice (PDF)" onclick="printReceipt(${b.id})" style="padding: 5px 9px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px;">
+                <i data-lucide="printer" style="width: 14px; height: 14px;"></i>
+                <span class="desktop-only-inline">Print</span>
+              </button>
+              <button class="btn btn-sm" title="Send Invoice via WhatsApp" onclick="shareInvoiceWhatsApp(${b.id})" style="padding: 5px 9px; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; background: #16a34a; border-color: #16a34a; color: #fff;">
+                <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+                <span class="desktop-only-inline">WhatsApp</span>
+              </button>
+              <div class="dropdown">
+                <button class="dropdown-btn" onclick="toggleDropdown(event, this)" title="More Actions">⋮</button>
+                <div class="dropdown-menu">
+                  <button class="dropdown-item" onclick="printReceipt(${b.id})"><i data-lucide="printer"></i> View & Print Invoice</button>
+                  <button class="dropdown-item" onclick="shareInvoiceWhatsApp(${b.id})"><i data-lucide="share-2"></i> Share via WhatsApp</button>
+                  <button class="dropdown-item" onclick="copyInvoiceToClipboard(${b.id})"><i data-lucide="copy"></i> Copy Invoice Text</button>
+                  ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" style="color: #d97706;" onclick="sendOverdueReminderWhatsApp(${b.id})"><i data-lucide="alert-triangle"></i> Overdue Reminder</button>` : ''}
+                  ${b.status !== 'PAID' && b.status !== 'VOID' ? `<button class="dropdown-item" onclick="openPaymentModal(${b.id}, ${due})"><i data-lucide="credit-card"></i> Record Payment</button>` : ''}
+                  ${b.status !== 'VOID' ? `<button class="dropdown-item danger" onclick="voidBill(${b.id})"><i data-lucide="slash"></i> Void Invoice</button>` : ''}
+                  <button class="dropdown-item danger" onclick="triggerDeleteBill(${b.id})"><i data-lucide="trash-2"></i> Delete Invoice</button>
+                </div>
               </div>
             </div>
           `;
@@ -874,13 +896,32 @@ export async function shareMessage({ title, text, phone = '', email = '' }) {
     if (titleEl) titleEl.textContent = title || 'Share Document';
 
     const waBtn = document.getElementById('share-btn-whatsapp');
-    if (waBtn) waBtn.href = waUrl;
+    if (waBtn) {
+      waBtn.href = waUrl;
+      waBtn.onclick = (e) => {
+        if (window.runtime && window.runtime.BrowserOpenURL) {
+          e.preventDefault();
+          window.runtime.BrowserOpenURL(waUrl);
+        } else if (window.go && window.go.main && window.go.main.App && window.go.main.App.OpenExternalURL) {
+          e.preventDefault();
+          window.go.main.App.OpenExternalURL(waUrl);
+        }
+      };
+    }
 
     const smsBtn = document.getElementById('share-btn-sms');
     if (smsBtn) smsBtn.href = smsUri;
 
     const mailBtn = document.getElementById('share-btn-email');
-    if (mailBtn) mailBtn.href = mailtoUri;
+    if (mailBtn) {
+      mailBtn.href = mailtoUri;
+      mailBtn.onclick = (e) => {
+        if (window.runtime && window.runtime.BrowserOpenURL) {
+          e.preventDefault();
+          window.runtime.BrowserOpenURL(mailtoUri);
+        }
+      };
+    }
 
     const copyBtn = document.getElementById('share-btn-copy');
     if (copyBtn) {
@@ -903,7 +944,13 @@ export async function shareMessage({ title, text, phone = '', email = '' }) {
 
   // Direct URL fallback if no modal in DOM (e.g. standalone print view)
   if (typeof window !== 'undefined') {
-    window.open(waUrl, '_blank');
+    if (window.runtime && window.runtime.BrowserOpenURL) {
+      window.runtime.BrowserOpenURL(waUrl);
+    } else if (window.go && window.go.main && window.go.main.App && window.go.main.App.OpenExternalURL) {
+      window.go.main.App.OpenExternalURL(waUrl);
+    } else {
+      window.open(waUrl, '_blank');
+    }
   }
   return { success: true, method: 'whatsapp' };
 }

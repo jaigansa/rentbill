@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"rentbills/backend/internal/db"
+	"rentbills/backend/pkg/db"
 )
 
 type SyncStatus struct {

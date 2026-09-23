@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"rentbills/backend/internal/accounting"
-	"rentbills/backend/internal/db"
-	"rentbills/backend/internal/sync"
+	"rentbills/backend/pkg/accounting"
+	"rentbills/backend/pkg/db"
+	"rentbills/backend/pkg/sync"
 )
 
 type Router struct {
@@ -133,8 +133,14 @@ func (r *Router) handleSelect(w http.ResponseWriter, req *http.Request, table st
 			if strings.HasPrefix(val, "eq.") {
 				val = strings.TrimPrefix(val, "eq.")
 			}
+			var argVal interface{} = val
+			if strings.EqualFold(val, "true") {
+				argVal = 1
+			} else if strings.EqualFold(val, "false") {
+				argVal = 0
+			}
 			whereClauses = append(whereClauses, fmt.Sprintf("%s.%s = ?", table, key))
-			args = append(args, val)
+			args = append(args, argVal)
 		}
 	}
 

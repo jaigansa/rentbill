@@ -43,26 +43,24 @@ export async function checkAuth() {
   const appView = document.getElementById('app-view');
   if (appView) appView.style.display = 'flex';
 
-  const badgeEl = document.getElementById('user-profile-badge');
-  const avatarTxt = document.getElementById('user-avatar-text');
-  const nameEl = document.getElementById('user-profile-name');
-  const roleEl = document.getElementById('user-profile-role');
-
-  const dropAvatar = document.getElementById('dropdown-avatar-text');
-  const dropName = document.getElementById('dropdown-user-name');
-  const dropEmail = document.getElementById('dropdown-user-email');
-  const dropRole = document.getElementById('dropdown-user-role');
-
   const initial = (activeUser.username || 'A').charAt(0).toUpperCase();
 
+  const badgeEl = document.getElementById('user-profile-badge');
   if (badgeEl) badgeEl.title = `Signed in as ${activeUser.username || 'Admin'} (${activeUser.role || 'ADMIN'}) — Full Access`;
+  const avatarTxt = document.getElementById('user-avatar-text');
   if (avatarTxt) avatarTxt.textContent = initial;
+  const nameEl = document.getElementById('user-profile-name');
   if (nameEl) nameEl.textContent = activeUser.username || 'Admin';
+  const roleEl = document.getElementById('user-profile-role');
   if (roleEl) roleEl.textContent = activeUser.role || 'ADMIN';
 
+  const dropAvatar = document.getElementById('dropdown-avatar-text');
   if (dropAvatar) dropAvatar.textContent = initial;
+  const dropName = document.getElementById('dropdown-user-name');
   if (dropName) dropName.textContent = activeUser.username || 'Admin';
+  const dropEmail = document.getElementById('dropdown-user-email');
   if (dropEmail) dropEmail.textContent = activeUser.email || 'admin@rentbill.local';
+  const dropRole = document.getElementById('dropdown-user-role');
   if (dropRole) dropRole.textContent = activeUser.role || 'ADMIN';
   updateConnectionStatus(navigator.onLine);
 

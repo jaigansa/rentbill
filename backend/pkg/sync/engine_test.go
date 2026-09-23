@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"rentbills/backend/internal/db"
+	"rentbills/backend/pkg/db"
 )
 
 func TestSyncEngineOfflineState(t *testing.T) {

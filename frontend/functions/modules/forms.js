@@ -640,35 +640,7 @@ export function setupFormSubmitHandlers() {
     });
   }
 
-  // 12. ADMIN CHANGE PASSWORD FORM
-  const formChangePassword = document.getElementById('form-change-password');
-  if (formChangePassword) {
-    formChangePassword.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const newPw = document.getElementById('cfg-new-password')?.value;
-      const confirmPw = document.getElementById('cfg-confirm-password')?.value;
-      if (!newPw || newPw.length < 6) {
-        alert('Password must be at least 6 characters long.');
-        return;
-      }
-      if (newPw !== confirmPw) {
-        alert('Passwords do not match. Please re-enter.');
-        return;
-      }
-      const client = getSupabaseClient();
-      if (!client) {
-        alert('Supabase client not initialized.');
-        return;
-      }
-      const { data, error } = await client.auth.updateUser({ password: newPw });
-      if (error) {
-        alert('Failed to update password: ' + error.message);
-      } else {
-        alert('✅ Password updated successfully! Please remember your new password.');
-        formChangePassword.reset();
-      }
-    });
-  }
+
 
   // MAINTENANCE FORM HANDLERS
   const formAddMaintenance = document.getElementById('form-add-maintenance');
