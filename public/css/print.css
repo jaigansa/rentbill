@@ -19,25 +19,36 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide app navigation, main tabs, headers, buttons, toasts, and non-invoice modals */
+  /* Hide app navigation, main tabs, headers, buttons, toasts, and non-printable modals */
   .top-nav,
   .bottom-nav,
   .app-content,
   .quick-actions,
   .filter-bar,
   .search-filter-card,
-  .modal-header,
   .modal-footer,
   .no-print,
   .toast,
   #toast,
-  .modal:not(#modal-invoice) {
+  .modal:not(#modal-invoice):not(#modal-ledger) {
     display: none !important;
     visibility: hidden !important;
   }
 
+  /* When printing an invoice, hide modal-ledger; when printing a statement, hide modal-invoice */
+  #modal-invoice:not(.active),
+  #modal-ledger:not(.active) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Hide modal-invoice modal-header (invoice uses its own inv-header) */
+  #modal-invoice .modal-header {
+    display: none !important;
+  }
+
   /* Make sure modal-invoice is cleanly displayed as the main document */
-  #modal-invoice {
+  #modal-invoice.active {
     display: block !important;
     position: static !important;
     width: 100% !important;
@@ -52,7 +63,7 @@
     inset: auto !important;
   }
 
-  #modal-invoice .modal-dialog {
+  #modal-invoice.active .modal-dialog {
     display: block !important;
     position: static !important;
     max-width: 100% !important;
@@ -67,6 +78,107 @@
     overflow: visible !important;
     animation: none !important;
     background: #ffffff !important;
+  }
+
+  /* Make sure modal-ledger (Passbook Statement) is cleanly displayed for print */
+  #modal-ledger.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-ledger.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-ledger.active .modal-header {
+    display: block !important;
+    visibility: visible !important;
+    border-bottom: 2px solid #2563eb !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  #modal-ledger.active .modal-header h3 {
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    color: #1e40af !important;
+  }
+
+  #modal-ledger.active .modal-header .modal-close {
+    display: none !important;
+  }
+
+  /* Hide tabs/filters and bill list during statement print */
+  #modal-ledger.active #ledger-view-toggle,
+  #modal-ledger.active #ledger-bills-container,
+  #modal-ledger.active .modal-footer {
+    display: none !important;
+  }
+
+  #modal-ledger.active .ledger-summary-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    margin-top: 14px !important;
+    margin-bottom: 18px !important;
+  }
+
+  #modal-ledger.active .ledger-stat-card {
+    border: 1px solid #d1d5db !important;
+    background: #f9fafb !important;
+    padding: 10px 14px !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+  }
+
+  #modal-ledger.active #ledger-statement-container {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+  }
+
+  #modal-ledger.active .ledger-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 0.95rem !important;
+  }
+
+  #modal-ledger.active .ledger-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1px solid #d1d5db !important;
+    border-bottom: 2px solid #9ca3af !important;
+    padding: 8px 10px !important;
+    font-weight: 700 !important;
+  }
+
+  #modal-ledger.active .ledger-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 8px 10px !important;
+    color: #1f2937 !important;
   }
 
   /* Invoice layout for print */

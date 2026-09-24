@@ -189,18 +189,38 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--text-muted);
 }
 
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .icon-btn {
-  background: none;
+  background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  color: var(--text-main);
   cursor: pointer;
-  background: var(--surface-alt);
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--surface);
+  border-color: var(--text-subtle);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+  background: var(--border);
 }
 
 /* Main Container */
@@ -834,6 +854,7 @@ textarea:hover::-webkit-scrollbar-thumb {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  margin-top: 24px;
   margin-bottom: 16px;
 }
 
@@ -1080,7 +1101,7 @@ textarea:hover::-webkit-scrollbar-thumb {
 .form-group textarea {
   width: 100%;
   padding: 10px 12px;
-  font-size: 0.95rem;
+  font-size: 1rem; /* 16px to prevent iOS Safari auto-zoom on focus */
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
@@ -1860,6 +1881,8 @@ textarea:hover::-webkit-scrollbar-thumb {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  margin-top: 24px;
+  margin-bottom: 16px;
 }
 
 .ledger-card {

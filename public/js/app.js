@@ -1702,17 +1702,28 @@ const App = {
         }
       }
 
-      // 3. Bind Statement Print & WhatsApp Actions
+      // 3. Bind Statement Print & Share Actions
       const btnShareWa = document.getElementById('btn-ledger-share-wa');
-      if (btnShareWa && ledgerData) {
+      if (btnShareWa) {
         btnShareWa.onclick = () => {
-          const text = Share.formatLedgerStatementText(ledgerData);
-          Share.sendWhatsAppDirect(tDetails ? tDetails.phone : '', text);
+          const currentData = ledgerData || this.currentLedgerData;
+          if (!currentData) {
+            this.showToast('Statement details are still loading...', 'warning');
+            return;
+          }
+          Share.shareStatement(currentData, tDetails || currentData.tenant);
         };
       }
       const btnPrint = document.getElementById('btn-ledger-print');
       if (btnPrint) {
         btnPrint.onclick = () => {
+          // Switch to Passbook Statement view so the table is active and visible
+          if (stmtContainer && billsContainer && btnStmt && btnBills) {
+            btnStmt.classList.add('active');
+            btnBills.classList.remove('active');
+            billsContainer.style.display = 'none';
+            stmtContainer.style.display = 'block';
+          }
           window.print();
         };
       }
