@@ -40,7 +40,30 @@ When started, it outputs:
 ======================================================
 ```
 
-### 2. Open on Your Phone
+### 2. Linux Service Management (`rentbill.sh`)
+Manage the app on Linux using the single unified script:
+
+```bash
+# Build binary from source
+./rentbill.sh --build
+
+# Install & start as an auto-starting background systemd service (no sudo needed)
+./rentbill.sh --install
+
+# Rebuild and restart the running background service after code changes
+./rentbill.sh --update
+
+# Stop and remove the background service (preserves database)
+./rentbill.sh --remove
+
+# Check background status
+./rentbill.sh --status
+
+# Follow live service logs
+./rentbill.sh --logs
+```
+
+### 3. Open on Your Phone
 Make sure your phone is connected to the same Wi-Fi network as your PC, then open the **Mobile Wi-Fi** URL in Safari, Chrome, or any mobile browser!
 
 ---
