@@ -1,0 +1,180 @@
+/* Print Stylesheet for clean receipt & PDF output */
+@page {
+  size: A4 portrait;
+  margin: 12mm 15mm 12mm 15mm;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    font-size: 12pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide app navigation, main tabs, headers, buttons, toasts, and non-invoice modals */
+  .top-nav,
+  .bottom-nav,
+  .app-content,
+  .quick-actions,
+  .filter-bar,
+  .search-filter-card,
+  .modal-header,
+  .modal-footer,
+  .no-print,
+  .toast,
+  #toast,
+  .modal:not(#modal-invoice) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Make sure modal-invoice is cleanly displayed as the main document */
+  #modal-invoice {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-invoice .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  /* Invoice layout for print */
+  .invoice-container {
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    padding: 20px 24px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .inv-header {
+    border-bottom: 2px solid #2563eb !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .inv-title {
+    color: #1e40af !important;
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .inv-num {
+    color: #4b5563 !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* Status badge in print */
+  .badge {
+    border: 1px solid currentColor !important;
+    padding: 2px 10px !important;
+    border-radius: 999px !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    display: inline-block !important;
+  }
+
+  .badge-paid {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border-color: #86efac !important;
+  }
+
+  .badge-pending {
+    background: #fef3c7 !important;
+    color: #b45309 !important;
+    border-color: #fcd34d !important;
+  }
+
+  .badge-overdue {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border-color: #fca5a5 !important;
+  }
+
+  /* Table styling */
+  .inv-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 16px 0 !important;
+    font-size: 0.95rem !important;
+  }
+
+  .inv-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1px solid #d1d5db !important;
+    border-bottom: 2px solid #9ca3af !important;
+    padding: 8px 10px !important;
+    font-weight: 700 !important;
+  }
+
+  .inv-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 8px 10px !important;
+    color: #1f2937 !important;
+  }
+
+  .inv-table td.num, .inv-table th.num {
+    text-align: right !important;
+  }
+
+  .inv-total-row td {
+    border-top: 2px solid #374151 !important;
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
+    color: #1e3a8a !important;
+  }
+
+  /* Preserving details boxes */
+  .amount-words-box,
+  .payment-details-box {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    margin-top: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

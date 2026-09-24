@@ -1,0 +1,2416 @@
+// RentBill Frontend Application Logic
+window.APP_CURRENCY = '₹';
+
+const App = {
+  activeTab: 'dashboard',
+  currentBillForInvoice: null,
+  currentLedgerTenantId: null,
+  activeDeleteCallback: null,
+  holdTimer: null,
+  holdStartTime: null,
+  holdDuration: 10000, // 10 seconds hold to delete
+  selectedDashboardMonth: '',
+  tenantSearchQuery: '',
+  tenantFilter: 'all',
+  propertySearchQuery: '',
+  propertyFilter: 'all',
+  properties: [],
+  tenants: [],
+  bills: [],
+
+  async init() {
+    this.setupDateBadge();
+    this.bindNavigation();
+    this.bindModals();
+    this.bindForms();
+    this.bindCalculators();
+    this.initHoldToDelete();
+    this.bindDashboardControls();
+    this.bindSearchAndFilters();
+
+    await this.loadSettings();
+    await this.refreshAll();
+    this.refreshIcons();
+  },
+
+  refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons();
+    }
+  },
+
+  setupDateBadge() {
+    const today = new Date();
+    const options = { month: 'short', day: 'numeric', year: 'numeric' };
+    const badge = document.getElementById('current-date-badge');
+    if (badge) badge.textContent = today.toLocaleDateString(undefined, options);
+
+    // Set default month & due date in form
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const billMonth = document.getElementById('bill-month');
+    if (billMonth) billMonth.value = `${yyyy}-${mm}`;
+
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const dueDateStr = nextWeek.toISOString().split('T')[0];
+    const dueDateInput = document.getElementById('bill-due-date');
+    if (dueDateInput) dueDateInput.value = dueDateStr;
+
+    const payDateInput = document.getElementById('pay-date');
+    if (payDateInput) payDateInput.value = today.toISOString().split('T')[0];
+
+    const moveInInput = document.getElementById('tenant-move-in');
+    if (moveInInput) moveInInput.value = today.toISOString().split('T')[0];
+  },
+
+  toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  },
+
+  bindNavigation() {
+    const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const tab = item.getAttribute('data-tab');
+        this.switchTab(tab);
+      });
+    });
+  },
+
+  switchTab(tabName) {
+    this.activeTab = tabName;
+    document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-tab') === tabName);
+    });
+
+    const activeView = document.getElementById(`view-${tabName}`);
+    if (activeView) activeView.classList.add('active');
+
+    if (tabName === 'dashboard') this.loadDashboard();
+    if (tabName === 'tenants') this.loadTenants();
+    if (tabName === 'properties') this.loadProperties();
+  },
+
+  bindModals() {
+    // Open modal buttons
+    document.getElementById('btn-quick-new-bill')?.addEventListener('click', () => this.openBillModal());
+    document.getElementById('btn-new-bill-tab')?.addEventListener('click', () => this.openBillModal());
+    document.getElementById('btn-quick-add-tenant')?.addEventListener('click', () => this.openTenantModal());
+    document.getElementById('btn-new-tenant-tab')?.addEventListener('click', () => this.openTenantModal());
+    document.getElementById('btn-quick-add-property')?.addEventListener('click', () => this.openPropertyModal());
+    document.getElementById('btn-new-property-tab')?.addEventListener('click', () => this.openPropertyModal());
+    document.getElementById('btn-open-settings')?.addEventListener('click', () => this.openSettingsModal());
+    document.getElementById('btn-ledger-add-bill')?.addEventListener('click', () => {
+      if (this.currentLedgerTenantId) {
+        this.openBillModalForTenant(this.currentLedgerTenantId);
+      } else {
+        this.openBillModal();
+      }
+    });
+    document.getElementById('btn-prop-add-expense')?.addEventListener('click', () => {
+      if (this.currentExpensesPropertyId) {
+        this.openAddExpenseModal(this.currentExpensesPropertyId);
+      }
+    });
+
+    // Backup & Restore file triggers
+    const btnTriggerRestore = document.getElementById('btn-trigger-restore');
+    const inputRestoreBackup = document.getElementById('input-restore-backup');
+    if (btnTriggerRestore && inputRestoreBackup) {
+      btnTriggerRestore.addEventListener('click', () => {
+        inputRestoreBackup.click();
+      });
+      inputRestoreBackup.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const confirmMsg = `Are you sure you want to restore the database from "${file.name}"?\n\n` +
+          `• Existing database records will be replaced with this backup.\n` +
+          `• It is recommended to download a current backup first.`;
+        if (!confirm(confirmMsg)) {
+          inputRestoreBackup.value = '';
+          return;
+        }
+
+        try {
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+            try {
+              const json = JSON.parse(event.target.result);
+              const res = await API.restoreBackup(json);
+              this.toast(res.message || 'Database restored successfully!');
+              this.closeModal('modal-settings');
+              inputRestoreBackup.value = '';
+              await this.refreshAll();
+            } catch (err) {
+              alert('Restore failed: ' + err.message);
+              inputRestoreBackup.value = '';
+            }
+          };
+          reader.readAsText(file);
+        } catch (err) {
+          alert('Error reading backup file: ' + err.message);
+          inputRestoreBackup.value = '';
+        }
+      });
+    }
+
+    // Invoice actions
+    document.getElementById('btn-invoice-edit')?.addEventListener('click', () => {
+      if (this.currentBillForInvoice) {
+        this.closeModal('modal-invoice');
+        this.editBill(this.currentBillForInvoice.id);
+      }
+    });
+    document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
+      if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
+    });
+    document.getElementById('btn-invoice-download-img')?.addEventListener('click', () => {
+      if (this.currentBillForInvoice) Share.downloadReceiptImage(this.currentBillForInvoice);
+    });
+    document.getElementById('btn-invoice-print')?.addEventListener('click', () => {
+      Share.printInvoice();
+    });
+    document.getElementById('btn-invoice-record-pay')?.addEventListener('click', () => {
+      if (this.currentBillForInvoice) {
+        this.closeModal('modal-invoice');
+        this.openPaymentModal(this.currentBillForInvoice.id);
+      }
+    });
+
+    // Close buttons
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const modalId = btn.getAttribute('data-close');
+        this.closeModal(modalId);
+      });
+    });
+
+    // Close on backdrop click
+    document.querySelectorAll('.modal').forEach(m => {
+      m.addEventListener('click', (e) => {
+        if (e.target === m) this.closeModal(m.id);
+      });
+    });
+
+    // Close all open card dropdowns when clicking anywhere outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.card-dropdown')) {
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+      }
+    });
+  },
+
+  openModal(id) {
+    document.getElementById(id)?.classList.add('active');
+    this.refreshIcons();
+  },
+
+  closeModal(id) {
+    document.getElementById(id)?.classList.remove('active');
+    if (id === 'modal-confirm-delete') {
+      this.cancelHold();
+      this.activeDeleteCallback = null;
+    }
+  },
+
+  confirmDelete({ title, subtitle, warningHtml, buttonLabel = 'Hold to Delete (10s)', onConfirm }) {
+    document.getElementById('delete-modal-title').textContent = title || 'Confirm Deletion';
+    document.getElementById('delete-modal-subtitle').textContent = subtitle || 'Protective Confirmation';
+    document.getElementById('delete-modal-warning-box').innerHTML = warningHtml || 'Are you sure you want to delete this item?';
+    document.getElementById('hold-delete-label').textContent = buttonLabel;
+
+    this.cancelHold();
+    this.activeDeleteCallback = onConfirm;
+    this.openModal('modal-confirm-delete');
+  },
+
+  initHoldToDelete() {
+    const btn = document.getElementById('btn-hold-delete');
+    if (!btn) return;
+
+    const startHold = (e) => {
+      // Only primary mouse button or touch
+      if (e.button && e.button !== 0) return;
+      e.preventDefault();
+
+      if (!this.activeDeleteCallback) return;
+
+      this.holdStartTime = performance.now();
+      btn.classList.add('is-holding');
+
+      const progressEl = document.getElementById('hold-delete-progress');
+      const labelEl = document.getElementById('hold-delete-label');
+
+      const tick = (now) => {
+        if (!this.holdStartTime) return;
+        const elapsed = now - this.holdStartTime;
+        const pct = Math.min(100, (elapsed / this.holdDuration) * 100);
+
+        if (progressEl) progressEl.style.width = `${pct}%`;
+
+        const remainingSec = Math.max(0, ((this.holdDuration - elapsed) / 1000)).toFixed(1);
+        if (labelEl) labelEl.textContent = `Holding... ${remainingSec}s`;
+
+        if (pct >= 100) {
+          // Trigger successful delete
+          btn.classList.remove('is-holding');
+          btn.classList.add('is-completed');
+          if (labelEl) labelEl.textContent = 'Deleted!';
+
+          // Trigger physical vibration if device supports it
+          try {
+            if (navigator.vibrate) navigator.vibrate(60);
+          } catch (e) {}
+
+          const cb = this.activeDeleteCallback;
+          this.activeDeleteCallback = null;
+          this.holdStartTime = null;
+
+          setTimeout(() => {
+            this.closeModal('modal-confirm-delete');
+            if (typeof cb === 'function') cb();
+          }, 200);
+        } else {
+          this.holdTimer = requestAnimationFrame(tick);
+        }
+      };
+
+      this.holdTimer = requestAnimationFrame(tick);
+    };
+
+    const stopHold = () => {
+      this.cancelHold();
+    };
+
+    // Pointer events handle both touchscreens and mouse uniformly
+    btn.addEventListener('pointerdown', startHold);
+    btn.addEventListener('pointerup', stopHold);
+    btn.addEventListener('pointerleave', stopHold);
+    btn.addEventListener('pointercancel', stopHold);
+  },
+
+  cancelHold() {
+    if (this.holdTimer) {
+      cancelAnimationFrame(this.holdTimer);
+      this.holdTimer = null;
+    }
+    this.holdStartTime = null;
+
+    const btn = document.getElementById('btn-hold-delete');
+    if (btn) {
+      btn.classList.remove('is-holding');
+      btn.classList.remove('is-completed');
+    }
+    const progressEl = document.getElementById('hold-delete-progress');
+    if (progressEl) progressEl.style.width = '0%';
+
+    const labelEl = document.getElementById('hold-delete-label');
+    if (labelEl) labelEl.textContent = 'Hold to Delete (2s)';
+  },
+
+  // Electricity & Water meter live calculation
+  bindCalculators() {
+    const prevElecMeter = document.getElementById('bill-prev-meter');
+    const currElecMeter = document.getElementById('bill-curr-meter');
+    const elecRate = document.getElementById('bill-elec-rate');
+    const baseRent = document.getElementById('bill-base-rent');
+    const waterType = document.getElementById('bill-water-type');
+    const waterFixed = document.getElementById('bill-water');
+    const prevWaterMeter = document.getElementById('bill-prev-water-meter');
+    const currWaterMeter = document.getElementById('bill-curr-water-meter');
+    const waterRate = document.getElementById('bill-water-rate');
+    const maint = document.getElementById('bill-maint');
+    const other = document.getElementById('bill-other');
+    const prevBalance = document.getElementById('bill-prev-balance');
+
+    // Toggle Property water type input visibility
+    const propWaterType = document.getElementById('prop-water-type');
+    if (propWaterType) {
+      propWaterType.addEventListener('change', () => {
+        const isMeter = propWaterType.value === 'METER';
+        document.getElementById('group-prop-water-fixed').style.display = isMeter ? 'none' : 'block';
+        document.getElementById('group-prop-water-meter').style.display = isMeter ? 'block' : 'none';
+      });
+    }
+
+    // Toggle Bill water type boxes
+    const updateWaterTypeUI = () => {
+      const isMeter = waterType.value === 'METER';
+      document.getElementById('bill-water-fixed-box').style.display = isMeter ? 'none' : 'block';
+      document.getElementById('bill-water-meter-box').style.display = isMeter ? 'block' : 'none';
+      updateCalc();
+      this.refreshIcons();
+    };
+
+    if (waterType) {
+      waterType.addEventListener('change', updateWaterTypeUI);
+    }
+
+    // Unlock previous meter buttons
+    const btnUnlockElec = document.getElementById('btn-unlock-prev-elec');
+    const btnUnlockWater = document.getElementById('btn-unlock-prev-water');
+    if (btnUnlockElec) {
+      btnUnlockElec.addEventListener('click', () => {
+        prevElecMeter.removeAttribute('readonly');
+        prevElecMeter.classList.remove('input-readonly');
+        prevElecMeter.focus();
+        btnUnlockElec.style.display = 'none';
+      });
+    }
+    if (btnUnlockWater) {
+      btnUnlockWater.addEventListener('click', () => {
+        prevWaterMeter.removeAttribute('readonly');
+        prevWaterMeter.classList.remove('input-readonly');
+        prevWaterMeter.focus();
+        btnUnlockWater.style.display = 'none';
+      });
+    }
+
+    const updateCalc = () => {
+      const pElec = parseFloat(prevElecMeter.value) || 0;
+      const cElec = parseFloat(currElecMeter.value) || 0;
+      const eRate = parseFloat(elecRate.value) || 0;
+      const rent = parseFloat(baseRent.value) || 0;
+      const m = parseFloat(maint.value) || 0;
+      const o = parseFloat(other.value) || 0;
+      const arrear = parseFloat(prevBalance ? prevBalance.value : 0) || 0;
+
+      // Electricity validation & calculation
+      const warnElec = document.getElementById('warn-curr-elec');
+      if (warnElec) {
+        if (currElecMeter.value !== '' && cElec < pElec) {
+          warnElec.style.display = 'block';
+        } else {
+          warnElec.style.display = 'none';
+        }
+      }
+
+      const elecUnits = cElec >= pElec ? (cElec - pElec) : 0;
+      const elecSub = elecUnits * eRate;
+      document.getElementById('bill-elec-units').value = `${elecUnits.toFixed(1)} units`;
+      document.getElementById('bill-elec-subtotal').textContent = `${window.APP_CURRENCY}${elecSub.toFixed(2)}`;
+
+      // Water validation & calculation
+      let waterTotal = 0;
+      if (waterType && waterType.value === 'METER') {
+        const pWater = parseFloat(prevWaterMeter.value) || 0;
+        const cWater = parseFloat(currWaterMeter.value) || 0;
+        const wRate = parseFloat(waterRate.value) || 0;
+
+        const warnWater = document.getElementById('warn-curr-water');
+        if (warnWater) {
+          if (currWaterMeter.value !== '' && cWater < pWater) {
+            warnWater.style.display = 'block';
+          } else {
+            warnWater.style.display = 'none';
+          }
+        }
+
+        const waterUnits = cWater >= pWater ? (cWater - pWater) : 0;
+        waterTotal = waterUnits * wRate;
+        document.getElementById('bill-water-units').value = `${waterUnits.toFixed(1)} units`;
+        document.getElementById('bill-water-subtotal').textContent = `${window.APP_CURRENCY}${waterTotal.toFixed(2)}`;
+      } else {
+        waterTotal = parseFloat(waterFixed.value) || 0;
+      }
+
+      const total = rent + elecSub + waterTotal + m + o + arrear;
+      document.getElementById('bill-calculated-total').textContent = `${window.APP_CURRENCY}${total.toFixed(2)}`;
+    };
+
+    [prevElecMeter, currElecMeter, elecRate, baseRent, waterFixed, prevWaterMeter, currWaterMeter, waterRate, maint, other, prevBalance].forEach(inp => {
+      if (inp) inp.addEventListener('input', updateCalc);
+    });
+
+    // When tenant selection changes in bill modal, auto populate unit, base rent, rate, and last meter readings
+    document.getElementById('bill-tenant-select')?.addEventListener('change', async (e) => {
+      const tenantId = e.target.value;
+      if (!tenantId) return;
+
+      const tenant = this.tenants.find(t => t.id == tenantId);
+      if (!tenant) return;
+
+      document.getElementById('bill-property-display').value = tenant.property_name || 'No Unit Assigned';
+      document.getElementById('bill-property-id').value = tenant.property_id || '';
+
+      if (tenant.property_id) {
+        const prop = this.properties.find(p => p.id == tenant.property_id);
+        if (prop) {
+          baseRent.value = prop.default_rent || 0;
+          elecRate.value = prop.electricity_rate || 0;
+          maint.value = prop.maintenance_charge || 0;
+
+          // Water settings from property
+          if (prop.water_billing_type === 'METER') {
+            waterType.value = 'METER';
+            waterRate.value = prop.water_rate || 0;
+          } else {
+            waterType.value = 'FIXED';
+            waterFixed.value = prop.water_charge || 0;
+          }
+          updateWaterTypeUI();
+        }
+      }
+
+      // Fetch last meter reading / move-in meter & pending arrears for tenant
+      try {
+        const lastBill = await API.getTenantLastBill(tenantId);
+        const pElecVal = lastBill.curr_electricity_meter || 0;
+        const pWaterVal = lastBill.curr_water_meter || 0;
+        const pendingArrear = lastBill.pending_balance || 0;
+
+        prevElecMeter.value = pElecVal;
+        prevWaterMeter.value = pWaterVal;
+
+        // Auto carry over previous unpaid arrears (only for new bills)
+        if (!document.getElementById('bill-id').value && prevBalance) {
+          prevBalance.value = pendingArrear > 0 ? pendingArrear.toFixed(2) : 0;
+        }
+
+        const badgeBalance = document.getElementById('badge-prev-balance');
+        const hintBalance = document.getElementById('hint-prev-balance');
+        if (pendingArrear > 0) {
+          if (badgeBalance) badgeBalance.style.display = 'inline-block';
+          if (hintBalance) hintBalance.textContent = `Carried forward from ${lastBill.billing_month || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`;
+        } else {
+          if (badgeBalance) badgeBalance.style.display = 'none';
+          if (hintBalance) hintBalance.textContent = 'No past unpaid dues';
+        }
+
+        // Keep current reading blank or set ready for entry
+        if (!document.getElementById('bill-id').value) {
+          currElecMeter.value = '';
+          currWaterMeter.value = '';
+        }
+
+        // Lock previous readings and show auto-carried badge / hint
+        const badgeElec = document.getElementById('badge-elec-meter-source');
+        const hintElec = document.getElementById('hint-prev-elec');
+        const badgeWater = document.getElementById('badge-water-meter-source');
+        const hintWater = document.getElementById('hint-prev-water');
+
+        prevElecMeter.setAttribute('readonly', 'true');
+        prevElecMeter.classList.add('input-readonly');
+        if (btnUnlockElec) btnUnlockElec.style.display = 'inline-flex';
+
+        prevWaterMeter.setAttribute('readonly', 'true');
+        prevWaterMeter.classList.add('input-readonly');
+        if (btnUnlockWater) btnUnlockWater.style.display = 'inline-flex';
+
+        if (lastBill.has_prior_bill) {
+          if (badgeElec) {
+            badgeElec.style.display = 'inline-block';
+            badgeElec.textContent = 'Carried Over';
+          }
+          if (hintElec) hintElec.textContent = `From ${lastBill.billing_month || 'last bill'}: ${pElecVal} units`;
+          if (badgeWater) {
+            badgeWater.style.display = 'inline-block';
+            badgeWater.textContent = 'Carried Over';
+          }
+          if (hintWater) hintWater.textContent = `From ${lastBill.billing_month || 'last bill'}: ${pWaterVal} units`;
+
+          // If suggested next month is available and this is a new bill, auto populate month
+          if (lastBill.suggested_next_month && !document.getElementById('bill-id').value) {
+            const billMonth = document.getElementById('bill-month');
+            if (billMonth) billMonth.value = lastBill.suggested_next_month;
+          }
+        } else if (lastBill.source === 'tenant_initial' && (pElecVal > 0 || pWaterVal > 0)) {
+          if (badgeElec) {
+            badgeElec.style.display = 'inline-block';
+            badgeElec.textContent = 'Move-in Start';
+          }
+          if (hintElec) hintElec.textContent = `Move-in initial reading: ${pElecVal} units`;
+          if (badgeWater) {
+            badgeWater.style.display = 'inline-block';
+            badgeWater.textContent = 'Move-in Start';
+          }
+          if (hintWater) hintWater.textContent = `Move-in initial reading: ${pWaterVal} units`;
+        } else {
+          if (badgeElec) badgeElec.style.display = 'none';
+          if (hintElec) hintElec.textContent = 'Starting reading for new tenant';
+          if (badgeWater) badgeWater.style.display = 'none';
+          if (hintWater) hintWater.textContent = 'Starting reading for new tenant';
+        }
+      } catch (err) {
+        prevElecMeter.value = 0;
+        prevWaterMeter.value = 0;
+      }
+      updateCalc();
+      this.refreshIcons();
+      if (!document.getElementById('bill-id').value) {
+        currElecMeter.focus();
+      }
+    });
+  },
+
+  bindForms() {
+    // Property Form (Create / Edit)
+    document.getElementById('form-property')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const propId = document.getElementById('prop-id').value;
+      const p = {
+        name: document.getElementById('prop-name').value.trim(),
+        unit_type: document.getElementById('prop-type').value,
+        address: document.getElementById('prop-address').value.trim(),
+        default_rent: parseFloat(document.getElementById('prop-rent').value) || 0,
+        electricity_rate: parseFloat(document.getElementById('prop-elec-rate').value) || 0,
+        water_billing_type: document.getElementById('prop-water-type').value,
+        water_charge: parseFloat(document.getElementById('prop-water').value) || 0,
+        water_rate: parseFloat(document.getElementById('prop-water-rate').value) || 0,
+        maintenance_charge: parseFloat(document.getElementById('prop-maint').value) || 0
+      };
+
+      try {
+        if (propId) {
+          await API.updateProperty(propId, p);
+          this.toast('Property updated successfully');
+        } else {
+          await API.createProperty(p);
+          this.toast('Property added successfully');
+        }
+        this.closeModal('modal-property');
+        e.target.reset();
+        await this.refreshAll();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    // Tenant Form (Create / Edit)
+    document.getElementById('form-tenant')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const tenantId = document.getElementById('tenant-id').value;
+      const propIdVal = document.getElementById('tenant-prop-id').value;
+      const isActiveVal = document.getElementById('tenant-is-active')?.value !== '0';
+
+      const t = {
+        name: document.getElementById('tenant-name').value.trim(),
+        phone: document.getElementById('tenant-phone').value.trim(),
+        email: document.getElementById('tenant-email').value.trim(),
+        property_id: propIdVal ? parseInt(propIdVal, 10) : null,
+        security_deposit: parseFloat(document.getElementById('tenant-deposit').value) || 0,
+        move_in_date: document.getElementById('tenant-move-in').value,
+        payment_upi: document.getElementById('tenant-payment-upi').value.trim(),
+        payment_bank_name: document.getElementById('tenant-payment-bank-name').value.trim(),
+        payment_account_no: document.getElementById('tenant-payment-account-no').value.trim(),
+        payment_ifsc: document.getElementById('tenant-payment-ifsc').value.trim().toUpperCase(),
+        initial_elec_meter: parseFloat(document.getElementById('tenant-init-elec').value) || 0,
+        initial_water_meter: parseFloat(document.getElementById('tenant-init-water').value) || 0,
+        is_active: isActiveVal
+      };
+
+      try {
+        if (tenantId) {
+          await API.updateTenant(tenantId, t);
+          this.toast('Tenant updated successfully');
+        } else {
+          await API.createTenant(t);
+          this.toast('Tenant added successfully');
+        }
+        this.closeModal('modal-tenant');
+        e.target.reset();
+        await this.refreshAll();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    // Bill Form (Create / Edit)
+    document.getElementById('form-bill')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const billId = document.getElementById('bill-id').value;
+      const tenantId = parseInt(document.getElementById('bill-tenant-select').value, 10);
+      const propId = parseInt(document.getElementById('bill-property-id').value, 10);
+
+      if (!propId) {
+        alert('Selected tenant has no assigned property unit.');
+        return;
+      }
+
+      const wType = document.getElementById('bill-water-type').value;
+
+      const prevElec = parseFloat(document.getElementById('bill-prev-meter').value) || 0;
+      const currElec = parseFloat(document.getElementById('bill-curr-meter').value) || 0;
+      if (currElec < prevElec) {
+        alert(`Current Electricity Meter reading (${currElec}) cannot be less than Previous reading (${prevElec}).`);
+        return;
+      }
+
+      const prevWater = parseFloat(document.getElementById('bill-prev-water-meter').value) || 0;
+      const currWater = parseFloat(document.getElementById('bill-curr-water-meter').value) || 0;
+      if (wType === 'METER' && currWater < prevWater) {
+        alert(`Current Water Meter reading (${currWater}) cannot be less than Previous reading (${prevWater}).`);
+        return;
+      }
+
+      const b = {
+        tenant_id: tenantId,
+        property_id: propId,
+        billing_month: document.getElementById('bill-month').value,
+        due_date: document.getElementById('bill-due-date').value,
+        base_rent: parseFloat(document.getElementById('bill-base-rent').value) || 0,
+        prev_electricity_meter: prevElec,
+        curr_electricity_meter: currElec,
+        electricity_rate: parseFloat(document.getElementById('bill-elec-rate').value) || 0,
+        water_billing_type: wType,
+        prev_water_meter: prevWater,
+        curr_water_meter: currWater,
+        water_rate: parseFloat(document.getElementById('bill-water-rate').value) || 0,
+        water_amount: wType === 'FIXED' ? (parseFloat(document.getElementById('bill-water').value) || 0) : 0,
+        maintenance_amount: parseFloat(document.getElementById('bill-maint').value) || 0,
+        other_charges: parseFloat(document.getElementById('bill-other').value) || 0,
+        other_charges_desc: document.getElementById('bill-other-desc').value.trim(),
+        previous_balance: parseFloat(document.getElementById('bill-prev-balance')?.value) || 0,
+        notes: document.getElementById('bill-notes').value.trim()
+      };
+
+      try {
+        if (billId) {
+          const updated = await API.updateBill(billId, b);
+          this.closeModal('modal-bill');
+          e.target.reset();
+          this.toast('Bill updated successfully!');
+          await this.refreshAll();
+          this.showInvoice(updated.id || billId);
+        } else {
+          const created = await API.createBill(b);
+          this.closeModal('modal-bill');
+          e.target.reset();
+          this.toast('Bill generated successfully!');
+          await this.refreshAll();
+          this.showInvoice(created.id);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    // Payment Form
+    document.getElementById('form-payment')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const billId = parseInt(document.getElementById('pay-bill-id').value, 10);
+      const pay = {
+        bill_id: billId,
+        amount: parseFloat(document.getElementById('pay-amount').value) || 0,
+        payment_date: document.getElementById('pay-date').value,
+        payment_method: document.getElementById('pay-method').value,
+        reference_no: document.getElementById('pay-ref').value.trim(),
+        notes: document.getElementById('pay-notes').value.trim()
+      };
+
+      try {
+        await API.recordPayment(pay);
+        this.closeModal('modal-payment');
+        e.target.reset();
+        this.toast('Payment recorded successfully');
+        await this.refreshAll();
+        this.showInvoice(billId);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    // Expense Form (Create / Edit)
+    document.getElementById('form-expense')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const expenseId = document.getElementById('expense-id').value;
+      const propId = parseInt(document.getElementById('expense-property-id').value, 10);
+      const expenseData = {
+        property_id: propId,
+        title: document.getElementById('expense-title').value.trim(),
+        category: document.getElementById('expense-category').value,
+        amount: parseFloat(document.getElementById('expense-amount').value) || 0,
+        expense_date: document.getElementById('expense-date').value,
+        payment_method: document.getElementById('expense-method').value,
+        paid_to: document.getElementById('expense-paid-to').value.trim(),
+        notes: document.getElementById('expense-notes').value.trim()
+      };
+
+      try {
+        if (expenseId) {
+          await API.updateExpense(expenseId, expenseData);
+          this.toast('Expense updated successfully');
+        } else {
+          await API.createExpense(expenseData);
+          this.toast('Expense logged successfully');
+        }
+        this.closeModal('modal-expense');
+        e.target.reset();
+        await this.refreshAll();
+        if (this.currentExpensesPropertyId) {
+          this.openPropertyExpenses(this.currentExpensesPropertyId);
+        }
+      } catch (err) {
+        alert('Error saving expense: ' + err.message);
+      }
+    });
+
+    // Settings Form
+    document.getElementById('form-settings')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        supabase_url: document.getElementById('set-supabase-url').value.trim(),
+        supabase_key: document.getElementById('set-supabase-key').value.trim(),
+        currency_symbol: document.getElementById('set-currency').value.trim() || '₹'
+      };
+      try {
+        await API.updateSettings(payload);
+        window.APP_CURRENCY = payload.currency_symbol;
+        this.closeModal('modal-settings');
+        this.toast('Settings updated');
+        await this.refreshAll();
+      } catch (err) {
+        alert('Failed saving settings');
+      }
+    });
+  },
+
+  async loadSettings() {
+    try {
+      const s = await API.getSettings();
+      if (s.currency_symbol) window.APP_CURRENCY = s.currency_symbol;
+      const elUrl = document.getElementById('set-supabase-url');
+      const elKey = document.getElementById('set-supabase-key');
+      const elCur = document.getElementById('set-currency');
+      if (elUrl) elUrl.value = s.supabase_url || '';
+      if (elKey) elKey.value = s.supabase_key || '';
+      if (elCur) elCur.value = s.currency_symbol || '₹';
+
+      // Set current URL in settings
+      const lanUrl = document.getElementById('lan-current-url');
+      if (lanUrl) lanUrl.textContent = window.location.origin;
+    } catch (e) {
+      console.error(e);
+    }
+  },
+
+  async refreshAll() {
+    await Promise.all([
+      this.loadProperties(),
+      this.loadTenants(),
+      this.loadBills(),
+      this.loadDashboard()
+    ]);
+    if (this.currentLedgerTenantId && document.getElementById('modal-ledger')?.classList.contains('active')) {
+      await this.openTenantLedger(this.currentLedgerTenantId);
+    }
+    this.refreshIcons();
+  },
+
+  bindDashboardControls() {
+    const monthSelect = document.getElementById('dash-month-select');
+    if (monthSelect) {
+      monthSelect.addEventListener('change', async (e) => {
+        this.selectedDashboardMonth = e.target.value;
+        await this.loadDashboard();
+      });
+    }
+
+    const prevBtn = document.getElementById('btn-month-prev');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', async () => {
+        if (!monthSelect || monthSelect.options.length <= 1) return;
+        const curIdx = monthSelect.selectedIndex;
+        if (curIdx < monthSelect.options.length - 1) {
+          monthSelect.selectedIndex = curIdx + 1;
+          this.selectedDashboardMonth = monthSelect.value;
+          await this.loadDashboard();
+        }
+      });
+    }
+
+    const nextBtn = document.getElementById('btn-month-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', async () => {
+        if (!monthSelect || monthSelect.options.length <= 1) return;
+        const curIdx = monthSelect.selectedIndex;
+        if (curIdx > 0) {
+          monthSelect.selectedIndex = curIdx - 1;
+          this.selectedDashboardMonth = monthSelect.value;
+          await this.loadDashboard();
+        }
+      });
+    }
+  },
+
+  async loadDashboard() {
+    try {
+      const data = await API.getDashboard(this.selectedDashboardMonth);
+      const curr = window.APP_CURRENCY || '₹';
+
+      // 1. Synchronize Month Selector Options
+      const monthSelect = document.getElementById('dash-month-select');
+      if (monthSelect) {
+        const available = data.available_months || [];
+        const currentSelected = data.selected_month || '';
+        this.selectedDashboardMonth = currentSelected;
+
+        // Build list: all unique months + ALL Time
+        const currentCalendarMonth = new Date().toISOString().slice(0, 7);
+        const setMonths = new Set(available);
+        setMonths.add(currentCalendarMonth);
+        const sortedMonths = Array.from(setMonths).sort().reverse();
+
+        monthSelect.innerHTML = sortedMonths.map(m => {
+          // Format month name nicely e.g. "Sep 2026"
+          let displayMonth = m;
+          try {
+            const parts = m.split('-');
+            if (parts.length === 2) {
+              const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+              displayMonth = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+            }
+          } catch (e) {}
+          return `<option value="${m}" ${m === currentSelected ? 'selected' : ''}>${displayMonth}</option>`;
+        }).join('') + `<option value="ALL" ${currentSelected === 'ALL' ? 'selected' : ''}>All Time</option>`;
+      }
+
+      // 2. Collection Progress Bar
+      const collPct = Math.round(data.collection_rate || 0);
+      const pctEl = document.getElementById('dash-collection-pct');
+      const barEl = document.getElementById('dash-collection-bar');
+      const subEl = document.getElementById('dash-collection-subtext');
+
+      if (pctEl) pctEl.textContent = `${collPct}%`;
+      if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, collPct))}%`;
+      if (subEl) {
+        subEl.textContent = `${curr}${data.total_collected.toFixed(2)} collected of ${curr}${data.total_billed.toFixed(2)} billed`;
+      }
+
+      // 3. Quick Stats Grid
+      document.getElementById('dash-total-billed').textContent = `${curr}${data.total_billed.toFixed(2)}`;
+      document.getElementById('dash-total-collected').textContent = `${curr}${data.total_collected.toFixed(2)}`;
+      document.getElementById('dash-total-pending').textContent = `${curr}${data.total_pending.toFixed(2)}`;
+      document.getElementById('dash-total-overdue').textContent = `${curr}${data.total_overdue.toFixed(2)}`;
+
+      const expEl = document.getElementById('dash-total-expenses');
+      if (expEl) expEl.textContent = `${curr}${(data.total_expenses || 0).toFixed(2)}`;
+      const netProfitEl = document.getElementById('dash-net-profit');
+      if (netProfitEl) {
+        const np = data.net_profit || 0;
+        netProfitEl.textContent = `${curr}${np.toFixed(2)}`;
+        netProfitEl.style.color = np >= 0 ? 'var(--success)' : 'var(--danger)';
+      }
+
+      // 4. Action Required Feed
+      const actionFeed = document.getElementById('dash-action-feed');
+      const actionBadge = document.getElementById('dash-action-count');
+      const periodHint = document.getElementById('dash-action-period-hint');
+
+      const overdueList = (data.action_required && data.action_required.overdue_bills) || [];
+      const unbilledList = (data.action_required && data.action_required.unbilled_tenants) || [];
+      const totalAlerts = overdueList.length + unbilledList.length;
+
+      if (periodHint) {
+        periodHint.textContent = data.selected_month === 'ALL' ? 'All-Time Pending' : `For ${data.selected_month}`;
+      }
+
+      if (actionBadge) {
+        if (totalAlerts > 0) {
+          actionBadge.textContent = totalAlerts;
+          actionBadge.style.display = 'inline-block';
+        } else {
+          actionBadge.style.display = 'none';
+        }
+      }
+
+      if (actionFeed) {
+        if (totalAlerts === 0) {
+          actionFeed.innerHTML = `
+            <div class="action-empty-state">
+              <i data-lucide="check-circle-2" style="color:var(--success); width:18px; height:18px;"></i>
+              <span>All caught up! No overdue bills or unbilled tenants for this period.</span>
+            </div>
+          `;
+        } else {
+          let html = '';
+          // Overdue Bills
+          overdueList.forEach(b => {
+            const balance = b.total_amount - b.paid_amount;
+            html += `
+              <div class="action-card card-overdue">
+                <div class="action-card-left">
+                  <div class="action-card-name">
+                    <span>${b.tenant_name}</span>
+                    <span class="badge badge-overdue" style="font-size:0.68rem; padding:1px 6px;">Overdue</span>
+                  </div>
+                  <div class="action-card-sub">
+                    ${b.property_name} • Due: ${b.due_date} • <strong>Balance: ${curr}${balance.toFixed(2)}</strong>
+                  </div>
+                </div>
+                <div class="action-card-right">
+                  <button type="button" class="btn-whatsapp-action" onclick="App.sendOverdueWhatsAppReminder(${b.id})" title="Send WhatsApp Reminder">
+                    <i data-lucide="send" style="width:13px; height:13px;"></i> Remind
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          // Unbilled Tenants
+          unbilledList.forEach(t => {
+            html += `
+              <div class="action-card card-unbilled">
+                <div class="action-card-left">
+                  <div class="action-card-name">
+                    <span>${t.name}</span>
+                    <span class="badge badge-date" style="font-size:0.68rem; padding:1px 6px;">Not Billed</span>
+                  </div>
+                  <div class="action-card-sub">
+                    Unit: ${t.property_name || 'No Unit'} • Phone: ${t.phone}
+                  </div>
+                </div>
+                <div class="action-card-right">
+                  <button type="button" class="btn btn-primary btn-sm" onclick="App.openBillModalForTenant(${t.id})">
+                    <i data-lucide="plus"></i> Bill
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          actionFeed.innerHTML = html;
+        }
+      }
+
+      // 5. Occupancy Widget
+      const totalUnits = data.total_properties || 0;
+      const occupiedUnits = data.occupied_units || 0;
+      const vacantUnits = data.vacant_units || 0;
+      const occPct = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+
+      const occBadge = document.getElementById('dash-occupancy-badge');
+      if (occBadge) occBadge.textContent = `${occupiedUnits}/${totalUnits} Units (${occPct}%)`;
+
+      const occBar = document.getElementById('dash-occupancy-bar');
+      if (occBar) occBar.style.width = `${occPct}%`;
+
+      const occCountEl = document.getElementById('dash-occupied-count');
+      if (occCountEl) occCountEl.textContent = `${occupiedUnits} Unit${occupiedUnits !== 1 ? 's' : ''}`;
+
+      const vacCountEl = document.getElementById('dash-vacant-count');
+      if (vacCountEl) vacCountEl.textContent = `${vacantUnits} Unit${vacantUnits !== 1 ? 's' : ''}`;
+
+      const vacantContainer = document.getElementById('dash-vacant-container');
+      if (vacantContainer) {
+        const vacantProps = data.vacant_properties || [];
+        if (vacantProps.length > 0) {
+          vacantContainer.innerHTML = `
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Vacant Units (Tap to assign tenant):</div>
+            <div class="vacant-chips-wrapper">
+              ${vacantProps.map(p => `
+                <div class="vacant-chip" onclick="App.openNewTenantForProperty(${p.id})">
+                  <i data-lucide="plus-circle" style="width:12px; height:12px; color:var(--primary);"></i>
+                  <strong>${p.name}</strong> (${curr}${p.default_rent.toFixed(0)})
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          vacantContainer.innerHTML = `
+            <div style="font-size:0.75rem; color:var(--success); margin-top:4px;">
+              <i data-lucide="check" style="width:12px; height:12px; vertical-align:-1px;"></i> 100% Occupancy! All units have active tenants.
+            </div>
+          `;
+        }
+      }
+
+      // 6. Utility Pulse
+      const elecUnitsEl = document.getElementById('dash-total-elec-units');
+      const elecAmountEl = document.getElementById('dash-total-elec-amount');
+      const waterUnitsEl = document.getElementById('dash-total-water-units');
+      const waterAmountEl = document.getElementById('dash-total-water-amount');
+
+      if (elecUnitsEl) elecUnitsEl.textContent = `${(data.total_elec_units || 0).toLocaleString()} Units`;
+      if (elecAmountEl) elecAmountEl.textContent = `${curr}${(data.total_elec_amount || 0).toFixed(2)} billed`;
+      if (waterUnitsEl) waterUnitsEl.textContent = `${(data.total_water_units || 0).toLocaleString()} Units`;
+      if (waterAmountEl) waterAmountEl.textContent = `${curr}${(data.total_water_amount || 0).toFixed(2)} billed`;
+
+      this.refreshIcons();
+    } catch (err) {
+      console.error('Dashboard load error:', err);
+    }
+  },
+
+  openNewTenantForProperty(propertyId) {
+    this.openModal('modal-tenant');
+    document.getElementById('form-tenant')?.reset();
+    document.getElementById('tenant-id').value = '';
+    document.getElementById('modal-tenant-title').textContent = 'Add New Tenant';
+    const propSelect = document.getElementById('tenant-prop-id');
+    if (propSelect) propSelect.value = propertyId;
+  },
+
+  async sendOverdueWhatsAppReminder(billId) {
+    try {
+      const b = await API.getBill(billId);
+      if (!b) return;
+
+      const curr = window.APP_CURRENCY || '₹';
+      const balance = (b.total_amount - b.paid_amount).toFixed(2);
+      const cleanPhone = (b.tenant_phone || '').replace(/[^0-9]/g, '');
+      const phoneWithCountry = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+
+      let msg = `*RENT PAYMENT REMINDER*\n\n`;
+      msg += `Dear ${b.tenant_name},\n`;
+      msg += `This is a friendly reminder that your rent bill for *${b.property_name}* (${b.billing_month}) is overdue.\n\n`;
+      msg += `*Invoice No:* ${b.bill_number}\n`;
+      msg += `*Due Date:* ${b.due_date}\n`;
+      msg += `*Total Bill:* ${curr}${b.total_amount.toFixed(2)}\n`;
+      msg += `*Pending Balance:* ${curr}${balance}\n\n`;
+
+      if (b.payment_upi) {
+        msg += `*UPI ID for Payment:*\n${b.payment_upi}\n`;
+      }
+      if (b.payment_bank_name && b.payment_account_no) {
+        msg += `\n*Bank Transfer:*\n`;
+        msg += `Bank: ${b.payment_bank_name}\n`;
+        msg += `A/C: ${b.payment_account_no}\n`;
+        if (b.payment_ifsc) msg += `IFSC: ${b.payment_ifsc}\n`;
+      }
+
+      msg += `\nPlease clear the balance at your earliest convenience. Thank you!`;
+
+      const encoded = encodeURIComponent(msg);
+      const waUrl = phoneWithCountry
+        ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encoded}`
+        : `https://api.whatsapp.com/send?text=${encoded}`;
+
+      window.open(waUrl, '_blank');
+    } catch (e) {
+      alert('Error opening reminder: ' + e.message);
+    }
+  },
+
+  bindSearchAndFilters() {
+    // Tenant Search
+    const tenantInput = document.getElementById('tenant-search-input');
+    const tenantClear = document.getElementById('tenant-search-clear');
+    if (tenantInput) {
+      tenantInput.addEventListener('input', (e) => {
+        this.tenantSearchQuery = e.target.value.trim().toLowerCase();
+        if (tenantClear) {
+          tenantClear.style.display = this.tenantSearchQuery ? 'block' : 'none';
+        }
+        this.renderTenantsList();
+      });
+    }
+
+    if (tenantClear) {
+      tenantClear.addEventListener('click', () => {
+        if (tenantInput) tenantInput.value = '';
+        this.tenantSearchQuery = '';
+        tenantClear.style.display = 'none';
+        this.renderTenantsList();
+      });
+    }
+
+    // Tenant Filter Pills
+    const tenantPills = document.querySelectorAll('#tenant-filter-pills .filter-pill');
+    tenantPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        tenantPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.tenantFilter = pill.getAttribute('data-filter') || 'all';
+        this.renderTenantsList();
+      });
+    });
+
+    // Property Search
+    const propInput = document.getElementById('property-search-input');
+    const propClear = document.getElementById('property-search-clear');
+    if (propInput) {
+      propInput.addEventListener('input', (e) => {
+        this.propertySearchQuery = e.target.value.trim().toLowerCase();
+        if (propClear) {
+          propClear.style.display = this.propertySearchQuery ? 'block' : 'none';
+        }
+        this.renderPropertiesList();
+      });
+    }
+
+    if (propClear) {
+      propClear.addEventListener('click', () => {
+        if (propInput) propInput.value = '';
+        this.propertySearchQuery = '';
+        propClear.style.display = 'none';
+        this.renderPropertiesList();
+      });
+    }
+
+    // Property Filter Pills
+    const propPills = document.querySelectorAll('#property-filter-pills .filter-pill');
+    propPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        propPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.propertyFilter = pill.getAttribute('data-filter') || 'all';
+        this.renderPropertiesList();
+      });
+    });
+  },
+
+  async loadProperties() {
+    try {
+      this.properties = await API.getProperties();
+
+      // Update tenant modal property dropdown
+      const tenantPropSelect = document.getElementById('tenant-prop-id');
+      if (tenantPropSelect) {
+        tenantPropSelect.innerHTML = `<option value="">-- Select Property --</option>` +
+          this.properties.map(p => `<option value="${p.id}">${p.name} (${p.unit_type})</option>`).join('');
+      }
+
+      this.renderPropertiesList();
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  renderPropertiesList() {
+    const container = document.getElementById('properties-list-container');
+    if (!container) return;
+    const curr = window.APP_CURRENCY || '₹';
+
+    if (!this.properties || this.properties.length === 0) {
+      container.innerHTML = `<div class="empty-state">No properties added yet. Tap "Add Property" to begin.</div>`;
+      return;
+    }
+
+    // Filter properties
+    let filtered = this.properties.filter(p => {
+      // 1. Text Search
+      if (this.propertySearchQuery) {
+        const q = this.propertySearchQuery;
+        const matchName = (p.name || '').toLowerCase().includes(q);
+        const matchAddr = (p.address || '').toLowerCase().includes(q);
+        const matchType = (p.unit_type || '').toLowerCase().includes(q);
+        if (!matchName && !matchAddr && !matchType) return false;
+      }
+
+      // 2. Status Filter Pill
+      const isOccupied = (p.tenant_count || 0) > 0;
+      if (this.propertyFilter === 'occupied' && !isOccupied) return false;
+      if (this.propertyFilter === 'vacant' && isOccupied) return false;
+
+      return true;
+    });
+
+    // Update subtitle
+    const subTitle = document.getElementById('properties-count-subtitle');
+    if (subTitle) {
+      subTitle.textContent = `Showing ${filtered.length} of ${this.properties.length} units`;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:24px;">
+          <i data-lucide="search-x" style="width:28px; height:28px; color:var(--text-muted); margin-bottom:8px;"></i>
+          <div>No properties match "<strong>${this.propertySearchQuery}</strong>"</div>
+        </div>
+      `;
+      this.refreshIcons();
+      return;
+    }
+
+    container.innerHTML = filtered.map(p => `
+      <div class="app-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${p.name}</div>
+            <div class="card-subtitle">${p.unit_type} • ${p.address || 'No address'}</div>
+          </div>
+          <div class="card-top-right">
+            <span class="badge ${p.tenant_count > 0 ? 'badge-paid' : 'badge-date'}">${p.tenant_count || 0} Tenant${p.tenant_count === 1 ? '' : 's'}</span>
+            <div class="card-dropdown">
+              <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="More options">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="card-dropdown-menu">
+                <button type="button" class="dropdown-item" onclick="App.editProperty(${p.id})">
+                  <i data-lucide="edit-3"></i> Edit Property
+                </button>
+                <button type="button" class="dropdown-item dropdown-item-danger" onclick="App.deleteProperty(${p.id})">
+                  <i data-lucide="trash-2"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-middle">
+          <span class="card-amount-label">Base Rent</span>
+          <span class="card-amount-val">${curr}${p.default_rent.toFixed(2)}</span>
+        </div>
+        <div style="font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+          <span><i data-lucide="zap" style="width:14px; height:14px; vertical-align:-2px; color:var(--warning);"></i> Elec: ${curr}${p.electricity_rate}/unit</span>
+          <span><i data-lucide="droplet" style="width:14px; height:14px; vertical-align:-2px; color:var(--primary);"></i> Water: ${p.water_billing_type === 'METER' ? `${curr}${p.water_rate}/unit (Meter)` : `${curr}${p.water_charge} (Fixed)`}</span>
+          <span><i data-lucide="wrench" style="width:14px; height:14px; vertical-align:-2px;"></i> Maint: ${curr}${p.maintenance_charge}</span>
+        </div>
+        ${(p.expense_count > 0 || p.total_expenses > 0) ? `
+          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm); margin-top:8px;">
+            <span><i data-lucide="wrench" style="width:13px; height:13px; color:#dc2626; vertical-align:-2px;"></i> Expenses: <strong style="color:#dc2626;">${curr}${(p.total_expenses || 0).toFixed(2)}</strong> (${p.expense_count || 0})</span>
+            <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</strong></span>
+          </div>
+        ` : ''}
+        <div class="card-actions" style="margin-top:10px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openPropertyExpenses(${p.id})">
+            <i data-lucide="wrench"></i> Expenses ${p.expense_count ? `(${p.expense_count})` : ''}
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="App.openAddExpenseModal(${p.id})">
+            <i data-lucide="plus"></i> Log Expense
+          </button>
+        </div>
+      </div>
+    `).join('');
+    this.refreshIcons();
+  },
+
+  async editProperty(id) {
+    try {
+      const p = await API.getProperty(id);
+      document.getElementById('prop-id').value = p.id;
+      document.getElementById('modal-property-title').textContent = 'Edit Property / Unit';
+      document.getElementById('prop-name').value = p.name;
+      document.getElementById('prop-type').value = p.unit_type || 'Apartment';
+      document.getElementById('prop-address').value = p.address || '';
+      document.getElementById('prop-rent').value = p.default_rent || 0;
+      document.getElementById('prop-elec-rate').value = p.electricity_rate || 0;
+      document.getElementById('prop-water-type').value = p.water_billing_type || 'FIXED';
+      document.getElementById('prop-water').value = p.water_charge || 0;
+      document.getElementById('prop-water-rate').value = p.water_rate || 0;
+      document.getElementById('prop-maint').value = p.maintenance_charge || 0;
+
+      const isMeter = p.water_billing_type === 'METER';
+      document.getElementById('group-prop-water-fixed').style.display = isMeter ? 'none' : 'block';
+      document.getElementById('group-prop-water-meter').style.display = isMeter ? 'block' : 'none';
+
+      this.openModal('modal-property');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  async deleteProperty(id) {
+    const prop = this.properties.find(p => p.id == id);
+    const propName = prop ? prop.name : 'this property';
+    const tenantCount = prop ? (prop.tenant_count || 0) : 0;
+
+    let warningHtml = `Are you sure you want to delete <strong>${propName}</strong>?`;
+    if (tenantCount > 0) {
+      warningHtml += `<br><br><span style="color:var(--danger); font-weight:600;"><i data-lucide="alert-circle" style="width:14px; height:14px; vertical-align:-2px;"></i> Warning:</span> ${tenantCount} tenant(s) are currently assigned to this unit.`;
+    }
+
+    this.confirmDelete({
+      title: 'Delete Property / Unit',
+      subtitle: propName,
+      warningHtml: warningHtml,
+      buttonLabel: 'Hold to Delete Property (10s)',
+      onConfirm: async () => {
+        try {
+          await API.deleteProperty(id);
+          this.toast('Property deleted successfully');
+          await this.refreshAll();
+        } catch (err) {
+          alert('Error deleting property: ' + err.message);
+        }
+      }
+    });
+  },
+
+  async loadTenants() {
+    try {
+      this.tenants = await API.getTenants();
+
+      // Update Bill Modal tenant select
+      const billTenantSelect = document.getElementById('bill-tenant-select');
+      if (billTenantSelect) {
+        billTenantSelect.innerHTML = `<option value="">-- Choose Tenant --</option>` +
+          this.tenants.filter(t => t.is_active).map(t => `<option value="${t.id}">${t.name} (${t.property_name || 'No Unit'})</option>`).join('');
+      }
+
+      this.renderTenantsList();
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  renderTenantsList() {
+    const container = document.getElementById('tenants-list-container');
+    if (!container) return;
+    const curr = window.APP_CURRENCY || '₹';
+
+    if (!this.tenants || this.tenants.length === 0) {
+      container.innerHTML = `<div class="empty-state">No tenants found. Tap "Add Tenant" to begin.</div>`;
+      return;
+    }
+
+    // Filter tenants
+    let filtered = this.tenants.filter(t => {
+      // 1. Text Search (name, phone, property_name)
+      if (this.tenantSearchQuery) {
+        const q = this.tenantSearchQuery;
+        const matchName = (t.name || '').toLowerCase().includes(q);
+        const matchPhone = (t.phone || '').toLowerCase().includes(q);
+        const matchProp = (t.property_name || '').toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchProp) return false;
+      }
+
+      // 2. Status Filter Pill (all, active, past)
+      if (this.tenantFilter === 'active' && !t.is_active) return false;
+      if (this.tenantFilter === 'past' && t.is_active) return false;
+
+      return true;
+    });
+
+    // Sort: Active tenants first (A-Z), Past tenants at the end of the list (A-Z)
+    filtered.sort((a, b) => {
+      if (a.is_active === b.is_active) {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      return a.is_active ? -1 : 1;
+    });
+
+    // Update subtitle
+    const subTitle = document.getElementById('tenants-count-subtitle');
+    if (subTitle) {
+      subTitle.textContent = `Showing ${filtered.length} of ${this.tenants.length} tenants`;
+    }
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:24px;">
+          <i data-lucide="search-x" style="width:28px; height:28px; color:var(--text-muted); margin-bottom:8px;"></i>
+          <div>No tenants match "<strong>${this.tenantSearchQuery}</strong>"</div>
+        </div>
+      `;
+      this.refreshIcons();
+      return;
+    }
+
+    container.innerHTML = filtered.map(t => `
+      <div class="app-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${t.name}</div>
+            <div class="card-subtitle"><i data-lucide="phone" style="width:14px; height:14px; vertical-align:-2px;"></i> ${t.phone} ${t.email ? '• ' + t.email : ''}</div>
+          </div>
+          <div class="card-top-right">
+            <span class="badge ${t.is_active ? 'badge-paid' : 'badge-date'}">${t.is_active ? 'Active' : 'Past'}</span>
+            <div class="card-dropdown">
+              <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="More options">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="card-dropdown-menu">
+                <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
+                  <i data-lucide="edit-3"></i> Edit Tenant
+                </button>
+                ${t.is_active ? `
+                  <button type="button" class="dropdown-item" onclick="App.deactivateTenant(${t.id})">
+                    <i data-lucide="user-x"></i> Move Out / Deactivate
+                  </button>
+                ` : `
+                  <button type="button" class="dropdown-item" onclick="App.reactivateTenant(${t.id})">
+                    <i data-lucide="user-check"></i> Reactivate Tenant
+                  </button>
+                `}
+                <button type="button" class="dropdown-item dropdown-item-danger" onclick="App.deleteTenant(${t.id})">
+                  <i data-lucide="trash-2"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-middle">
+          <span class="card-amount-label">Unit: <strong>${t.property_name || 'Unassigned'}</strong></span>
+          <span class="card-amount-val">${curr}${t.security_deposit.toFixed(2)} <span style="font-size:0.75rem; font-weight:normal;">Deposit</span></span>
+        </div>
+        ${(t.payment_upi || t.payment_bank_name) ? `
+          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm);">
+            <i data-lucide="credit-card" style="width:13px; height:13px; color:var(--primary); flex-shrink:0;"></i>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              ${t.payment_upi ? `UPI: <strong style="color:var(--text-main);">${t.payment_upi}</strong>` : ''}
+              ${t.payment_upi && t.payment_bank_name ? ' • ' : ''}
+              ${t.payment_bank_name ? `${t.payment_bank_name} (${t.payment_account_no ? 'A/C: ' + t.payment_account_no : ''})` : ''}
+            </span>
+          </div>
+        ` : ''}
+        <div class="card-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openTenantLedger(${t.id})">
+            <i data-lucide="book-open"></i> Passbook
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openReminderModalForTenant(${t.id})" title="Send WhatsApp Reminder">
+            <i data-lucide="message-circle" style="color:var(--success);"></i> Remind
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="App.openBillModalForTenant(${t.id})">
+            <i data-lucide="plus"></i> Bill
+          </button>
+        </div>
+      </div>
+    `).join('');
+    this.refreshIcons();
+  },
+
+  async editTenant(id) {
+    try {
+      const t = await API.getTenant(id);
+      document.getElementById('tenant-id').value = t.id;
+      document.getElementById('modal-tenant-title').textContent = 'Edit Tenant';
+      document.getElementById('tenant-name').value = t.name;
+      document.getElementById('tenant-phone').value = t.phone;
+      document.getElementById('tenant-email').value = t.email || '';
+      document.getElementById('tenant-prop-id').value = t.property_id || '';
+      document.getElementById('tenant-deposit').value = t.security_deposit || 0;
+      document.getElementById('tenant-move-in').value = t.move_in_date || '';
+      document.getElementById('tenant-payment-upi').value = t.payment_upi || '';
+      document.getElementById('tenant-payment-bank-name').value = t.payment_bank_name || '';
+      document.getElementById('tenant-payment-account-no').value = t.payment_account_no || '';
+      document.getElementById('tenant-payment-ifsc').value = t.payment_ifsc || '';
+      document.getElementById('tenant-init-elec').value = t.initial_elec_meter || 0;
+      document.getElementById('tenant-init-water').value = t.initial_water_meter || 0;
+      const statusSelect = document.getElementById('tenant-is-active');
+      if (statusSelect) {
+        statusSelect.value = t.is_active ? '1' : '0';
+      }
+
+      this.openModal('modal-tenant');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  async deleteTenant(id) {
+    const tenant = this.tenants.find(t => t.id == id);
+    const tenantName = tenant ? tenant.name : 'this tenant';
+    const unitName = tenant && tenant.property_name ? tenant.property_name : 'No Unit';
+
+    let warningHtml = `Are you sure you want to delete <strong>${tenantName}</strong> (${unitName})?`;
+    warningHtml += `<br><br><span style="color:var(--danger); font-weight:600;"><i data-lucide="alert-triangle" style="width:14px; height:14px; vertical-align:-2px;"></i> Permanent Action:</span> Deleting this tenant will permanently erase all associated bills, meter history, and payment transactions. This cannot be undone.`;
+
+    this.confirmDelete({
+      title: 'Delete Tenant',
+      subtitle: `${tenantName} • ${unitName}`,
+      warningHtml: warningHtml,
+      buttonLabel: 'Hold to Delete Tenant (10s)',
+      onConfirm: async () => {
+        try {
+          await API.deleteTenant(id);
+          this.toast('Tenant deleted successfully');
+          await this.refreshAll();
+        } catch (err) {
+          alert('Error deleting tenant: ' + err.message);
+        }
+      }
+    });
+  },
+
+  async deactivateTenant(id) {
+    const tenant = this.tenants.find(t => t.id == id);
+    const tenantName = tenant ? tenant.name : 'this tenant';
+    const unitName = tenant && tenant.property_name ? tenant.property_name : 'No Unit';
+
+    const confirmMsg = `Are you sure you want to deactivate / move out "${tenantName}" (${unitName})?\n\n` +
+      `• Their assigned property flat/unit will be freed up as Vacant.\n` +
+      `• All existing bills, payments, and ledger history will remain completely safe.\n` +
+      `• The tenant will be moved to the "Past" residents filter tab.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      // Fetch full tenant details to ensure full payload
+      const t = await API.getTenant(id);
+      t.is_active = false;
+      await API.updateTenant(id, t);
+      this.toast(`Tenant ${tenantName} moved out / deactivated`);
+      await this.refreshAll();
+    } catch (err) {
+      alert('Error deactivating tenant: ' + err.message);
+    }
+  },
+
+  async reactivateTenant(id) {
+    const tenant = this.tenants.find(t => t.id == id);
+    const tenantName = tenant ? tenant.name : 'this tenant';
+
+    if (!confirm(`Reactivate "${tenantName}" as an active resident?`)) return;
+
+    try {
+      const t = await API.getTenant(id);
+      t.is_active = true;
+      await API.updateTenant(id, t);
+      this.toast(`Tenant ${tenantName} reactivated`);
+      await this.refreshAll();
+    } catch (err) {
+      alert('Error reactivating tenant: ' + err.message);
+    }
+  },
+
+  async openTenantLedger(tenantId) {
+    this.currentLedgerTenantId = tenantId;
+    const container = document.getElementById('ledger-bills-container');
+    const statementTbody = document.getElementById('ledger-statement-tbody');
+    if (container) {
+      container.innerHTML = `<div class="empty-state">Loading tenant ledger...</div>`;
+    }
+    if (statementTbody) {
+      statementTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px;">Loading statement...</td></tr>`;
+    }
+
+    const tenant = this.tenants.find(t => t.id == tenantId);
+    if (tenant) {
+      document.getElementById('modal-ledger-tenant-name').textContent = `${tenant.name} - Ledger`;
+      document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tenant.property_name || 'Unassigned'} • Phone: ${tenant.phone}`;
+    } else {
+      document.getElementById('modal-ledger-tenant-name').textContent = 'Tenant Bill Ledger';
+      document.getElementById('modal-ledger-unit-info').textContent = '';
+    }
+
+    // Default to bills view
+    const billsContainer = document.getElementById('ledger-bills-container');
+    const stmtContainer = document.getElementById('ledger-statement-container');
+    const btnBills = document.getElementById('btn-ledger-view-bills');
+    const btnStmt = document.getElementById('btn-ledger-view-statement');
+    if (billsContainer && stmtContainer && btnBills && btnStmt) {
+      billsContainer.style.display = 'block';
+      stmtContainer.style.display = 'none';
+      btnBills.classList.add('active');
+      btnStmt.classList.remove('active');
+
+      btnBills.onclick = () => {
+        btnBills.classList.add('active');
+        btnStmt.classList.remove('active');
+        billsContainer.style.display = 'block';
+        stmtContainer.style.display = 'none';
+      };
+      btnStmt.onclick = () => {
+        btnStmt.classList.add('active');
+        btnBills.classList.remove('active');
+        billsContainer.style.display = 'none';
+        stmtContainer.style.display = 'block';
+      };
+    }
+
+    this.openModal('modal-ledger');
+
+    try {
+      const [tDetails, bills, ledgerData] = await Promise.all([
+        tenant ? Promise.resolve(tenant) : API.getTenant(tenantId),
+        API.getBills(tenantId),
+        API.getTenantLedger(tenantId).catch(() => null)
+      ]);
+
+      this.currentLedgerData = ledgerData;
+
+      if (tDetails) {
+        let paymentInfoText = '';
+        if (tDetails.payment_upi) paymentInfoText += ` • Pay UPI: ${tDetails.payment_upi}`;
+        if (tDetails.payment_bank_name) paymentInfoText += ` • Bank: ${tDetails.payment_bank_name} (${tDetails.payment_account_no || ''})`;
+        document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Ledger & Passbook`;
+        document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tDetails.property_name || 'Unassigned'} • Phone: ${tDetails.phone}${paymentInfoText}`;
+      }
+
+      const curr = window.APP_CURRENCY || '₹';
+      const totalBilled = ledgerData ? ledgerData.total_billed : bills.reduce((sum, b) => sum + (b.total_amount || 0), 0);
+      const totalPaid = ledgerData ? ledgerData.total_paid : bills.reduce((sum, b) => sum + (b.paid_amount || 0), 0);
+      const totalBalance = ledgerData ? ledgerData.current_balance : bills.reduce((sum, b) => sum + (b.balance_amount || 0), 0);
+
+      document.getElementById('ledger-total-billed').textContent = `${curr}${totalBilled.toFixed(2)}`;
+      document.getElementById('ledger-total-paid').textContent = `${curr}${totalPaid.toFixed(2)}`;
+      document.getElementById('ledger-total-balance').textContent = `${curr}${totalBalance.toFixed(2)}`;
+
+      // 1. Render Bills Cards
+      if (container) {
+        if (!bills || bills.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              No bills found for this tenant.<br>
+              Tap "+ Add Bill" to create one.
+            </div>
+          `;
+        } else {
+          container.innerHTML = bills.map(b => this.renderBillCardHtml(b)).join('');
+          this.attachBillActionListeners(container);
+        }
+      }
+
+      // 2. Render Chronological Passbook Statement
+      if (statementTbody && ledgerData) {
+        if (!ledgerData.entries || ledgerData.entries.length === 0) {
+          statementTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No billing or payment activity recorded yet.</td></tr>`;
+        } else {
+          statementTbody.innerHTML = ledgerData.entries.map(e => `
+            <tr>
+              <td style="white-space:nowrap; font-size:0.75rem; color:var(--text-muted);">${e.date}</td>
+              <td>
+                <div style="font-weight:600; color:var(--text-main);">${e.description}</div>
+                <div style="font-size:0.72rem; color:var(--text-muted);">${e.type === 'BILL' ? 'Status: ' + (e.status || 'PENDING') : (e.referenceNo ? 'Ref: ' + e.referenceNo : 'Payment Received')}</div>
+              </td>
+              <td style="text-align:right; font-weight:600; color:var(--text-main);">
+                ${e.debit > 0 ? curr + e.debit.toFixed(2) : '-'}
+              </td>
+              <td style="text-align:right; font-weight:600; color:var(--success);">
+                ${e.credit > 0 ? curr + e.credit.toFixed(2) : '-'}
+              </td>
+              <td style="text-align:right; font-weight:700; color:${e.running_balance > 0 ? 'var(--danger)' : 'var(--text-main)'};">
+                ${curr}${e.running_balance.toFixed(2)}
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // 3. Bind Statement Print & WhatsApp Actions
+      const btnShareWa = document.getElementById('btn-ledger-share-wa');
+      if (btnShareWa && ledgerData) {
+        btnShareWa.onclick = () => {
+          const text = Share.formatLedgerStatementText(ledgerData);
+          Share.sendWhatsAppDirect(tDetails ? tDetails.phone : '', text);
+        };
+      }
+      const btnPrint = document.getElementById('btn-ledger-print');
+      if (btnPrint) {
+        btnPrint.onclick = () => {
+          window.print();
+        };
+      }
+
+      this.refreshIcons();
+    } catch (err) {
+      console.error(err);
+      if (container) {
+        container.innerHTML = `<div class="empty-state text-danger">Failed to load bills: ${err.message}</div>`;
+      }
+    }
+  },
+
+  async openPropertyExpenses(propertyId) {
+    this.currentExpensesPropertyId = propertyId;
+    const container = document.getElementById('property-expenses-container');
+    if (container) {
+      container.innerHTML = `<div class="empty-state">Loading property expenses...</div>`;
+    }
+
+    const prop = this.properties.find(p => p.id == propertyId);
+    const propTitle = prop ? prop.name : 'Property';
+    document.getElementById('modal-property-expenses-title').textContent = `${propTitle} - Expenses`;
+    document.getElementById('modal-property-expenses-sub').textContent = prop ? `${prop.unit_type} • ${prop.address || 'Maintenance & Repairs'}` : 'Maintenance & Repairs';
+
+    this.openModal('modal-property-expenses');
+
+    try {
+      const expenses = await API.getPropertyExpenses(propertyId);
+      const curr = window.APP_CURRENCY || '₹';
+
+      // Re-fetch fresh property details or use cached values
+      const p = this.properties.find(item => item.id == propertyId) || {};
+      const totalIncome = p.total_income || 0;
+      const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+      const netProfit = totalIncome - totalExpenses;
+
+      document.getElementById('prop-stat-income').textContent = `${curr}${totalIncome.toFixed(2)}`;
+      document.getElementById('prop-stat-expenses').textContent = `${curr}${totalExpenses.toFixed(2)}`;
+      const netProfitEl = document.getElementById('prop-stat-net-profit');
+      if (netProfitEl) {
+        netProfitEl.textContent = `${curr}${netProfit.toFixed(2)}`;
+        netProfitEl.className = `ledger-stat-value ${netProfit >= 0 ? 'text-success' : 'text-danger'}`;
+      }
+
+      if (container) {
+        if (!expenses || expenses.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              No expenses recorded for this property yet.<br>
+              Tap "+ Log Expense" above to record maintenance or repair costs.
+            </div>
+          `;
+        } else {
+          container.innerHTML = expenses.map(ex => `
+            <div class="app-card" style="margin-bottom:10px;">
+              <div class="card-top">
+                <div>
+                  <div class="card-title">${ex.title}</div>
+                  <div class="card-subtitle">
+                    <span class="badge badge-date" style="font-size:0.7rem; padding:1px 6px;">${ex.category}</span>
+                    • ${ex.expense_date} ${ex.paid_to ? '• Paid to: ' + ex.paid_to : ''}
+                  </div>
+                </div>
+                <div class="card-top-right">
+                  <strong style="color:#dc2626; font-size:1.05rem;">${curr}${ex.amount.toFixed(2)}</strong>
+                  <div class="card-dropdown">
+                    <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="Expense options">
+                      <i data-lucide="more-vertical"></i>
+                    </button>
+                    <div class="card-dropdown-menu">
+                      <button type="button" class="dropdown-item" onclick="App.editExpense(${ex.id})">
+                        <i data-lucide="edit-3"></i> Edit Expense
+                      </button>
+                      <button type="button" class="dropdown-item dropdown-item-danger" onclick="App.deleteExpense(${ex.id})">
+                        <i data-lucide="trash-2"></i> Delete Expense
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style="font-size:0.78rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                <span>Payment Mode: <strong>${ex.payment_method || 'Cash'}</strong></span>
+                ${ex.notes ? `<span>Note: ${ex.notes}</span>` : ''}
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+      this.refreshIcons();
+    } catch (err) {
+      console.error(err);
+      if (container) {
+        container.innerHTML = `<div class="empty-state text-danger">Failed to load expenses: ${err.message}</div>`;
+      }
+    }
+  },
+
+  openAddExpenseModal(propertyId) {
+    this.currentExpensesPropertyId = propertyId;
+    const prop = this.properties.find(p => p.id == propertyId);
+    const form = document.getElementById('form-expense');
+    if (form) form.reset();
+
+    document.getElementById('expense-id').value = '';
+    document.getElementById('expense-property-id').value = propertyId;
+    document.getElementById('expense-property-name').value = prop ? prop.name : `Property #${propertyId}`;
+    document.getElementById('modal-expense-title').textContent = 'Log Property Expense';
+
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('expense-date');
+    if (dateInput) dateInput.value = today;
+
+    this.openModal('modal-expense');
+  },
+
+  async editExpense(expenseId) {
+    try {
+      const ex = await API.getPropertyExpenses(this.currentExpensesPropertyId).then(list => list.find(e => e.id == expenseId));
+      if (!ex) {
+        alert('Expense not found');
+        return;
+      }
+
+      document.getElementById('expense-id').value = ex.id;
+      document.getElementById('expense-property-id').value = ex.property_id;
+      document.getElementById('expense-property-name').value = ex.property_name || 'Property';
+      document.getElementById('modal-expense-title').textContent = 'Edit Expense';
+      document.getElementById('expense-title').value = ex.title;
+      document.getElementById('expense-category').value = ex.category;
+      document.getElementById('expense-amount').value = ex.amount;
+      document.getElementById('expense-date').value = ex.expense_date;
+      document.getElementById('expense-method').value = ex.payment_method || 'Cash';
+      document.getElementById('expense-paid-to').value = ex.paid_to || '';
+      document.getElementById('expense-notes').value = ex.notes || '';
+
+      this.openModal('modal-expense');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  async deleteExpense(expenseId) {
+    this.confirmDelete({
+      title: 'Delete Expense',
+      subtitle: 'Maintenance Record',
+      warningHtml: 'Are you sure you want to permanently delete this expense entry?',
+      buttonLabel: 'Hold to Delete Expense (10s)',
+      onConfirm: async () => {
+        try {
+          await API.deleteExpense(expenseId);
+          this.toast('Expense deleted successfully');
+          await this.refreshAll();
+          if (this.currentExpensesPropertyId) {
+            this.openPropertyExpenses(this.currentExpensesPropertyId);
+          }
+        } catch (err) {
+          alert('Error deleting expense: ' + err.message);
+        }
+      }
+    });
+  },
+
+  async loadBills() {
+    try {
+      this.bills = await API.getBills();
+      this.renderBills('ALL');
+    } catch (err) {
+      console.error(err);
+    }
+  },
+
+  renderBills(filter = 'ALL') {
+    const container = document.getElementById('all-bills-container');
+    if (!container) return;
+    let list = this.bills;
+    if (filter !== 'ALL') {
+      list = this.bills.filter(b => b.status === filter);
+    }
+
+    if (list.length === 0) {
+      container.innerHTML = `<div class="empty-state">No ${filter === 'ALL' ? '' : filter.toLowerCase()} bills found.</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(b => this.renderBillCardHtml(b)).join('');
+    this.attachBillActionListeners(container);
+    this.refreshIcons();
+  },
+
+  // Toggle card dropdown menu safely
+  toggleDropdown(buttonEl, event) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    const parentDropdown = buttonEl.closest('.card-dropdown');
+    const wasActive = parentDropdown.classList.contains('active');
+    
+    // Close other dropdowns first
+    document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+    
+    if (!wasActive) {
+      parentDropdown.classList.add('active');
+    }
+  },
+
+  renderBillCardHtml(b) {
+    const curr = window.APP_CURRENCY;
+    const badgeClass = b.status === 'PAID' ? 'badge-paid' : (b.status === 'OVERDUE' ? 'badge-overdue' : (b.status === 'PARTIAL' ? 'badge-partial' : 'badge-pending'));
+    
+    return `
+      <div class="app-card">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${b.tenant_name} <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(${b.property_name})</span></div>
+            <div class="card-subtitle">Bill #${b.bill_number} • ${b.billing_month} • Due ${b.due_date}</div>
+          </div>
+          <div class="card-top-right">
+            <span class="badge ${badgeClass}">${b.status}</span>
+            <div class="card-dropdown">
+              <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="Bill options">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="card-dropdown-menu">
+                <button type="button" class="dropdown-item btn-action-remind" data-bill-id="${b.id}">
+                  <i data-lucide="message-circle" style="color:var(--success);"></i> WhatsApp Reminder
+                </button>
+                <button type="button" class="dropdown-item btn-action-share" data-bill-id="${b.id}">
+                  <i data-lucide="share-2"></i> Share Bill
+                </button>
+                <button type="button" class="dropdown-item btn-action-view" data-bill-id="${b.id}">
+                  <i data-lucide="printer"></i> View / Print
+                </button>
+                <button type="button" class="dropdown-item btn-action-edit" data-bill-id="${b.id}">
+                  <i data-lucide="edit-3"></i> Edit Bill
+                </button>
+                ${b.status !== 'PAID' ? `
+                  <button type="button" class="dropdown-item btn-action-pay" data-bill-id="${b.id}">
+                    <i data-lucide="credit-card"></i> Record Payment
+                  </button>
+                ` : ''}
+                <button type="button" class="dropdown-item dropdown-item-danger btn-action-del" data-bill-id="${b.id}">
+                  <i data-lucide="trash-2"></i> Delete Bill
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-middle">
+          <div>
+            <div class="card-amount-label">Total Bill</div>
+            <div class="card-amount-val">${curr}${b.total_amount.toFixed(2)}</div>
+          </div>
+          ${b.paid_amount > 0 ? `
+            <div style="text-align:right;">
+              <div class="card-amount-label">Balance Due</div>
+              <div style="font-size:1.15rem; font-weight:700; color:var(--danger);">${curr}${b.balance_amount.toFixed(2)}</div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  },
+
+  attachBillActionListeners(container) {
+    container.querySelectorAll('.btn-action-view').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        this.showInvoice(btn.getAttribute('data-bill-id'));
+      });
+    });
+
+    container.querySelectorAll('.btn-action-remind').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const id = parseInt(btn.getAttribute('data-bill-id'), 10);
+        this.openReminderModalForBill(id);
+      });
+    });
+
+    container.querySelectorAll('.btn-action-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        this.editBill(btn.getAttribute('data-bill-id'));
+      });
+    });
+
+    container.querySelectorAll('.btn-action-share').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const id = parseInt(btn.getAttribute('data-bill-id'), 10);
+        // Look up cached bill synchronously so user gesture is never broken
+        let bill = App.bills.find(b => b.id === id);
+        if (bill) {
+          Share.shareBill(bill);
+        } else {
+          API.getBill(id).then(b => Share.shareBill(b));
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-action-pay').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        this.openPaymentModal(btn.getAttribute('data-bill-id'));
+      });
+    });
+
+    container.querySelectorAll('.btn-action-del').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const billId = parseInt(btn.getAttribute('data-bill-id'), 10);
+        const bill = App.bills.find(b => b.id === billId);
+        const billNo = bill ? bill.bill_number : `#${billId}`;
+        const tenantName = bill ? bill.tenant_name : 'Tenant';
+        const month = bill && bill.billing_month ? bill.billing_month : '';
+        const curr = window.APP_CURRENCY || '₹';
+        const amount = bill ? `${curr}${bill.total_amount.toFixed(2)}` : '';
+
+        let warningHtml = `Are you sure you want to delete invoice <strong>${billNo}</strong> for <strong>${tenantName}</strong> (${month})?`;
+        if (bill && bill.paid_amount > 0) {
+          warningHtml += `<br><br><span style="color:var(--danger); font-weight:600;"><i data-lucide="alert-triangle" style="width:14px; height:14px; vertical-align:-2px;"></i> Payment Warning:</span> This bill has <strong>${curr}${bill.paid_amount.toFixed(2)}</strong> in recorded payments. Deleting this bill will also remove these payment records.`;
+        }
+
+        this.confirmDelete({
+          title: 'Delete Bill',
+          subtitle: `${billNo} • ${tenantName} ${amount ? `(${amount})` : ''}`,
+          warningHtml: warningHtml,
+          buttonLabel: 'Hold to Delete Bill (10s)',
+          onConfirm: async () => {
+            try {
+              await API.deleteBill(billId);
+              this.toast('Bill deleted');
+              await this.refreshAll();
+            } catch (err) {
+              alert('Error: ' + err.message);
+            }
+          }
+        });
+      });
+    });
+  },
+
+  async showInvoice(billId) {
+    try {
+      const b = await API.getBill(billId);
+      this.currentBillForInvoice = b;
+      const curr = window.APP_CURRENCY;
+      const statusBadge = `<span class="badge ${b.status === 'PAID' ? 'badge-paid' : (b.status === 'OVERDUE' ? 'badge-overdue' : 'badge-pending')}">${b.status}</span>`;
+
+      const html = `
+        <div class="inv-header">
+          <div>
+            <div class="inv-title">RENT INVOICE</div>
+            <div class="inv-num">Invoice #${b.bill_number}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">Date: ${b.created_at.split('T')[0] || b.created_at.split(' ')[0]}</div>
+          </div>
+          <div style="text-align:right;">
+            ${statusBadge}
+            <div style="font-size:0.85rem; font-weight:700; margin-top:6px;">${b.billing_month}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Due: ${b.due_date}</div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-bottom:14px; font-size:0.85rem;">
+          <div>
+            <strong>Billed To:</strong><br>
+            ${b.tenant_name}<br>
+            Phone: ${b.tenant_phone}
+          </div>
+          <div style="text-align:right;">
+            <strong>Property Unit:</strong><br>
+            ${b.property_name}
+          </div>
+        </div>
+
+        <table class="inv-table">
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th class="num">Amount (${curr})</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Base House Rent</td>
+              <td class="num">${curr}${b.base_rent.toFixed(2)}</td>
+            </tr>
+            ${b.electricity_amount > 0 ? `
+              <tr>
+                <td>
+                  Electricity (${b.electricity_units} units @ ${curr}${b.electricity_rate})<br>
+                  <small style="color:var(--text-muted);">Meter: ${b.prev_electricity_meter} ➔ ${b.curr_electricity_meter}</small>
+                </td>
+                <td class="num">${curr}${b.electricity_amount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            ${b.water_amount > 0 ? `
+              <tr>
+                <td>
+                  ${b.water_billing_type === 'METER' ? `
+                    Water Meter (${b.water_units} units @ ${curr}${b.water_rate})<br>
+                    <small style="color:var(--text-muted);">Meter: ${b.prev_water_meter} ➔ ${b.curr_water_meter}</small>
+                  ` : `Water Charges (Fixed)`}
+                </td>
+                <td class="num">${curr}${b.water_amount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            ${b.maintenance_amount > 0 ? `
+              <tr>
+                <td>Maintenance Charges</td>
+                <td class="num">${curr}${b.maintenance_amount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            ${b.other_charges > 0 ? `
+              <tr>
+                <td>Other: ${b.other_charges_desc || 'Adjustments'}</td>
+                <td class="num">${curr}${b.other_charges.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            ${b.previous_balance > 0 ? `
+              <tr style="background:rgba(239, 68, 68, 0.05);">
+                <td style="color:var(--danger); font-weight:600;">
+                  <i data-lucide="history" style="width:13px; height:13px; vertical-align:-2px;"></i> Previous Arrears / Unpaid Balance
+                </td>
+                <td class="num" style="color:var(--danger); font-weight:700;">${curr}${b.previous_balance.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            <tr class="inv-total-row" style="border-top:2px solid var(--border);">
+              <td>Total Amount</td>
+              <td class="num" style="color:var(--primary); font-size:1.15rem;">${curr}${b.total_amount.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td>Paid Amount</td>
+              <td class="num" style="color:var(--success); font-weight:600;">${curr}${b.paid_amount.toFixed(2)}</td>
+            </tr>
+            <tr style="font-weight:700;">
+              <td>Balance Due</td>
+              <td class="num" style="color:${b.balance_amount > 0 ? 'var(--danger)' : 'var(--text-main)'}; font-size:1.05rem;">
+                ${curr}${b.balance_amount.toFixed(2)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="amount-words-box" style="font-size:0.82rem; margin-top:8px; padding:6px 10px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border);">
+          <strong>Amount in Words:</strong> ${typeof Share !== 'undefined' ? Share.amountInWords(b.total_amount) : ''}
+        </div>
+
+        ${(b.payment_upi || b.payment_bank_name) ? `
+          <div class="payment-details-box" style="margin-top:12px; padding:10px 12px; background:var(--surface-alt); border-radius:var(--radius-sm); border:1px dashed var(--border); font-size:0.82rem;">
+            <div style="font-weight:700; color:var(--primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+              <i data-lucide="credit-card" style="width:14px; height:14px;"></i> Payment Details (Pay To)
+            </div>
+            ${b.payment_upi ? `<div><strong>UPI ID:</strong> <span style="font-family:monospace; font-size:0.9rem;">${b.payment_upi}</span></div>` : ''}
+            ${b.payment_bank_name ? `<div><strong>Bank:</strong> ${b.payment_bank_name}</div>` : ''}
+            ${b.payment_account_no ? `<div><strong>A/C No:</strong> <span style="font-family:monospace;">${b.payment_account_no}</span></div>` : ''}
+            ${b.payment_ifsc ? `<div><strong>IFSC:</strong> <span style="font-family:monospace;">${b.payment_ifsc}</span></div>` : ''}
+          </div>
+        ` : ''}
+
+        ${b.notes ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;"><strong>Note:</strong> ${b.notes}</p>` : ''}
+      `;
+
+      document.getElementById('invoice-printable').innerHTML = html;
+      this.openModal('modal-invoice');
+      this.refreshIcons();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  },
+
+  openBillModalForTenant(tenantId) {
+    this.openBillModal();
+    const sel = document.getElementById('bill-tenant-select');
+    if (sel) {
+      sel.value = tenantId;
+      sel.dispatchEvent(new Event('change'));
+    }
+  },
+
+  openBillModal() {
+    document.getElementById('form-bill').reset();
+    document.getElementById('bill-id').value = '';
+    document.getElementById('modal-bill-title').textContent = 'Generate Rent & Utility Bill';
+    document.getElementById('bill-elec-units').value = '0 units';
+    document.getElementById('bill-elec-subtotal').textContent = `${window.APP_CURRENCY}0.00`;
+    document.getElementById('bill-water-units').value = '0 units';
+    document.getElementById('bill-water-subtotal').textContent = `${window.APP_CURRENCY}0.00`;
+    document.getElementById('bill-calculated-total').textContent = `${window.APP_CURRENCY}0.00`;
+
+    // Reset carryover hints & warnings
+    document.getElementById('badge-elec-meter-source')?.setAttribute('style', 'display:none;');
+    document.getElementById('badge-water-meter-source')?.setAttribute('style', 'display:none;');
+    document.getElementById('badge-prev-balance')?.setAttribute('style', 'display:none;');
+    document.getElementById('hint-prev-elec') && (document.getElementById('hint-prev-elec').textContent = '');
+    document.getElementById('hint-prev-water') && (document.getElementById('hint-prev-water').textContent = '');
+    document.getElementById('hint-prev-balance') && (document.getElementById('hint-prev-balance').textContent = 'Carried forward from previous unpaid bill');
+    document.getElementById('warn-curr-elec')?.setAttribute('style', 'display:none;');
+    document.getElementById('warn-curr-water')?.setAttribute('style', 'display:none;');
+    document.getElementById('btn-unlock-prev-elec')?.setAttribute('style', 'display:none;');
+    document.getElementById('btn-unlock-prev-water')?.setAttribute('style', 'display:none;');
+
+    const prevElec = document.getElementById('bill-prev-meter');
+    if (prevElec) {
+      prevElec.removeAttribute('readonly');
+      prevElec.classList.remove('input-readonly');
+    }
+    const prevWater = document.getElementById('bill-prev-water-meter');
+    if (prevWater) {
+      prevWater.removeAttribute('readonly');
+      prevWater.classList.remove('input-readonly');
+    }
+
+    this.setupDateBadge();
+    this.openModal('modal-bill');
+  },
+
+  async editBill(id) {
+    try {
+      const b = await API.getBill(id);
+      document.getElementById('bill-id').value = b.id;
+      document.getElementById('modal-bill-title').textContent = `Edit Bill #${b.bill_number}`;
+
+      // Reset carryover hints & warnings for edit
+      document.getElementById('badge-elec-meter-source')?.setAttribute('style', 'display:none;');
+      document.getElementById('badge-water-meter-source')?.setAttribute('style', 'display:none;');
+      document.getElementById('badge-prev-balance')?.setAttribute('style', 'display:none;');
+      document.getElementById('hint-prev-elec') && (document.getElementById('hint-prev-elec').textContent = '');
+      document.getElementById('hint-prev-water') && (document.getElementById('hint-prev-water').textContent = '');
+      document.getElementById('hint-prev-balance') && (document.getElementById('hint-prev-balance').textContent = 'Carried forward from previous unpaid bill');
+      document.getElementById('warn-curr-elec')?.setAttribute('style', 'display:none;');
+      document.getElementById('warn-curr-water')?.setAttribute('style', 'display:none;');
+      document.getElementById('btn-unlock-prev-elec')?.setAttribute('style', 'display:none;');
+      document.getElementById('btn-unlock-prev-water')?.setAttribute('style', 'display:none;');
+
+      const prevElec = document.getElementById('bill-prev-meter');
+      if (prevElec) {
+        prevElec.removeAttribute('readonly');
+        prevElec.classList.remove('input-readonly');
+      }
+      const prevWater = document.getElementById('bill-prev-water-meter');
+      if (prevWater) {
+        prevWater.removeAttribute('readonly');
+        prevWater.classList.remove('input-readonly');
+      }
+
+      const sel = document.getElementById('bill-tenant-select');
+      if (sel) sel.value = b.tenant_id;
+      document.getElementById('bill-property-display').value = b.property_name || '';
+      document.getElementById('bill-property-id').value = b.property_id || '';
+      document.getElementById('bill-month').value = b.billing_month || '';
+      document.getElementById('bill-due-date').value = b.due_date || '';
+      document.getElementById('bill-base-rent').value = b.base_rent || 0;
+
+      // Electricity
+      document.getElementById('bill-prev-meter').value = b.prev_electricity_meter || 0;
+      document.getElementById('bill-curr-meter').value = b.curr_electricity_meter || 0;
+      document.getElementById('bill-elec-rate').value = b.electricity_rate || 0;
+
+      // Water
+      const wType = b.water_billing_type || 'FIXED';
+      document.getElementById('bill-water-type').value = wType;
+      document.getElementById('bill-water-fixed-box').style.display = wType === 'METER' ? 'none' : 'block';
+      document.getElementById('bill-water-meter-box').style.display = wType === 'METER' ? 'block' : 'none';
+      document.getElementById('bill-water').value = b.water_amount || 0;
+      document.getElementById('bill-prev-water-meter').value = b.prev_water_meter || 0;
+      document.getElementById('bill-curr-water-meter').value = b.curr_water_meter || 0;
+      document.getElementById('bill-water-rate').value = b.water_rate || 0;
+
+      document.getElementById('bill-maint').value = b.maintenance_amount || 0;
+      document.getElementById('bill-other').value = b.other_charges || 0;
+      document.getElementById('bill-other-desc').value = b.other_charges_desc || '';
+      const elPrevBal = document.getElementById('bill-prev-balance');
+      if (elPrevBal) elPrevBal.value = b.previous_balance || 0;
+      document.getElementById('bill-notes').value = b.notes || '';
+
+      // Trigger calculation event
+      document.getElementById('bill-base-rent').dispatchEvent(new Event('input'));
+      this.openModal('modal-bill');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+  },
+
+  openTenantModal() {
+    document.getElementById('form-tenant').reset();
+    document.getElementById('tenant-id').value = '';
+    const statusSelect = document.getElementById('tenant-is-active');
+    if (statusSelect) statusSelect.value = '1';
+    document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
+    this.openModal('modal-tenant');
+  },
+
+  openPropertyModal() {
+    document.getElementById('form-property').reset();
+    document.getElementById('prop-id').value = '';
+    document.getElementById('modal-property-title').textContent = 'Add Property / Unit';
+    document.getElementById('group-prop-water-fixed').style.display = 'block';
+    document.getElementById('group-prop-water-meter').style.display = 'none';
+    this.openModal('modal-property');
+  },
+
+  openSettingsModal() {
+    this.openModal('modal-settings');
+  },
+
+  async openPaymentModal(billId) {
+    try {
+      const b = await API.getBill(billId);
+      const curr = window.APP_CURRENCY;
+      document.getElementById('pay-bill-id').value = b.id;
+      document.getElementById('pay-amount').value = b.balance_amount > 0 ? b.balance_amount : '';
+      document.getElementById('pay-bill-info').innerHTML = `
+        <div style="background:var(--surface-alt); padding:10px; border-radius:var(--radius-sm); margin-bottom:12px; font-size:0.85rem;">
+          <strong>Bill #${b.bill_number}</strong> for <strong>${b.tenant_name}</strong><br>
+          Total: ${curr}${b.total_amount.toFixed(2)} | Paid: ${curr}${b.paid_amount.toFixed(2)} | 
+          <span style="color:var(--danger); font-weight:700;">Due: ${curr}${b.balance_amount.toFixed(2)}</span>
+        </div>
+      `;
+      this.openModal('modal-payment');
+      this.refreshIcons();
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  },
+
+  // --- Automated WhatsApp Reminder Engine ---
+
+  async openReminderModalForTenant(tenantId) {
+    const tenant = this.tenants.find(t => t.id == tenantId) || await API.getTenant(tenantId).catch(() => null);
+    if (!tenant) return;
+
+    // Find latest unpaid or most recent bill for this tenant
+    const tenantBills = (this.bills || []).filter(b => b.tenant_id == tenantId);
+    const bill = tenantBills.find(b => b.status !== 'PAID') || tenantBills[0] || null;
+
+    this.showReminderDialog(bill, tenant);
+  },
+
+  async openReminderModalForBill(billId) {
+    const bill = (this.bills || []).find(b => b.id == billId) || await API.getBill(billId).catch(() => null);
+    if (!bill) return;
+    const tenant = (this.tenants || []).find(t => t.id == bill.tenant_id) || null;
+
+    this.showReminderDialog(bill, tenant);
+  },
+
+  showReminderDialog(bill, tenant) {
+    this.currentReminderBill = bill;
+    this.currentReminderTenant = tenant;
+
+    const tenantName = (tenant && tenant.name) || (bill && bill.tenant_name) || 'Tenant';
+    const subtitle = document.getElementById('reminder-tenant-subtitle');
+    if (subtitle) {
+      const propName = (tenant && tenant.property_name) || (bill && bill.property_name) || '';
+      subtitle.textContent = `Tenant: ${tenantName} ${propName ? '(' + propName + ')' : ''}`;
+    }
+
+    // Default template: if overdue -> 'overdue', if due today -> 'due_today', if paid -> 'receipt', else -> 'gentle'
+    let defaultType = 'gentle';
+    if (bill) {
+      if (bill.status === 'PAID') defaultType = 'receipt';
+      else if (bill.status === 'OVERDUE') defaultType = 'overdue';
+      else {
+        const today = new Date().toISOString().split('T')[0];
+        if (bill.due_date === today) defaultType = 'due_today';
+      }
+    }
+
+    const pills = document.querySelectorAll('#modal-reminder .template-pill');
+    pills.forEach(p => {
+      if (p.getAttribute('data-tpl') === defaultType) p.classList.add('active');
+      else p.classList.remove('active');
+    });
+
+    const msgBox = document.getElementById('reminder-message-text');
+    if (msgBox) {
+      msgBox.value = Share.buildReminderMessage(defaultType, bill, tenant);
+    }
+
+    // Bind template pill clicks
+    pills.forEach(p => {
+      p.onclick = () => {
+        pills.forEach(x => x.classList.remove('active'));
+        p.classList.add('active');
+        const tplType = p.getAttribute('data-tpl');
+        if (msgBox) {
+          msgBox.value = Share.buildReminderMessage(tplType, this.currentReminderBill, this.currentReminderTenant);
+        }
+      };
+    });
+
+    // Bind copy message
+    const btnCopy = document.getElementById('btn-copy-reminder-msg');
+    if (btnCopy && msgBox) {
+      btnCopy.onclick = async () => {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(msgBox.value);
+          } else {
+            msgBox.select();
+            document.execCommand('copy');
+          }
+          this.toast('Reminder text copied to clipboard!');
+        } catch (e) {
+          msgBox.select();
+          document.execCommand('copy');
+          this.toast('Copied!');
+        }
+      };
+    }
+
+    // Bind send whatsapp
+    const btnSend = document.getElementById('btn-send-whatsapp-now');
+    if (btnSend) {
+      btnSend.onclick = () => {
+        const phone = (tenant && tenant.phone) || (bill && bill.tenant_phone) || '';
+        const text = msgBox ? msgBox.value : '';
+        Share.sendWhatsAppDirect(phone, text);
+        this.closeModal('modal-reminder');
+      };
+    }
+
+    this.openModal('modal-reminder');
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  App.init();
+});
+
