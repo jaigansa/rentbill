@@ -1254,11 +1254,17 @@ const App = {
                 <i data-lucide="more-vertical"></i>
               </button>
               <div class="card-dropdown-menu">
+                <button type="button" class="dropdown-item" onclick="App.openAddExpenseModal(${p.id})">
+                  <i data-lucide="plus"></i> Log Expense
+                </button>
+                <button type="button" class="dropdown-item" onclick="App.openPropertyExpenses(${p.id})">
+                  <i data-lucide="wrench"></i> View Expenses ${p.expense_count ? `(${p.expense_count})` : ''}
+                </button>
                 <button type="button" class="dropdown-item" onclick="App.editProperty(${p.id})">
                   <i data-lucide="edit-3"></i> Edit Property
                 </button>
                 <button type="button" class="dropdown-item dropdown-item-danger" onclick="App.deleteProperty(${p.id})">
-                  <i data-lucide="trash-2"></i> Delete
+                  <i data-lucide="trash-2"></i> Delete Property
                 </button>
               </div>
             </div>
@@ -1279,14 +1285,6 @@ const App = {
             <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};" title="${this.formatFullMoney(p.net_profit || 0)}">${this.formatMoney(p.net_profit || 0, true)}</strong></span>
           </div>
         ` : ''}
-        <div class="card-actions" style="margin-top:10px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openPropertyExpenses(${p.id})">
-            <i data-lucide="wrench"></i> Expenses ${p.expense_count ? `(${p.expense_count})` : ''}
-          </button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="App.openAddExpenseModal(${p.id})">
-            <i data-lucide="plus"></i> Log Expense
-          </button>
-        </div>
       </div>
     `).join('');
     this.refreshIcons();
@@ -1441,6 +1439,12 @@ const App = {
                 <i data-lucide="more-vertical"></i>
               </button>
               <div class="card-dropdown-menu">
+                <button type="button" class="dropdown-item" onclick="App.openBillModalForTenant(${t.id})">
+                  <i data-lucide="plus"></i> Generate Bill
+                </button>
+                <button type="button" class="dropdown-item" onclick="App.openTenantLedger(${t.id})">
+                  <i data-lucide="book-open"></i> Passbook / Ledger
+                </button>
                 <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
                   <i data-lucide="edit-3"></i> Edit Tenant
                 </button>
@@ -1454,7 +1458,7 @@ const App = {
                   </button>
                 `}
                 <button type="button" class="dropdown-item dropdown-item-danger" onclick="App.deleteTenant(${t.id})">
-                  <i data-lucide="trash-2"></i> Delete
+                  <i data-lucide="trash-2"></i> Delete Tenant
                 </button>
               </div>
             </div>
@@ -1474,17 +1478,6 @@ const App = {
             </span>
           </div>
         ` : ''}
-        <div class="card-actions">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openTenantLedger(${t.id})">
-            <i data-lucide="book-open"></i> Passbook
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openReminderModalForTenant(${t.id})" title="Send ${chLabel} Notice">
-            <i data-lucide="${chIcon}" style="color:${isWa ? 'var(--success)' : 'var(--primary)'};"></i> Notice
-          </button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="App.openBillModalForTenant(${t.id})">
-            <i data-lucide="plus"></i> Bill
-          </button>
-        </div>
       </div>
     `;
     }).join('');
