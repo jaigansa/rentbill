@@ -181,12 +181,14 @@
     color: #1f2937 !important;
   }
 
-  /* Invoice layout for print */
+  /* =========================================================
+     PRO-STYLE BLACK & WHITE (MONOCHROME) PRINT INVOICE
+     ========================================================= */
   .invoice-container {
-    border: 1px solid #d1d5db !important;
-    border-radius: 8px !important;
+    border: 1.5px solid #000000 !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 20px 24px !important;
+    padding: 24px 28px !important;
     margin: 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -197,96 +199,110 @@
   }
 
   .inv-header {
-    border-bottom: 2px solid #2563eb !important;
-    padding-bottom: 12px !important;
-    margin-bottom: 16px !important;
+    border-bottom: 2px solid #000000 !important;
+    padding-bottom: 14px !important;
+    margin-bottom: 18px !important;
   }
 
   .inv-title {
-    color: #1e40af !important;
-    font-size: 1.6rem !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.5px !important;
+    color: #000000 !important;
+    font-size: 1.7rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
   }
 
   .inv-num {
-    color: #4b5563 !important;
+    color: #000000 !important;
     font-size: 0.95rem !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
   }
 
-  /* Status badge in print */
+  /* Monochrome Stamp Status Badge */
   .badge {
-    border: 1px solid currentColor !important;
-    padding: 2px 10px !important;
-    border-radius: 999px !important;
-    font-weight: 700 !important;
-    font-size: 0.8rem !important;
+    border: 2px solid #000000 !important;
+    background: transparent !important;
+    color: #000000 !important;
+    padding: 3px 12px !important;
+    border-radius: 4px !important;
+    font-weight: 800 !important;
+    font-size: 0.85rem !important;
     text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
     display: inline-block !important;
   }
 
-  .badge-paid {
-    background: #dcfce7 !important;
-    color: #15803d !important;
-    border-color: #86efac !important;
-  }
-
-  .badge-pending {
-    background: #fef3c7 !important;
-    color: #b45309 !important;
-    border-color: #fcd34d !important;
-  }
-
+  .badge-paid,
+  .badge-pending,
   .badge-overdue {
-    background: #fee2e2 !important;
-    color: #b91c1c !important;
-    border-color: #fca5a5 !important;
+    background: transparent !important;
+    color: #000000 !important;
+    border-color: #000000 !important;
   }
 
-  /* Table styling */
+  /* High-Contrast Crisp Table */
   .inv-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin: 16px 0 !important;
+    margin: 18px 0 !important;
     font-size: 0.95rem !important;
   }
 
   .inv-table th {
-    background: #f3f4f6 !important;
-    color: #111827 !important;
-    border-top: 1px solid #d1d5db !important;
-    border-bottom: 2px solid #9ca3af !important;
+    background: transparent !important;
+    color: #000000 !important;
+    border-top: 1.5px solid #000000 !important;
+    border-bottom: 1.5px solid #000000 !important;
     padding: 8px 10px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.5px !important;
   }
 
   .inv-table td {
-    border-bottom: 1px solid #e5e7eb !important;
-    padding: 8px 10px !important;
-    color: #1f2937 !important;
+    border-bottom: 1px solid #d4d4d8 !important;
+    padding: 9px 10px !important;
+    color: #000000 !important;
   }
 
   .inv-table td.num, .inv-table th.num {
     text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
   }
 
+  /* Formal Bookkeeping Double-Underline for Totals */
   .inv-total-row td {
-    border-top: 2px solid #374151 !important;
-    font-weight: 800 !important;
-    font-size: 1.1rem !important;
-    color: #1e3a8a !important;
+    border-top: 1.5px solid #000000 !important;
+    border-bottom: 3px double #000000 !important;
+    font-weight: 900 !important;
+    font-size: 1.15rem !important;
+    color: #000000 !important;
   }
 
-  /* Preserving details boxes */
+  /* Clean Ink-Friendly Boxes (No heavy grey tints) */
   .amount-words-box,
   .payment-details-box {
-    background: #f9fafb !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 6px !important;
-    padding: 8px 12px !important;
-    margin-top: 10px !important;
+    background: transparent !important;
+    border: 1px solid #000000 !important;
+    border-radius: 4px !important;
+    padding: 10px 14px !important;
+    margin-top: 12px !important;
+    color: #000000 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .payment-details-box div {
+    color: #000000 !important;
+  }
+
+  /* Digital Invoice Notice */
+  .inv-footer-notice {
+    border-top: 1px solid #000000 !important;
+    color: #3f3f46 !important;
+    font-size: 0.72rem !important;
+    margin-top: 20px !important;
+    padding-top: 8px !important;
   }
 }

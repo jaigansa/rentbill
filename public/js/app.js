@@ -2252,6 +2252,11 @@ const App = {
         ` : ''}
 
         ${b.notes ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;"><strong>Note:</strong> ${b.notes}</p>` : ''}
+        
+        <div class="inv-footer-notice" style="margin-top:16px; padding-top:10px; border-top:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted);">
+          <span>This is a computer-generated invoice and requires no physical signature.</span>
+          <span>Generated via <strong>RentBill</strong></span>
+        </div>
       `;
 
       document.getElementById('invoice-printable').innerHTML = html;
