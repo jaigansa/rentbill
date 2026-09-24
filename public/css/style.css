@@ -1081,6 +1081,10 @@ textarea:hover::-webkit-scrollbar-thumb {
     font-weight: 600;
     white-space: nowrap;
   }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 
 /* Forms */
@@ -1100,6 +1104,9 @@ textarea:hover::-webkit-scrollbar-thumb {
 .form-group select,
 .form-group textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   font-size: 1rem; /* 16px to prevent iOS Safari auto-zoom on focus */
   border: 1px solid var(--border);
@@ -1108,6 +1115,13 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--text-main);
   outline: none;
   transition: border-color 0.15s ease;
+}
+
+.form-group input[type="date"],
+.form-group input[type="month"] {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 42px;
 }
 
 .form-group input:focus,
@@ -1124,8 +1138,12 @@ textarea:hover::-webkit-scrollbar-thumb {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+}
+
+.form-row > .form-group {
+  min-width: 0;
 }
 
 .form-divider {
