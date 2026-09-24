@@ -17,8 +17,13 @@ const App = {
   properties: [],
   tenants: [],
   bills: [],
+  isPINEnabled: false,
+  isAppLocked: false,
+  enteredPIN: '',
+  isVerifyingPIN: false,
 
   async init() {
+    this.bindVisualViewport();
     this.setupDateBadge();
     this.bindNavigation();
     this.bindModals();
@@ -27,16 +32,70 @@ const App = {
     this.initHoldToDelete();
     this.bindDashboardControls();
     this.bindSearchAndFilters();
+    this.bindAppLock();
 
+    await this.checkAuthStatus();
     await this.loadSettings();
     await this.refreshAll();
     this.refreshIcons();
+  },
+
+  bindVisualViewport() {
+    if (window.visualViewport) {
+      const updateViewport = () => {
+        const vv = window.visualViewport;
+        document.documentElement.style.setProperty('--vvh', `${vv.height}px`);
+      };
+      window.visualViewport.addEventListener('resize', updateViewport);
+      window.visualViewport.addEventListener('scroll', updateViewport);
+      updateViewport();
+    }
   },
 
   refreshIcons() {
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
       window.lucide.createIcons();
     }
+  },
+
+  // Smart currency formatter: cleanly formats large numbers (Crores, Lakhs, Thousands)
+  formatMoney(amount, compact = false) {
+    const curr = window.APP_CURRENCY || '₹';
+    const num = Number(amount) || 0;
+    const isNeg = num < 0;
+    const abs = Math.abs(num);
+
+    if (compact) {
+      // 1 Crore = 10,000,000 (100 Lakhs)
+      if (abs >= 10000000) {
+        const cr = abs / 10000000;
+        const formattedCr = cr >= 100 ? cr.toFixed(1) : cr.toFixed(2);
+        return `${isNeg ? '-' : ''}${curr}${parseFloat(formattedCr)} Cr`;
+      }
+      // 1 Lakh = 100,000
+      if (abs >= 100000) {
+        const l = abs / 100000;
+        const formattedL = l >= 100 ? l.toFixed(1) : l.toFixed(2);
+        return `${isNeg ? '-' : ''}${curr}${parseFloat(formattedL)} L`;
+      }
+    }
+
+    // Standard view with Indian comma grouping
+    const hasPaise = (abs % 1) !== 0;
+    const formatted = abs.toLocaleString('en-IN', {
+      minimumFractionDigits: hasPaise ? 2 : 0,
+      maximumFractionDigits: 2
+    });
+    return `${isNeg ? '-' : ''}${curr}${formatted}`;
+  },
+
+  formatFullMoney(amount) {
+    const curr = window.APP_CURRENCY || '₹';
+    const num = Number(amount) || 0;
+    return `${num < 0 ? '-' : ''}${curr}${Math.abs(num).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
   },
 
   setupDateBadge() {
@@ -105,13 +164,6 @@ const App = {
     document.getElementById('btn-quick-add-property')?.addEventListener('click', () => this.openPropertyModal());
     document.getElementById('btn-new-property-tab')?.addEventListener('click', () => this.openPropertyModal());
     document.getElementById('btn-open-settings')?.addEventListener('click', () => this.openSettingsModal());
-    document.getElementById('btn-ledger-add-bill')?.addEventListener('click', () => {
-      if (this.currentLedgerTenantId) {
-        this.openBillModalForTenant(this.currentLedgerTenantId);
-      } else {
-        this.openBillModal();
-      }
-    });
     document.getElementById('btn-prop-add-expense')?.addEventListener('click', () => {
       if (this.currentExpensesPropertyId) {
         this.openAddExpenseModal(this.currentExpensesPropertyId);
@@ -161,26 +213,11 @@ const App = {
     }
 
     // Invoice actions
-    document.getElementById('btn-invoice-edit')?.addEventListener('click', () => {
-      if (this.currentBillForInvoice) {
-        this.closeModal('modal-invoice');
-        this.editBill(this.currentBillForInvoice.id);
-      }
-    });
-    document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
-      if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
-    });
     document.getElementById('btn-invoice-download-img')?.addEventListener('click', () => {
       if (this.currentBillForInvoice) Share.downloadReceiptImage(this.currentBillForInvoice);
     });
     document.getElementById('btn-invoice-print')?.addEventListener('click', () => {
       Share.printInvoice();
-    });
-    document.getElementById('btn-invoice-record-pay')?.addEventListener('click', () => {
-      if (this.currentBillForInvoice) {
-        this.closeModal('modal-invoice');
-        this.openPaymentModal(this.currentBillForInvoice.id);
-      }
     });
 
     // Close buttons
@@ -602,6 +639,7 @@ const App = {
         payment_ifsc: document.getElementById('tenant-payment-ifsc').value.trim().toUpperCase(),
         initial_elec_meter: parseFloat(document.getElementById('tenant-init-elec').value) || 0,
         initial_water_meter: parseFloat(document.getElementById('tenant-init-water').value) || 0,
+        preferred_channel: document.getElementById('tenant-channel')?.value || 'SMS_RCS',
         is_active: isActiveVal
       };
 
@@ -880,21 +918,33 @@ const App = {
       if (pctEl) pctEl.textContent = `${collPct}%`;
       if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, collPct))}%`;
       if (subEl) {
-        subEl.textContent = `${curr}${data.total_collected.toFixed(2)} collected of ${curr}${data.total_billed.toFixed(2)} billed`;
+        subEl.textContent = `${this.formatMoney(data.total_collected, true)} collected of ${this.formatMoney(data.total_billed, true)} billed`;
+        subEl.title = `Collected: ${this.formatFullMoney(data.total_collected)} of ${this.formatFullMoney(data.total_billed)}`;
       }
 
-      // 3. Quick Stats Grid
-      document.getElementById('dash-total-billed').textContent = `${curr}${data.total_billed.toFixed(2)}`;
-      document.getElementById('dash-total-collected').textContent = `${curr}${data.total_collected.toFixed(2)}`;
-      document.getElementById('dash-total-pending').textContent = `${curr}${data.total_pending.toFixed(2)}`;
-      document.getElementById('dash-total-overdue').textContent = `${curr}${data.total_overdue.toFixed(2)}`;
+      // 3. Quick Stats Grid (Clean compact formatting for Crores, Lakhs, and Large Numbers)
+      const setStatCard = (id, amount) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = this.formatMoney(amount, true);
+        el.title = this.formatFullMoney(amount);
+      };
+
+      setStatCard('dash-total-billed', data.total_billed);
+      setStatCard('dash-total-collected', data.total_collected);
+      setStatCard('dash-total-pending', data.total_pending);
+      setStatCard('dash-total-overdue', data.total_overdue);
 
       const expEl = document.getElementById('dash-total-expenses');
-      if (expEl) expEl.textContent = `${curr}${(data.total_expenses || 0).toFixed(2)}`;
+      if (expEl) {
+        expEl.textContent = this.formatMoney(data.total_expenses || 0, true);
+        expEl.title = this.formatFullMoney(data.total_expenses || 0);
+      }
       const netProfitEl = document.getElementById('dash-net-profit');
       if (netProfitEl) {
         const np = data.net_profit || 0;
-        netProfitEl.textContent = `${curr}${np.toFixed(2)}`;
+        netProfitEl.textContent = this.formatMoney(np, true);
+        netProfitEl.title = this.formatFullMoney(np);
         netProfitEl.style.color = np >= 0 ? 'var(--success)' : 'var(--danger)';
       }
 
@@ -941,11 +991,11 @@ const App = {
                     <span class="badge badge-overdue" style="font-size:0.68rem; padding:1px 6px;">Overdue</span>
                   </div>
                   <div class="action-card-sub">
-                    ${b.property_name} • Due: ${b.due_date} • <strong>Balance: ${curr}${balance.toFixed(2)}</strong>
+                    ${b.property_name} • Due: ${b.due_date} • <strong title="${this.formatFullMoney(balance)}">Balance: ${this.formatMoney(balance, true)}</strong>
                   </div>
                 </div>
                 <div class="action-card-right">
-                  <button type="button" class="btn-whatsapp-action" onclick="App.sendOverdueWhatsAppReminder(${b.id})" title="Send WhatsApp Reminder">
+                  <button type="button" class="btn-whatsapp-action" onclick="App.sendOverdueWhatsAppReminder(${b.id})" title="Send Reminder">
                     <i data-lucide="send" style="width:13px; height:13px;"></i> Remind
                   </button>
                 </div>
@@ -1028,9 +1078,15 @@ const App = {
       const waterAmountEl = document.getElementById('dash-total-water-amount');
 
       if (elecUnitsEl) elecUnitsEl.textContent = `${(data.total_elec_units || 0).toLocaleString()} Units`;
-      if (elecAmountEl) elecAmountEl.textContent = `${curr}${(data.total_elec_amount || 0).toFixed(2)} billed`;
+      if (elecAmountEl) {
+        elecAmountEl.textContent = `${this.formatMoney(data.total_elec_amount || 0, true)} billed`;
+        elecAmountEl.title = this.formatFullMoney(data.total_elec_amount || 0);
+      }
       if (waterUnitsEl) waterUnitsEl.textContent = `${(data.total_water_units || 0).toLocaleString()} Units`;
-      if (waterAmountEl) waterAmountEl.textContent = `${curr}${(data.total_water_amount || 0).toFixed(2)} billed`;
+      if (waterAmountEl) {
+        waterAmountEl.textContent = `${this.formatMoney(data.total_water_amount || 0, true)} billed`;
+        waterAmountEl.title = this.formatFullMoney(data.total_water_amount || 0);
+      }
 
       this.refreshIcons();
     } catch (err) {
@@ -1045,47 +1101,12 @@ const App = {
     document.getElementById('modal-tenant-title').textContent = 'Add New Tenant';
     const propSelect = document.getElementById('tenant-prop-id');
     if (propSelect) propSelect.value = propertyId;
+    const chSelect = document.getElementById('tenant-channel');
+    if (chSelect) chSelect.value = 'SMS_RCS';
   },
 
   async sendOverdueWhatsAppReminder(billId) {
-    try {
-      const b = await API.getBill(billId);
-      if (!b) return;
-
-      const curr = window.APP_CURRENCY || '₹';
-      const balance = (b.total_amount - b.paid_amount).toFixed(2);
-      const cleanPhone = (b.tenant_phone || '').replace(/[^0-9]/g, '');
-      const phoneWithCountry = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
-
-      let msg = `*RENT PAYMENT REMINDER*\n\n`;
-      msg += `Dear ${b.tenant_name},\n`;
-      msg += `This is a friendly reminder that your rent bill for *${b.property_name}* (${b.billing_month}) is overdue.\n\n`;
-      msg += `*Invoice No:* ${b.bill_number}\n`;
-      msg += `*Due Date:* ${b.due_date}\n`;
-      msg += `*Total Bill:* ${curr}${b.total_amount.toFixed(2)}\n`;
-      msg += `*Pending Balance:* ${curr}${balance}\n\n`;
-
-      if (b.payment_upi) {
-        msg += `*UPI ID for Payment:*\n${b.payment_upi}\n`;
-      }
-      if (b.payment_bank_name && b.payment_account_no) {
-        msg += `\n*Bank Transfer:*\n`;
-        msg += `Bank: ${b.payment_bank_name}\n`;
-        msg += `A/C: ${b.payment_account_no}\n`;
-        if (b.payment_ifsc) msg += `IFSC: ${b.payment_ifsc}\n`;
-      }
-
-      msg += `\nPlease clear the balance at your earliest convenience. Thank you!`;
-
-      const encoded = encodeURIComponent(msg);
-      const waUrl = phoneWithCountry
-        ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encoded}`
-        : `https://api.whatsapp.com/send?text=${encoded}`;
-
-      window.open(waUrl, '_blank');
-    } catch (e) {
-      alert('Error opening reminder: ' + e.message);
-    }
+    this.openReminderModalForBill(billId);
   },
 
   bindSearchAndFilters() {
@@ -1245,7 +1266,7 @@ const App = {
         </div>
         <div class="card-middle">
           <span class="card-amount-label">Base Rent</span>
-          <span class="card-amount-val">${curr}${p.default_rent.toFixed(2)}</span>
+          <span class="card-amount-val" title="${this.formatFullMoney(p.default_rent)}">${this.formatMoney(p.default_rent, true)}</span>
         </div>
         <div style="font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
           <span><i data-lucide="zap" style="width:14px; height:14px; vertical-align:-2px; color:var(--warning);"></i> Elec: ${curr}${p.electricity_rate}/unit</span>
@@ -1254,8 +1275,8 @@ const App = {
         </div>
         ${(p.expense_count > 0 || p.total_expenses > 0) ? `
           <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm); margin-top:8px;">
-            <span><i data-lucide="wrench" style="width:13px; height:13px; color:#dc2626; vertical-align:-2px;"></i> Expenses: <strong style="color:#dc2626;">${curr}${(p.total_expenses || 0).toFixed(2)}</strong> (${p.expense_count || 0})</span>
-            <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</strong></span>
+            <span><i data-lucide="wrench" style="width:13px; height:13px; color:#dc2626; vertical-align:-2px;"></i> Expenses: <strong style="color:#dc2626;" title="${this.formatFullMoney(p.total_expenses || 0)}">${this.formatMoney(p.total_expenses || 0, true)}</strong> (${p.expense_count || 0})</span>
+            <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};" title="${this.formatFullMoney(p.net_profit || 0)}">${this.formatMoney(p.net_profit || 0, true)}</strong></span>
           </div>
         ` : ''}
         <div class="card-actions" style="margin-top:10px;">
@@ -1393,12 +1414,25 @@ const App = {
       return;
     }
 
-    container.innerHTML = filtered.map(t => `
+    container.innerHTML = filtered.map(t => {
+      const ch = t.preferred_channel || 'SMS_RCS';
+      const isWa = ch === 'WHATSAPP';
+      const isBoth = ch === 'BOTH';
+      const chIcon = isWa ? 'message-circle' : 'message-square';
+      const chLabel = isWa ? 'WhatsApp' : (isBoth ? 'SMS/WA' : 'SMS/RCS');
+      const chClass = isWa ? 'badge-wa' : 'badge-sms';
+
+      return `
       <div class="app-card">
         <div class="card-top">
           <div>
             <div class="card-title">${t.name}</div>
-            <div class="card-subtitle"><i data-lucide="phone" style="width:14px; height:14px; vertical-align:-2px;"></i> ${t.phone} ${t.email ? '• ' + t.email : ''}</div>
+            <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span><i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone} ${t.email ? '• ' + t.email : ''}</span>
+              <span class="channel-badge ${chClass}">
+                <i data-lucide="${chIcon}" style="width:10px; height:10px;"></i> ${chLabel}
+              </span>
+            </div>
           </div>
           <div class="card-top-right">
             <span class="badge ${t.is_active ? 'badge-paid' : 'badge-date'}">${t.is_active ? 'Active' : 'Past'}</span>
@@ -1444,15 +1478,16 @@ const App = {
           <button type="button" class="btn btn-secondary btn-sm" onclick="App.openTenantLedger(${t.id})">
             <i data-lucide="book-open"></i> Passbook
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openReminderModalForTenant(${t.id})" title="Send WhatsApp Reminder">
-            <i data-lucide="message-circle" style="color:var(--success);"></i> Remind
+          <button type="button" class="btn btn-secondary btn-sm" onclick="App.openReminderModalForTenant(${t.id})" title="Send ${chLabel} Notice">
+            <i data-lucide="${chIcon}" style="color:${isWa ? 'var(--success)' : 'var(--primary)'};"></i> Notice
           </button>
           <button type="button" class="btn btn-primary btn-sm" onclick="App.openBillModalForTenant(${t.id})">
             <i data-lucide="plus"></i> Bill
           </button>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
     this.refreshIcons();
   },
 
@@ -1476,6 +1511,10 @@ const App = {
       const statusSelect = document.getElementById('tenant-is-active');
       if (statusSelect) {
         statusSelect.value = t.is_active ? '1' : '0';
+      }
+      const chSelect = document.getElementById('tenant-channel');
+      if (chSelect) {
+        chSelect.value = t.preferred_channel || 'SMS_RCS';
       }
 
       this.openModal('modal-tenant');
@@ -1628,8 +1667,7 @@ const App = {
         if (!bills || bills.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              No bills found for this tenant.<br>
-              Tap "+ Add Bill" to create one.
+              No bills found for this tenant.
             </div>
           `;
         } else {
@@ -1865,13 +1903,40 @@ const App = {
     this.refreshIcons();
   },
 
-  // Toggle card dropdown menu safely
+  // Toggle card dropdown menu safely (opens full-view action sheet on mobile/small screens, or inline dropdown on desktop)
   toggleDropdown(buttonEl, event) {
     if (event) {
       event.stopPropagation();
       event.preventDefault();
     }
     const parentDropdown = buttonEl.closest('.card-dropdown');
+    if (!parentDropdown) return;
+    const dropdownMenu = parentDropdown.querySelector('.card-dropdown-menu');
+    if (!dropdownMenu) return;
+
+    // Detect mobile / touch view
+    const isMobile = window.innerWidth <= 820 || (window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+
+    if (isMobile) {
+      // Close any active inline dropdowns first
+      document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+
+      // Extract card title and subtitle for context in the sheet header
+      const card = buttonEl.closest('.app-card');
+      let title = 'Options';
+      let subtitle = 'Select an action';
+
+      if (card) {
+        const titleEl = card.querySelector('.card-title');
+        const subEl = card.querySelector('.card-subtitle');
+        if (titleEl) title = titleEl.textContent.trim();
+        if (subEl) subtitle = subEl.textContent.trim();
+      }
+
+      this.openActionSheetFromDropdown(dropdownMenu, title, subtitle);
+      return;
+    }
+
     const wasActive = parentDropdown.classList.contains('active');
     
     // Close other dropdowns first
@@ -1882,8 +1947,46 @@ const App = {
     }
   },
 
+  openActionSheetFromDropdown(dropdownMenu, title, subtitle) {
+    const sheetTitle = document.getElementById('action-sheet-title');
+    const sheetSubtitle = document.getElementById('action-sheet-subtitle');
+    const sheetItems = document.getElementById('action-sheet-items');
+    if (!sheetItems) return;
+
+    if (sheetTitle) sheetTitle.textContent = title || 'Options';
+    if (sheetSubtitle) {
+      sheetSubtitle.textContent = subtitle || 'Select an action';
+      sheetSubtitle.style.display = subtitle ? 'block' : 'none';
+    }
+
+    sheetItems.innerHTML = '';
+
+    const items = dropdownMenu.querySelectorAll('.dropdown-item');
+    items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const isDanger = item.classList.contains('dropdown-item-danger');
+      btn.className = `action-sheet-btn ${isDanger ? 'action-sheet-btn-danger' : ''}`;
+      
+      // Transfer inner HTML (icon + label text)
+      btn.innerHTML = item.innerHTML;
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.closeModal('modal-action-sheet');
+        // Trigger the original item click synchronously so native share, inline handlers, and listeners execute
+        item.click();
+      });
+
+      sheetItems.appendChild(btn);
+    });
+
+    this.openModal('modal-action-sheet');
+    this.refreshIcons();
+  },
+
   renderBillCardHtml(b) {
-    const curr = window.APP_CURRENCY;
+    const curr = window.APP_CURRENCY || '₹';
     const badgeClass = b.status === 'PAID' ? 'badge-paid' : (b.status === 'OVERDUE' ? 'badge-overdue' : (b.status === 'PARTIAL' ? 'badge-partial' : 'badge-pending'));
     
     return `
@@ -1901,7 +2004,7 @@ const App = {
               </button>
               <div class="card-dropdown-menu">
                 <button type="button" class="dropdown-item btn-action-remind" data-bill-id="${b.id}">
-                  <i data-lucide="message-circle" style="color:var(--success);"></i> WhatsApp Reminder
+                  <i data-lucide="send" style="color:var(--primary);"></i> Send Reminder (SMS / WA)
                 </button>
                 <button type="button" class="dropdown-item btn-action-share" data-bill-id="${b.id}">
                   <i data-lucide="share-2"></i> Share Bill
@@ -1927,12 +2030,12 @@ const App = {
         <div class="card-middle">
           <div>
             <div class="card-amount-label">Total Bill</div>
-            <div class="card-amount-val">${curr}${b.total_amount.toFixed(2)}</div>
+            <div class="card-amount-val" title="${this.formatFullMoney(b.total_amount)}">${this.formatMoney(b.total_amount, true)}</div>
           </div>
           ${b.paid_amount > 0 ? `
             <div style="text-align:right;">
               <div class="card-amount-label">Balance Due</div>
-              <div style="font-size:1.15rem; font-weight:700; color:var(--danger);">${curr}${b.balance_amount.toFixed(2)}</div>
+              <div style="font-size:1.15rem; font-weight:700; color:var(--danger);" title="${this.formatFullMoney(b.balance_amount)}">${this.formatMoney(b.balance_amount, true)}</div>
             </div>
           ` : ''}
         </div>
@@ -2272,6 +2375,8 @@ const App = {
     document.getElementById('tenant-id').value = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
+    const chSelect = document.getElementById('tenant-channel');
+    if (chSelect) chSelect.value = 'SMS_RCS';
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
   },
@@ -2341,39 +2446,105 @@ const App = {
       subtitle.textContent = `Tenant: ${tenantName} ${propName ? '(' + propName + ')' : ''}`;
     }
 
+    // Default channel: based on tenant.preferred_channel
+    let activeChannel = (tenant && tenant.preferred_channel === 'WHATSAPP') ? 'whatsapp' : 'sms_rcs';
+
     // Default template: if overdue -> 'overdue', if due today -> 'due_today', if paid -> 'receipt', else -> 'gentle'
-    let defaultType = 'gentle';
+    let activeType = 'gentle';
     if (bill) {
-      if (bill.status === 'PAID') defaultType = 'receipt';
-      else if (bill.status === 'OVERDUE') defaultType = 'overdue';
+      if (bill.status === 'PAID') activeType = 'receipt';
+      else if (bill.status === 'OVERDUE') activeType = 'overdue';
       else {
         const today = new Date().toISOString().split('T')[0];
-        if (bill.due_date === today) defaultType = 'due_today';
+        if (bill.due_date === today) activeType = 'due_today';
       }
     }
 
-    const pills = document.querySelectorAll('#modal-reminder .template-pill');
-    pills.forEach(p => {
-      if (p.getAttribute('data-tpl') === defaultType) p.classList.add('active');
+    const channelPills = document.querySelectorAll('#modal-reminder .channel-pill');
+    channelPills.forEach(p => {
+      if (p.getAttribute('data-channel') === activeChannel) p.classList.add('active');
+      else p.classList.remove('active');
+    });
+
+    const templatePills = document.querySelectorAll('#modal-reminder .template-pill');
+    templatePills.forEach(p => {
+      if (p.getAttribute('data-tpl') === activeType) p.classList.add('active');
       else p.classList.remove('active');
     });
 
     const msgBox = document.getElementById('reminder-message-text');
-    if (msgBox) {
-      msgBox.value = Share.buildReminderMessage(defaultType, bill, tenant);
-    }
+    const counterEl = document.getElementById('reminder-char-counter');
+    const btnSendPrimary = document.getElementById('btn-send-reminder-primary');
+    const btnSendIcon = document.getElementById('btn-send-primary-icon');
+    const btnSendText = document.getElementById('btn-send-primary-text');
 
-    // Bind template pill clicks
-    pills.forEach(p => {
+    const updatePrimaryButton = () => {
+      if (!btnSendPrimary) return;
+      if (activeChannel === 'whatsapp') {
+        btnSendPrimary.className = 'btn btn-whatsapp';
+        if (btnSendText) btnSendText.textContent = 'Open WhatsApp Now';
+        if (btnSendIcon) btnSendIcon.setAttribute('data-lucide', 'message-circle');
+      } else if (activeChannel === 'email') {
+        btnSendPrimary.className = 'btn btn-primary';
+        if (btnSendText) btnSendText.textContent = 'Send via Email';
+        if (btnSendIcon) btnSendIcon.setAttribute('data-lucide', 'mail');
+      } else {
+        // SMS / RCS
+        btnSendPrimary.className = 'btn btn-primary';
+        if (btnSendText) btnSendText.textContent = 'Send via SMS / RCS';
+        if (btnSendIcon) btnSendIcon.setAttribute('data-lucide', 'message-square');
+      }
+      this.refreshIcons();
+    };
+
+    const updateCharCounter = (text) => {
+      if (!counterEl) return;
+      const chars = (text || '').length;
+      if (activeChannel === 'sms_rcs') {
+        const smsSegments = Math.ceil(chars / 160) || 1;
+        counterEl.textContent = `${chars} chars (${smsSegments} SMS / RCS)`;
+      } else {
+        counterEl.textContent = `${chars} chars`;
+      }
+    };
+
+    const regenerateMessage = () => {
+      if (msgBox) {
+        const text = Share.buildReminderMessage(activeType, this.currentReminderBill, this.currentReminderTenant, activeChannel);
+        msgBox.value = text;
+        updateCharCounter(text);
+      }
+      updatePrimaryButton();
+    };
+
+    regenerateMessage();
+
+    // Bind channel clicks
+    channelPills.forEach(p => {
       p.onclick = () => {
-        pills.forEach(x => x.classList.remove('active'));
+        channelPills.forEach(x => x.classList.remove('active'));
         p.classList.add('active');
-        const tplType = p.getAttribute('data-tpl');
-        if (msgBox) {
-          msgBox.value = Share.buildReminderMessage(tplType, this.currentReminderBill, this.currentReminderTenant);
-        }
+        activeChannel = p.getAttribute('data-channel');
+        regenerateMessage();
       };
     });
+
+    // Bind template clicks
+    templatePills.forEach(p => {
+      p.onclick = () => {
+        templatePills.forEach(x => x.classList.remove('active'));
+        p.classList.add('active');
+        activeType = p.getAttribute('data-tpl');
+        regenerateMessage();
+      };
+    });
+
+    // Live typing counter
+    if (msgBox) {
+      msgBox.oninput = () => {
+        updateCharCounter(msgBox.value);
+      };
+    }
 
     // Bind copy message
     const btnCopy = document.getElementById('btn-copy-reminder-msg');
@@ -2395,18 +2566,320 @@ const App = {
       };
     }
 
-    // Bind send whatsapp
-    const btnSend = document.getElementById('btn-send-whatsapp-now');
-    if (btnSend) {
-      btnSend.onclick = () => {
+    // Bind primary send action
+    if (btnSendPrimary) {
+      btnSendPrimary.onclick = () => {
         const phone = (tenant && tenant.phone) || (bill && bill.tenant_phone) || '';
+        const email = (tenant && tenant.email) || (bill && bill.tenant_email) || '';
         const text = msgBox ? msgBox.value : '';
-        Share.sendWhatsAppDirect(phone, text);
+
+        if (activeChannel === 'whatsapp') {
+          Share.sendWhatsAppDirect(phone, text);
+          this.toast('Opening WhatsApp...');
+        } else if (activeChannel === 'email') {
+          const subject = `Rent Notice for ${bill ? bill.property_name : (tenant ? tenant.property_name : 'Rental Unit')}`;
+          Share.sendEmailDirect(email, subject, text);
+          this.toast('Opening Email client...');
+        } else {
+          // SMS / RCS
+          Share.sendSmsRcsDirect(phone, text);
+          this.toast('Opening Messages (SMS / RCS)...');
+        }
         this.closeModal('modal-reminder');
       };
     }
 
     this.openModal('modal-reminder');
+    this.refreshIcons();
+  },
+
+  // --- 4-Digit Security PIN App Lock Controller ---
+
+  bindAppLock() {
+    // Quick lock button in top navigation bar
+    const btnLock = document.getElementById('btn-lock-app');
+    if (btnLock) {
+      btnLock.addEventListener('click', () => {
+        this.lockApp();
+      });
+    }
+
+    // Keypad button listeners
+    document.querySelectorAll('.pin-key').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const key = btn.getAttribute('data-key');
+        this.handlePinKeypad(key);
+      });
+    });
+
+    // Physical keyboard listener for desktop & laptop users
+    window.addEventListener('keydown', (e) => {
+      if (!this.isAppLocked) return;
+      if (e.key >= '0' && e.key <= '9') {
+        this.handlePinKeypad(e.key);
+      } else if (e.key === 'Backspace') {
+        this.handlePinKeypad('backspace');
+      } else if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
+        this.handlePinKeypad('clear');
+      }
+    });
+
+    // Auto-lock when user leaves browser tab or locks screen (if away > 45 seconds)
+    let backgroundTime = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        backgroundTime = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (this.isPINEnabled && !this.isAppLocked && backgroundTime > 0) {
+          const elapsed = (Date.now() - backgroundTime) / 1000;
+          if (elapsed >= 45) { // Auto-lock after 45 seconds in background
+            this.lockApp();
+          }
+        }
+      }
+    });
+
+    this.bindPINSettings();
+  },
+
+  async checkAuthStatus() {
+    try {
+      const status = await API.getAuthStatus();
+      this.isPINEnabled = !!status.pin_enabled;
+      this.updatePINStatusUI(this.isPINEnabled);
+
+      if (this.isPINEnabled) {
+        // If not unlocked in this browser session, present lock screen immediately
+        const unlocked = sessionStorage.getItem('rb_unlocked') === 'true';
+        if (!unlocked) {
+          this.lockApp();
+        }
+      }
+    } catch (e) {
+      console.error('Failed checking PIN status:', e);
+    }
+  },
+
+  updatePINStatusUI(enabled) {
+    const btnLock = document.getElementById('btn-lock-app');
+    const statusText = document.getElementById('pin-status-text');
+    const statusBadge = document.getElementById('pin-status-badge');
+    const btnOpenSetup = document.getElementById('btn-open-pin-setup');
+    const btnDisable = document.getElementById('btn-disable-pin');
+    const icon = document.getElementById('pin-status-icon');
+
+    if (btnLock) {
+      btnLock.style.display = enabled ? 'inline-flex' : 'none';
+    }
+
+    if (statusBadge) {
+      statusBadge.textContent = enabled ? 'ACTIVE' : 'OFF';
+      statusBadge.style.background = enabled ? 'var(--success-light)' : '#e2e8f0';
+      statusBadge.style.color = enabled ? 'var(--success)' : '#475569';
+    }
+
+    if (statusText) {
+      statusText.textContent = enabled ? 'PIN Lock: Active (Protected)' : 'PIN Lock: Disabled';
+    }
+
+    if (icon) {
+      icon.style.color = enabled ? 'var(--success)' : 'var(--text-muted)';
+    }
+
+    if (btnOpenSetup) {
+      btnOpenSetup.innerHTML = enabled
+        ? '<i data-lucide="key-round"></i> Change 4-Digit PIN'
+        : '<i data-lucide="key-round"></i> Set Up 4-Digit PIN';
+    }
+
+    if (btnDisable) {
+      btnDisable.style.display = enabled ? 'inline-flex' : 'none';
+    }
+
+    this.refreshIcons();
+  },
+
+  lockApp() {
+    if (!this.isPINEnabled) return;
+    this.isAppLocked = true;
+    this.enteredPIN = '';
+    sessionStorage.removeItem('rb_unlocked');
+    this.renderPinDots();
+
+    const overlay = document.getElementById('app-lock-screen');
+    const sub = document.getElementById('lock-screen-subtitle');
+    if (sub) {
+      sub.textContent = 'Enter 4-Digit PIN to unlock';
+      sub.style.color = 'var(--text-muted)';
+    }
+    if (overlay) {
+      overlay.style.display = 'flex';
+    }
+    this.refreshIcons();
+  },
+
+  unlockApp() {
+    this.isAppLocked = false;
+    this.enteredPIN = '';
+    sessionStorage.setItem('rb_unlocked', 'true');
+    const overlay = document.getElementById('app-lock-screen');
+    if (overlay) {
+      overlay.style.display = 'none';
+    }
+  },
+
+  handlePinKeypad(key) {
+    if (!this.isAppLocked || this.isVerifyingPIN) return;
+
+    if (key === 'clear') {
+      this.enteredPIN = '';
+      this.renderPinDots();
+      return;
+    }
+
+    if (key === 'backspace') {
+      this.enteredPIN = this.enteredPIN.slice(0, -1);
+      this.renderPinDots();
+      return;
+    }
+
+    if (key >= '0' && key <= '9' && this.enteredPIN.length < 4) {
+      this.enteredPIN += key;
+      this.renderPinDots();
+
+      if (this.enteredPIN.length === 4) {
+        this.verifyPINSubmission();
+      }
+    }
+  },
+
+  renderPinDots() {
+    const dots = document.querySelectorAll('#lock-pin-dots .pin-dot');
+    const len = this.enteredPIN.length;
+    dots.forEach((dot, idx) => {
+      if (idx < len) {
+        dot.classList.add('filled');
+      } else {
+        dot.classList.remove('filled');
+      }
+    });
+  },
+
+  async verifyPINSubmission() {
+    this.isVerifyingPIN = true;
+    try {
+      await API.verifyPIN(this.enteredPIN);
+      if (navigator.vibrate) navigator.vibrate(40);
+      this.unlockApp();
+      this.toast('App Unlocked!');
+    } catch (err) {
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+      const dotsWrapper = document.getElementById('lock-pin-dots');
+      const sub = document.getElementById('lock-screen-subtitle');
+      if (dotsWrapper) dotsWrapper.classList.add('shake');
+      if (sub) {
+        sub.textContent = 'Incorrect PIN. Try again.';
+        sub.style.color = 'var(--danger)';
+      }
+
+      setTimeout(() => {
+        if (dotsWrapper) dotsWrapper.classList.remove('shake');
+        this.enteredPIN = '';
+        this.renderPinDots();
+        if (sub) {
+          sub.textContent = 'Enter 4-Digit PIN to unlock';
+          sub.style.color = 'var(--text-muted)';
+        }
+      }, 500);
+    } finally {
+      this.isVerifyingPIN = false;
+    }
+  },
+
+  bindPINSettings() {
+    // Open Setup Modal
+    const btnOpenSetup = document.getElementById('btn-open-pin-setup');
+    const formPin = document.getElementById('form-pin-setup');
+    const currentPinGroup = document.getElementById('group-current-pin');
+    const currentPinInput = document.getElementById('input-current-pin');
+    const newPinInput = document.getElementById('input-new-pin');
+    const confirmPinInput = document.getElementById('input-confirm-pin');
+    const modalTitle = document.getElementById('pin-setup-modal-title');
+    const btnSave = document.getElementById('btn-save-pin');
+
+    if (btnOpenSetup) {
+      btnOpenSetup.addEventListener('click', () => {
+        if (formPin) formPin.reset();
+        if (currentPinGroup) {
+          currentPinGroup.style.display = this.isPINEnabled ? 'block' : 'none';
+        }
+        if (currentPinInput) {
+          currentPinInput.required = this.isPINEnabled;
+        }
+        if (modalTitle) {
+          modalTitle.textContent = this.isPINEnabled ? 'Change 4-Digit PIN' : 'Set Up 4-Digit PIN';
+        }
+        if (btnSave) {
+          btnSave.textContent = this.isPINEnabled ? 'Update PIN' : 'Save & Enable PIN';
+        }
+        this.openModal('modal-pin-setup');
+      });
+    }
+
+    // Submit Setup Form
+    if (formPin) {
+      formPin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPin = currentPinInput ? currentPinInput.value.trim() : '';
+        const newPin = newPinInput ? newPinInput.value.trim() : '';
+        const confirmPin = confirmPinInput ? confirmPinInput.value.trim() : '';
+
+        if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+          alert('New PIN must be exactly 4 digits (0-9).');
+          return;
+        }
+
+        if (newPin !== confirmPin) {
+          alert('New PIN and Confirm PIN do not match.');
+          return;
+        }
+
+        try {
+          await API.setPIN(newPin, currentPin);
+          this.isPINEnabled = true;
+          this.updatePINStatusUI(true);
+          sessionStorage.setItem('rb_unlocked', 'true');
+          this.closeModal('modal-pin-setup');
+          this.toast('4-Digit PIN enabled successfully!');
+        } catch (err) {
+          alert(err.message || 'Failed configuring PIN');
+        }
+      });
+    }
+
+    // Turn Off PIN
+    const btnDisable = document.getElementById('btn-disable-pin');
+    if (btnDisable) {
+      btnDisable.addEventListener('click', async () => {
+        const pin = prompt('Enter your current 4-Digit PIN to disable the lock:');
+        if (pin === null) return;
+        if (!pin || pin.length !== 4) {
+          alert('Please enter your 4-digit PIN.');
+          return;
+        }
+
+        try {
+          await API.disablePIN(pin.trim());
+          this.isPINEnabled = false;
+          this.updatePINStatusUI(false);
+          sessionStorage.removeItem('rb_unlocked');
+          this.toast('PIN Lock has been disabled.');
+        } catch (err) {
+          alert(err.message || 'Incorrect PIN. Could not disable.');
+        }
+      });
+    }
   }
 };
 

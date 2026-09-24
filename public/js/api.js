@@ -224,5 +224,52 @@ const API = {
       throw new Error(err.error || 'Restore failed');
     }
     return res.json();
+  },
+
+  // 4-Digit Security PIN Auth
+  async getAuthStatus() {
+    const res = await fetch('/api/auth/status');
+    if (!res.ok) return { pin_enabled: false };
+    return res.json();
+  },
+
+  async verifyPIN(pin) {
+    const res = await fetch('/api/auth/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: pin })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Incorrect PIN' }));
+      throw new Error(err.error || 'Incorrect PIN');
+    }
+    return res.json();
+  },
+
+  async setPIN(newPin, currentPin = '') {
+    const res = await fetch('/api/auth/set-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_pin: newPin, current_pin: currentPin })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to configure PIN' }));
+      throw new Error(err.error || 'Failed to configure PIN');
+    }
+    return res.json();
+  },
+
+  async disablePIN(currentPin = '') {
+    const res = await fetch('/api/auth/disable-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_pin: currentPin })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to disable PIN' }));
+      throw new Error(err.error || 'Failed to disable PIN');
+    }
+    return res.json();
   }
 };
+

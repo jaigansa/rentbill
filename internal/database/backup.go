@@ -137,10 +137,14 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 		if t.IsActive {
 			activeInt = 1
 		}
+		ch := t.PreferredChannel
+		if ch == "" {
+			ch = "SMS_RCS"
+		}
 		_, err := tx.Exec(`
-			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, is_active, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, activeInt, t.CreatedAt)
+			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, preferred_channel, is_active, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, ch, activeInt, t.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("failed restoring tenant %s: %w", t.Name, err)
 		}

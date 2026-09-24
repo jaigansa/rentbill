@@ -91,18 +91,21 @@ func (db *DB) DeleteProperty(id int64) error {
 // --- Tenant Queries ---
 
 func (db *DB) CreateTenant(t *Tenant) (int64, error) {
+	if t.PreferredChannel == "" {
+		t.PreferredChannel = "SMS_RCS"
+	}
 	query := `
 	INSERT INTO tenants (
 		name, phone, email, property_id, security_deposit, move_in_date,
 		payment_upi, payment_bank_name, payment_account_no, payment_ifsc,
-		initial_elec_meter, initial_water_meter, is_active
+		initial_elec_meter, initial_water_meter, preferred_channel, is_active
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
-		t.InitialElecMeter, t.InitialWaterMeter, 1,
+		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel, 1,
 	)
 	if err != nil {
 		return 0, err
@@ -117,6 +120,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.payment_upi, ''), COALESCE(t.payment_bank_name, ''),
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
+	       COALESCE(t.preferred_channel, 'SMS_RCS'),
 	       t.is_active, t.created_at
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
@@ -137,6 +141,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 			&t.SecurityDeposit, &t.MoveInDate,
 			&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 			&t.InitialElecMeter, &t.InitialWaterMeter,
+			&t.PreferredChannel,
 			&isActiveInt, &t.CreatedAt,
 		)
 		if err != nil {
@@ -155,6 +160,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.payment_upi, ''), COALESCE(t.payment_bank_name, ''),
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
+	       COALESCE(t.preferred_channel, 'SMS_RCS'),
 	       t.is_active, t.created_at
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
@@ -167,6 +173,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 		&t.SecurityDeposit, &t.MoveInDate,
 		&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 		&t.InitialElecMeter, &t.InitialWaterMeter,
+		&t.PreferredChannel,
 		&isActiveInt, &t.CreatedAt,
 	)
 	if err != nil {
@@ -181,17 +188,20 @@ func (db *DB) UpdateTenant(t *Tenant) error {
 	if t.IsActive {
 		activeInt = 1
 	}
+	if t.PreferredChannel == "" {
+		t.PreferredChannel = "SMS_RCS"
+	}
 	query := `
 	UPDATE tenants
 	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, move_in_date = ?,
 	    payment_upi = ?, payment_bank_name = ?, payment_account_no = ?, payment_ifsc = ?,
-	    initial_elec_meter = ?, initial_water_meter = ?, is_active = ?
+	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?, is_active = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
-		t.InitialElecMeter, t.InitialWaterMeter, activeInt, t.ID,
+		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel, activeInt, t.ID,
 	)
 	return err
 }

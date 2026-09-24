@@ -628,3 +628,102 @@ func (s *Server) HandleReportsCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	_, _ = w.Write(csvData)
 }
+
+// --- 4-Digit Security PIN Handlers ---
+
+func (s *Server) HandleAuthStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"pin_enabled": s.db.IsPINEnabled(),
+	})
+}
+
+func (s *Server) HandleAuthVerify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var payload struct {
+		PIN string `json:"pin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+	if !s.db.IsPINEnabled() {
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "PIN not set",
+		})
+		return
+	}
+	if s.db.VerifyPIN(payload.PIN) {
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"success": true,
+			"message": "PIN verified successfully",
+		})
+		return
+	}
+	sendError(w, http.StatusUnauthorized, "Incorrect 4-digit PIN")
+}
+
+func (s *Server) HandleAuthSetPIN(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var payload struct {
+		CurrentPIN string `json:"current_pin"`
+		NewPIN     string `json:"new_pin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+	if s.db.IsPINEnabled() {
+		if !s.db.VerifyPIN(payload.CurrentPIN) {
+			sendError(w, http.StatusUnauthorized, "Current PIN is incorrect")
+			return
+		}
+	}
+	if err := s.db.SetPIN(payload.NewPIN); err != nil {
+		sendError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "4-Digit PIN configured successfully",
+	})
+}
+
+func (s *Server) HandleAuthDisablePIN(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	var payload struct {
+		CurrentPIN string `json:"current_pin"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+	if s.db.IsPINEnabled() {
+		if !s.db.VerifyPIN(payload.CurrentPIN) {
+			sendError(w, http.StatusUnauthorized, "Current PIN is incorrect")
+			return
+		}
+	}
+	if err := s.db.DisablePIN(); err != nil {
+		sendError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "PIN lock disabled successfully",
+	})
+}
+

@@ -53,7 +53,7 @@ const Share = {
     return words;
   },
 
-  // Format the full bill breakdown text
+  // Format the full bill breakdown text (Rich WhatsApp / detailed format)
   buildBillText(bill) {
     const currency = window.APP_CURRENCY || '₹';
     const lines = [
@@ -122,18 +122,80 @@ const Share = {
     return lines.join('\n');
   },
 
+  // Format concise SMS / RCS bill notice (fits mobile text messages, zero messy asterisks)
+  buildSmsRcsBillText(bill, isCompact = false) {
+    const currency = window.APP_CURRENCY || '₹';
+    const due = bill.due_date || '';
+    const balance = (bill.balance_amount !== undefined && bill.balance_amount !== null)
+      ? bill.balance_amount
+      : (bill.total_amount - (bill.paid_amount || 0));
+
+    let payDetails = '';
+    if (bill.payment_upi) {
+      payDetails = `Pay via UPI: ${bill.payment_upi}`;
+    } else if (bill.payment_bank_name) {
+      payDetails = `Pay to Bank: ${bill.payment_bank_name} (A/C: ${bill.payment_account_no || ''}, IFSC: ${bill.payment_ifsc || ''})`;
+    }
+
+    if (isCompact) {
+      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${bill.billing_month}) is ${currency}${bill.total_amount.toFixed(2)}. Due: ${due}.`;
+      if (balance > 0 && balance !== bill.total_amount) {
+        msg += ` Due Bal: ${currency}${balance.toFixed(2)}.`;
+      }
+      if (payDetails) msg += ` ${payDetails}.`;
+      msg += ` Thank you!`;
+      return msg;
+    }
+
+    const lines = [
+      `RENT NOTICE (${bill.billing_month})`,
+      `Tenant: ${bill.tenant_name}`,
+      `Unit: ${bill.property_name}`,
+      `Bill #: ${bill.bill_number}`,
+      `Due Date: ${due}`,
+      `-----------------------------`,
+      `Rent: ${currency}${bill.base_rent.toFixed(2)}`,
+    ];
+
+    if (bill.electricity_amount > 0) {
+      lines.push(`Electricity: ${bill.electricity_units} units = ${currency}${bill.electricity_amount.toFixed(2)}`);
+    }
+    if (bill.water_amount > 0) {
+      lines.push(`Water: ${currency}${bill.water_amount.toFixed(2)}`);
+    }
+    if (bill.maintenance_amount > 0) {
+      lines.push(`Maintenance: ${currency}${bill.maintenance_amount.toFixed(2)}`);
+    }
+    if (bill.other_charges > 0) {
+      lines.push(`Other: ${currency}${bill.other_charges.toFixed(2)}`);
+    }
+    if (bill.previous_balance > 0) {
+      lines.push(`Previous Due: ${currency}${bill.previous_balance.toFixed(2)}`);
+    }
+    lines.push(`-----------------------------`);
+    lines.push(`TOTAL DUE: ${currency}${bill.total_amount.toFixed(2)}`);
+    if (bill.paid_amount > 0) {
+      lines.push(`Paid: ${currency}${bill.paid_amount.toFixed(2)} | Balance: ${currency}${balance.toFixed(2)}`);
+    }
+    if (payDetails) {
+      lines.push(payDetails);
+    }
+    lines.push(`Thank you! - RentBill`);
+    return lines.join('\n');
+  },
+
   // Primary share action:
   // Must execute immediately in synchronous user gesture thread for mobile browser permission
   shareBill(bill) {
     if (!bill) return;
 
     const title = `Rent Bill - ${bill.property_name} (${bill.billing_month})`;
-    const text = this.buildBillText(bill);
-    const shareData = { title: title, text: text };
+    // Default to concise SMS/RCS if tenant prefers SMS_RCS, else full text
+    const defaultText = (bill.preferred_channel === 'WHATSAPP')
+      ? this.buildBillText(bill)
+      : this.buildSmsRcsBillText(bill, false);
+    const shareData = { title: title, text: defaultText };
 
-    // navigator.share requires secure context (HTTPS or localhost) AND user gesture.
-    // When accessing over LAN IP (e.g. http://192.168.x.x:8080), browsers treat it as insecure HTTP
-    // and disable navigator.share. In that case, we seamlessly open our in-app fallback window!
     let canNativeShare = false;
     try {
       if (navigator.share) {
@@ -148,50 +210,75 @@ const Share = {
     }
 
     if (canNativeShare) {
-      // Execute directly synchronously within the user click gesture
       navigator.share(shareData)
-        .then(() => {
-          // Shared successfully
-        })
+        .then(() => {})
         .catch((err) => {
-          // If not user-cancelled (AbortError), open our fallback dialog
           if (err && err.name !== 'AbortError') {
-            this.openFallbackShareModal(bill, text);
+            this.openFallbackShareModal(bill, defaultText);
           }
         });
       return;
     }
 
-    // Fallback: If navigator.share is unavailable (e.g. Insecure HTTP over LAN IP, or desktop)
-    this.openFallbackShareModal(bill, text);
+    // Fallback dialog
+    this.openFallbackShareModal(bill, defaultText);
   },
 
   // Open the in-app Share Modal dialog
-  openFallbackShareModal(bill, text) {
+  openFallbackShareModal(bill, initialText) {
     const previewEl = document.getElementById('share-preview-text');
-    if (previewEl) previewEl.value = text;
+    const charCountEl = document.getElementById('share-char-count');
+    const btnFmtSms = document.getElementById('btn-share-fmt-sms');
+    const btnFmtFull = document.getElementById('btn-share-fmt-full');
+
+    let currentFormat = 'sms'; // 'sms' or 'full'
+    const fullText = this.buildBillText(bill);
+    const smsText = this.buildSmsRcsBillText(bill, false);
+
+    const updatePreview = (fmt) => {
+      currentFormat = fmt;
+      const activeText = fmt === 'sms' ? smsText : fullText;
+      if (previewEl) previewEl.value = activeText;
+      if (charCountEl) {
+        const chars = activeText.length;
+        const smsParts = Math.ceil(chars / 160);
+        charCountEl.textContent = fmt === 'sms'
+          ? `${chars} chars (${smsParts} SMS / RCS message)`
+          : `${chars} chars`;
+      }
+      if (btnFmtSms) {
+        if (fmt === 'sms') btnFmtSms.classList.add('active');
+        else btnFmtSms.classList.remove('active');
+      }
+      if (btnFmtFull) {
+        if (fmt === 'full') btnFmtFull.classList.add('active');
+        else btnFmtFull.classList.remove('active');
+      }
+    };
+
+    if (btnFmtSms) btnFmtSms.onclick = () => updatePreview('sms');
+    if (btnFmtFull) btnFmtFull.onclick = () => updatePreview('full');
+
+    // Initialize with sms format
+    updatePreview('sms');
 
     const cleanPhone = (bill.tenant_phone || '').replace(/[^0-9]/g, '');
-    const phoneWithCountry = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
-    const encodedText = encodeURIComponent(text);
+
+    // Bind SMS / RCS channel button
+    const btnSms = document.getElementById('btn-share-channel-sms');
+    if (btnSms) {
+      btnSms.onclick = () => {
+        const text = previewEl ? previewEl.value : smsText;
+        this.sendSmsRcsDirect(cleanPhone, text);
+      };
+    }
 
     // Bind WhatsApp channel button
     const btnWa = document.getElementById('btn-share-channel-wa');
     if (btnWa) {
       btnWa.onclick = () => {
-        const url = phoneWithCountry
-          ? `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encodedText}`
-          : `https://api.whatsapp.com/send?text=${encodedText}`;
-        window.open(url, '_blank');
-      };
-    }
-
-    // Bind SMS channel button
-    const btnSms = document.getElementById('btn-share-channel-sms');
-    if (btnSms) {
-      btnSms.onclick = () => {
-        const smsUrl = cleanPhone ? `sms:${cleanPhone}?body=${encodedText}` : `sms:?body=${encodedText}`;
-        window.location.href = smsUrl;
+        const text = previewEl ? previewEl.value : fullText;
+        this.sendWhatsAppDirect(cleanPhone, text);
       };
     }
 
@@ -199,9 +286,9 @@ const Share = {
     const btnEmail = document.getElementById('btn-share-channel-email');
     if (btnEmail) {
       btnEmail.onclick = () => {
-        const subject = encodeURIComponent(`Rent Bill for ${bill.property_name} - ${bill.billing_month}`);
-        const mailtoUrl = `mailto:${bill.tenant_email || ''}?subject=${subject}&body=${encodedText}`;
-        window.location.href = mailtoUrl;
+        const text = previewEl ? previewEl.value : fullText;
+        const subject = `Rent Bill for ${bill.property_name} - ${bill.billing_month}`;
+        this.sendEmailDirect(bill.tenant_email || '', subject, text);
       };
     }
 
@@ -209,22 +296,23 @@ const Share = {
     const btnCopy = document.getElementById('btn-share-channel-copy');
     if (btnCopy) {
       btnCopy.onclick = async () => {
+        const textToCopy = previewEl ? previewEl.value : smsText;
         try {
           if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(textToCopy);
           } else {
             previewEl.select();
             document.execCommand('copy');
           }
           if (window.App && typeof window.App.toast === 'function') {
             window.App.toast('Bill text copied to clipboard!');
-          } else {
-            alert('Bill text copied!');
           }
         } catch (e) {
           previewEl.select();
           document.execCommand('copy');
-          alert('Copied to clipboard!');
+          if (window.App && typeof window.App.toast === 'function') {
+            window.App.toast('Copied to clipboard!');
+          }
         }
       };
     }
@@ -483,8 +571,8 @@ const Share = {
     }
   },
 
-  // WhatsApp Reminder Message Builders
-  buildReminderMessage(type, bill, tenant) {
+  // Universal Multi-Channel Reminder Message Builders (SMS/RCS, WhatsApp, Email)
+  buildReminderMessage(type, bill, tenant, channel = 'sms_rcs') {
     const curr = window.APP_CURRENCY || '₹';
     const tenantName = (tenant && tenant.name) || (bill && bill.tenant_name) || 'Tenant';
     const propName = (tenant && tenant.property_name) || (bill && bill.property_name) || 'Rental Unit';
@@ -496,19 +584,43 @@ const Share = {
     const upi = (bill && bill.payment_upi) || (tenant && tenant.payment_upi) || '';
     const bank = (bill && bill.payment_bank_name) || (tenant && tenant.payment_bank_name) || '';
 
-    let payDetails = '';
-    if (upi) payDetails += `\n*UPI ID:* ${upi}`;
-    if (bank) payDetails += `\n*Bank:* ${bank} (A/C: ${bill ? bill.payment_account_no : tenant.payment_account_no || ''}, IFSC: ${bill ? bill.payment_ifsc : tenant.payment_ifsc || ''})`;
+    let payDetailsWa = '';
+    if (upi) payDetailsWa += `\n*UPI ID:* ${upi}`;
+    if (bank) payDetailsWa += `\n*Bank:* ${bank} (A/C: ${bill ? bill.payment_account_no : tenant.payment_account_no || ''}, IFSC: ${bill ? bill.payment_ifsc : tenant.payment_ifsc || ''})`;
 
+    let payDetailsSms = '';
+    if (upi) payDetailsSms = `Pay via UPI: ${upi}`;
+    else if (bank) payDetailsSms = `Pay to Bank: ${bank} (${bill ? bill.payment_account_no : tenant.payment_account_no || ''}, IFSC: ${bill ? bill.payment_ifsc : tenant.payment_ifsc || ''})`;
+
+    if (channel === 'sms_rcs') {
+      switch (type) {
+        case 'gentle':
+          return `RentBill: Hi ${tenantName}, friendly reminder that your rent for ${propName} (${month}) of ${balance} is due on ${due}. ${payDetailsSms}. Thank you!`;
+        case 'due_today':
+          return `RentBill: Hi ${tenantName}, your rent for ${propName} (${month}) of ${balance} is DUE TODAY (${due}). Please pay using: ${payDetailsSms}. Kindly share confirmation once paid. Thank you!`;
+        case 'overdue':
+          return `URGENT NOTICE: Hi ${tenantName}, rent of ${balance} for ${propName} (${month}) was due on ${due} and is now OVERDUE. Please clear dues immediately: ${payDetailsSms}. Thank you - RentBill`;
+        case 'receipt':
+          return `RentBill: Hi ${tenantName}, payment received for ${propName} (${month}). Bill #${billNum}. Total: ${total}. Balance: ${balance}. Thank you!`;
+        default:
+          return `RentBill: Hi ${tenantName}, rent for ${propName} (${month}) is ${balance}. Due: ${due}. ${payDetailsSms}. Thank you!`;
+      }
+    }
+
+    if (channel === 'email') {
+      return `Dear ${tenantName},\n\nThis is a notification regarding your rental unit ${propName} for the period ${month}.\n\nBill Details:\n• Bill Number: ${billNum}\n• Billing Month: ${month}\n• Due Date: ${due}\n• Total Amount: ${total}\n• Balance Outstanding: ${balance}\n\nPayment Information:${payDetailsWa.replace(/\*/g, '')}\n\nIf you have already processed this payment, kindly disregard this notice or reply with the transaction reference.\n\nWarm regards,\nProperty Management - RentBill`;
+    }
+
+    // Default: WhatsApp format (with rich formatting & emojis)
     switch (type) {
       case 'gentle':
-        return `Hello ${tenantName},\n\nThis is a friendly reminder that your rent bill for *${propName}* (${month}) of *${balance}* is due on *${due}*.\n\nKindly complete the payment at your convenience:${payDetails}\n\nThank you!\n- RentBill Management`;
+        return `Hello ${tenantName},\n\nThis is a friendly reminder that your rent bill for *${propName}* (${month}) of *${balance}* is due on *${due}*.\n\nKindly complete the payment at your convenience:${payDetailsWa}\n\nThank you!\n- RentBill Management`;
 
       case 'due_today':
-        return `Dear ${tenantName},\n\nYour rent bill for *${propName}* (${month}) amounting to *${balance}* is *DUE TODAY* (${due}).\n\nPlease transfer the amount today using:${payDetails}\n\nKindly share the transaction screenshot once paid.\nThank you!`;
+        return `Dear ${tenantName},\n\nYour rent bill for *${propName}* (${month}) amounting to *${balance}* is *DUE TODAY* (${due}).\n\nPlease transfer the amount today using:${payDetailsWa}\n\nKindly share the transaction screenshot once paid.\nThank you!`;
 
       case 'overdue':
-        return `⚠️ *PAYMENT OVERDUE NOTICE*\n\nDear ${tenantName},\n\nThis is an urgent reminder that your rent payment of *${balance}* for *${propName}* (${month}) was due on *${due}* and is currently *OVERDUE*.\n\nPlease clear the outstanding dues immediately:${payDetails}\n\nIf you have already paid, please share the transaction reference.\nThank you.`;
+        return `⚠️ *PAYMENT OVERDUE NOTICE*\n\nDear ${tenantName},\n\nThis is an urgent reminder that your rent payment of *${balance}* for *${propName}* (${month}) was due on *${due}* and is currently *OVERDUE*.\n\nPlease clear the outstanding dues immediately:${payDetailsWa}\n\nIf you have already paid, please share the transaction reference.\nThank you.`;
 
       case 'receipt':
         return `✅ *PAYMENT RECEIVED - THANK YOU!*\n\nDear ${tenantName},\n\nWe have received your payment for *${propName}* (${month}).\n*Bill No:* ${billNum}\n*Total Bill:* ${total}\n*Outstanding Balance:* ${balance}\n\nThank you for your prompt payment!\n- RentBill Management`;
@@ -516,6 +628,36 @@ const Share = {
       default:
         return `Hello ${tenantName},\nYour rent bill for ${propName} (${month}) is ${balance}. Due date: ${due}. Thank you!`;
     }
+  },
+
+  // Open native mobile SMS / RCS Messages app directly
+  sendSmsRcsDirect(phone, text) {
+    const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    const encoded = encodeURIComponent(text);
+    // iOS Messages prefers '&body=', Android prefers '?body='
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const sep = isIOS ? '&' : '?';
+    const smsUrl = cleanPhone ? `sms:${cleanPhone}${sep}body=${encoded}` : `sms:${sep}body=${encoded}`;
+    window.location.href = smsUrl;
+  },
+
+  // Open native Email client
+  sendEmailDirect(email, subject, text) {
+    const mailto = `mailto:${email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    window.location.href = mailto;
+  },
+
+  // Device native share sheet
+  async sendNativeShare(title, text) {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: title, text: text });
+        return true;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return true;
+      }
+    }
+    return false;
   },
 
   // Open WhatsApp directly with phone and text

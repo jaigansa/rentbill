@@ -4,6 +4,9 @@ outputs/
 *.exe
 *.log
 data/
+*.db
+*.db-shm
+*.db-wal
 
 # OS Generated Files
 .DS_Store

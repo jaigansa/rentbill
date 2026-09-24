@@ -68,6 +68,7 @@ func createTables(db *sql.DB) error {
 		payment_ifsc TEXT DEFAULT '',
 		initial_elec_meter REAL DEFAULT 0.0,
 		initial_water_meter REAL DEFAULT 0.0,
+		preferred_channel TEXT DEFAULT 'SMS_RCS',
 		is_active INTEGER DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (property_id) REFERENCES properties (id) ON DELETE SET NULL
@@ -159,6 +160,7 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE tenants ADD COLUMN payment_ifsc TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN initial_elec_meter REAL DEFAULT 0.0",
 		"ALTER TABLE tenants ADD COLUMN initial_water_meter REAL DEFAULT 0.0",
+		"ALTER TABLE tenants ADD COLUMN preferred_channel TEXT DEFAULT 'SMS_RCS'",
 	}
 	for _, m := range migrations {
 		_, _ = db.Exec(m) // Ignore if column already exists
@@ -214,6 +216,7 @@ type Tenant struct {
 	PaymentIFSC       string  `json:"payment_ifsc"`
 	InitialElecMeter  float64 `json:"initial_elec_meter"`
 	InitialWaterMeter float64 `json:"initial_water_meter"`
+	PreferredChannel  string  `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
 	IsActive          bool    `json:"is_active"`
 	CreatedAt         string  `json:"created_at"`
 }

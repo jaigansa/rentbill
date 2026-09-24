@@ -41,6 +41,12 @@ func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
 	mux.HandleFunc("/api/payments", server.HandlePayments)
 	mux.HandleFunc("/api/settings", server.HandleSettings)
 
+	// 4-Digit Security PIN Auth
+	mux.HandleFunc("/api/auth/status", server.HandleAuthStatus)
+	mux.HandleFunc("/api/auth/verify", server.HandleAuthVerify)
+	mux.HandleFunc("/api/auth/set-pin", server.HandleAuthSetPIN)
+	mux.HandleFunc("/api/auth/disable-pin", server.HandleAuthDisablePIN)
+
 	// Backup, Restore & Reports
 	mux.HandleFunc("/api/backup/export", server.HandleBackupExport)
 	mux.HandleFunc("/api/backup/restore", server.HandleBackupRestore)

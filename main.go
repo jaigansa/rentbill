@@ -52,6 +52,19 @@ func main() {
 	}
 	defer db.Close()
 
+	// Emergency PIN Reset CLI Flag (--reset-pin)
+	for _, arg := range os.Args[1:] {
+		if arg == "--reset-pin" || arg == "-reset-pin" {
+			if err := db.DisablePIN(); err != nil {
+				log.Fatalf("❌ Failed to reset PIN: %v", err)
+			}
+			fmt.Println("======================================================")
+			fmt.Println("  🔓 4-Digit Security PIN has been RESET and disabled!")
+			fmt.Println("======================================================")
+			return
+		}
+	}
+
 	// Strip 'public' prefix from embedded filesystem
 	subFS, err := fs.Sub(publicFS, "public")
 	if err != nil {

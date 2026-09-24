@@ -22,7 +22,10 @@
         <p class="brand-subtitle">Smart Rental Management</p>
       </div>
     </div>
-    <div class="top-actions">
+    <div class="top-actions" style="display:flex; align-items:center; gap:6px;">
+      <button class="icon-btn" id="btn-lock-app" title="Lock App Now" aria-label="Lock App" style="display:none;">
+        <i data-lucide="lock"></i>
+      </button>
       <button class="icon-btn" id="btn-open-settings" title="Settings & LAN access" aria-label="Settings">
         <i data-lucide="settings"></i>
       </button>
@@ -384,6 +387,18 @@
           </small>
         </div>
 
+        <div class="form-group">
+          <label for="tenant-channel">Preferred Reminder & Notice Channel</label>
+          <select id="tenant-channel">
+            <option value="SMS_RCS" selected>💬 SMS / RCS (Google & Apple Messages - Universal)</option>
+            <option value="WHATSAPP">🟢 WhatsApp</option>
+            <option value="BOTH">📱 Both / Any Channel</option>
+          </select>
+          <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
+            Default channel opened when dispatching bills, receipts, and payment notices.
+          </small>
+        </div>
+
         <!-- Initial Move-in Meter Readings -->
         <div style="border-top:1px dashed var(--border); padding-top:12px; margin-top:6px; margin-bottom:12px;">
           <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
@@ -470,14 +485,11 @@
       </div>
 
       <!-- Ledger Action Bar -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="margin-bottom:12px;">
         <div class="filter-pills" id="ledger-view-toggle">
           <button type="button" class="filter-pill active" id="btn-ledger-view-bills">Bills List</button>
           <button type="button" class="filter-pill" id="btn-ledger-view-statement">Passbook Statement</button>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-ledger-add-bill">
-          <i data-lucide="plus"></i> Add Bill
-        </button>
       </div>
 
       <!-- Ledger Bills List -->
@@ -510,7 +522,6 @@
         <button type="button" class="btn btn-secondary" id="btn-ledger-print">
           <i data-lucide="printer"></i> Print Statement
         </button>
-        <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
       </div>
     </div>
   </div>
@@ -874,20 +885,11 @@
       </div>
 
       <div class="modal-footer no-print">
-        <button type="button" class="btn btn-secondary" id="btn-invoice-edit">
-          <i data-lucide="edit-3"></i> Edit Bill
-        </button>
-        <button type="button" class="btn btn-primary" id="btn-invoice-share">
-          <i data-lucide="share-2"></i> Share
-        </button>
         <button type="button" class="btn btn-secondary" id="btn-invoice-download-img" title="Download HD Receipt Image (PNG) to Gallery/Files">
           <i data-lucide="image"></i> Save Image
         </button>
-        <button type="button" class="btn btn-secondary" id="btn-invoice-print">
+        <button type="button" class="btn btn-primary" id="btn-invoice-print">
           <i data-lucide="printer"></i> Print / PDF
-        </button>
-        <button type="button" class="btn btn-secondary" id="btn-invoice-record-pay">
-          <i data-lucide="credit-card"></i> Pay
         </button>
       </div>
     </div>
@@ -897,18 +899,21 @@
   <div class="modal" id="modal-share">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3><i data-lucide="share-2" style="vertical-align:-2px; margin-right:4px;"></i> Share Bill Summary</h3>
+        <div>
+          <h3><i data-lucide="share-2" style="vertical-align:-2px; margin-right:4px;"></i> Share Bill & Notice</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Send to tenant via SMS, RCS, WhatsApp or Email</span>
+        </div>
         <button class="modal-close" data-close="modal-share">&times;</button>
       </div>
       <div class="share-options-body">
         <div class="share-action-grid">
+          <button type="button" class="share-channel-btn btn-sms" id="btn-share-channel-sms">
+            <i data-lucide="message-square"></i>
+            <span>SMS / RCS</span>
+          </button>
           <button type="button" class="share-channel-btn btn-whatsapp" id="btn-share-channel-wa">
             <i data-lucide="message-circle"></i>
             <span>WhatsApp</span>
-          </button>
-          <button type="button" class="share-channel-btn btn-sms" id="btn-share-channel-sms">
-            <i data-lucide="message-square"></i>
-            <span>SMS Message</span>
           </button>
           <button type="button" class="share-channel-btn btn-email" id="btn-share-channel-email">
             <i data-lucide="mail"></i>
@@ -920,8 +925,21 @@
           </button>
         </div>
 
-        <div class="form-group" style="margin-top: 14px;">
-          <label for="share-preview-text">Bill Text Preview</label>
+        <!-- Format switch pills: Concise SMS/RCS vs Full breakdown -->
+        <div style="margin-top: 14px; display: flex; gap: 8px;">
+          <button type="button" class="filter-pill active" id="btn-share-fmt-sms" style="flex:1; justify-content:center;">
+            <i data-lucide="message-square" style="width:14px; height:14px; vertical-align:-2px;"></i> Concise SMS / RCS
+          </button>
+          <button type="button" class="filter-pill" id="btn-share-fmt-full" style="flex:1; justify-content:center;">
+            <i data-lucide="file-text" style="width:14px; height:14px; vertical-align:-2px;"></i> Full Breakdown
+          </button>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="share-preview-text" style="margin-bottom:0;">Message Preview</label>
+            <span id="share-char-count" style="font-size:0.75rem; color:var(--text-muted);">0 chars</span>
+          </div>
           <textarea id="share-preview-text" rows="7" readonly class="input-readonly" style="font-size:0.8rem; font-family:monospace; resize:none;"></textarea>
         </div>
       </div>
@@ -933,19 +951,47 @@
 
 
 
-  <!-- Modal: Automated WhatsApp Payment Reminder Engine -->
+  <!-- Modal: Automated Multi-Channel Payment Notice & Reminder Engine -->
   <div class="modal" id="modal-reminder">
     <div class="modal-dialog">
       <div class="modal-header">
         <div>
-          <h3><i data-lucide="send" style="vertical-align:-2px; color:var(--success); margin-right:4px;"></i> WhatsApp Reminder</h3>
-          <span style="font-size:0.75rem; color:var(--text-muted);" id="reminder-tenant-subtitle">Send 1-Click Payment Notice</span>
+          <h3><i data-lucide="send" style="vertical-align:-2px; color:var(--primary); margin-right:4px;"></i> Send Payment Notice</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="reminder-tenant-subtitle">SMS / RCS, WhatsApp & Multi-Channel Notice</span>
         </div>
         <button class="modal-close" data-close="modal-reminder">&times;</button>
       </div>
       <div class="modal-body" style="padding-top:12px;">
+        <!-- Channel Selector -->
         <div class="form-group">
-          <label style="font-weight:600; margin-bottom:6px;">Select Reminder Template</label>
+          <label style="font-weight:600; margin-bottom:6px;">Select Dispatch Channel</label>
+          <div class="reminder-channels-grid">
+            <button type="button" class="channel-pill active" data-channel="sms_rcs">
+              <i data-lucide="message-square"></i>
+              <div>
+                <strong>SMS / RCS</strong>
+                <small>Native Messages (Universal)</small>
+              </div>
+            </button>
+            <button type="button" class="channel-pill" data-channel="whatsapp">
+              <i data-lucide="message-circle"></i>
+              <div>
+                <strong>WhatsApp</strong>
+                <small>Direct WhatsApp Chat</small>
+              </div>
+            </button>
+            <button type="button" class="channel-pill" data-channel="email">
+              <i data-lucide="mail"></i>
+              <div>
+                <strong>Email</strong>
+                <small>Send to Tenant Email</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:12px;">
+          <label style="font-weight:600; margin-bottom:6px;">Select Notice Template</label>
           <div class="reminder-templates-grid">
             <button type="button" class="template-pill active" data-tpl="gentle">
               <i data-lucide="bell"></i>
@@ -981,23 +1027,45 @@
         <div class="form-group" style="margin-top:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <label for="reminder-message-text" style="margin-bottom:0;">Message Preview (Editable)</label>
-            <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
-              <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
-            </button>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="reminder-char-counter" style="font-size:0.75rem; color:var(--text-muted);">0 chars</span>
+              <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
+                <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
+              </button>
+            </div>
           </div>
-          <textarea id="reminder-message-text" rows="7" class="form-control" style="font-size:0.82rem; font-family:inherit; resize:vertical;"></textarea>
+          <textarea id="reminder-message-text" rows="6" class="form-control" style="font-size:0.82rem; font-family:inherit; resize:vertical;"></textarea>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer" style="flex-wrap:wrap; gap:8px;">
         <button type="button" class="btn btn-secondary" data-close="modal-reminder">Cancel</button>
-        <button type="button" class="btn btn-whatsapp" id="btn-send-whatsapp-now">
-          <i data-lucide="message-circle"></i> Open WhatsApp Now
+        <button type="button" class="btn btn-primary" id="btn-send-reminder-primary" style="flex:1;">
+          <i data-lucide="message-square" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send via SMS / RCS</span>
         </button>
       </div>
     </div>
   </div>
 
 
+
+  <!-- Modal: Mobile Action Sheet Pop-up (Full View Options for 3-Dot Click) -->
+  <div class="modal action-sheet-modal" id="modal-action-sheet">
+    <div class="action-sheet-dialog">
+      <div class="action-sheet-handle-bar"></div>
+      <div class="action-sheet-header">
+        <h3 id="action-sheet-title" class="action-sheet-title">Options</h3>
+        <span id="action-sheet-subtitle" class="action-sheet-subtitle">Select an action</span>
+      </div>
+      <div class="action-sheet-body" id="action-sheet-items">
+        <!-- Rendered dynamically via JS with big, easy-to-tap buttons -->
+      </div>
+      <div class="action-sheet-footer">
+        <button type="button" class="btn btn-secondary btn-block action-sheet-btn-cancel" data-close="modal-action-sheet">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal: Protective Hold-to-Delete Confirmation -->
   <div class="modal" id="modal-confirm-delete">
@@ -1051,6 +1119,26 @@
       </div>
       <div class="settings-body">
         
+        <div class="settings-section">
+          <h4><i data-lucide="shield-check" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> App Security (4-Digit PIN Lock)</h4>
+          <p class="settings-desc">Protect your rental figures and tenant records with a quick 4-digit PIN whenever the app is opened or backgrounded.</p>
+          <div id="pin-settings-status" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="lock" style="width:16px; height:16px; color:var(--text-muted);" id="pin-status-icon"></i>
+              <span style="font-size:0.85rem; font-weight:600;" id="pin-status-text">PIN Lock: Disabled</span>
+            </div>
+            <span class="badge" id="pin-status-badge" style="background:#e2e8f0; color:#475569;">OFF</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-open-pin-setup" style="flex:1;">
+              <i data-lucide="key-round"></i> Configure 4-Digit PIN
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-disable-pin" style="display:none; color:var(--danger); border-color:rgba(239,68,68,0.3);">
+              <i data-lucide="unlock"></i> Turn Off PIN
+            </button>
+          </div>
+        </div>
+
         <div class="settings-section">
           <h4><i data-lucide="smartphone" style="vertical-align:-2px; margin-right:4px;"></i> Mobile Wi-Fi Access</h4>
           <p class="settings-desc">To access this app on your phone, ensure both PC and phone are on the same Wi-Fi, then visit your PC's IP address on port 8080.</p>
@@ -1115,6 +1203,81 @@
           </form>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Set Up / Change 4-Digit Security PIN -->
+  <div class="modal" id="modal-pin-setup">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="pin-setup-modal-title">Configure 4-Digit PIN</h3>
+        <button class="modal-close" data-close="modal-pin-setup">&times;</button>
+      </div>
+      <form id="form-pin-setup">
+        <p class="settings-desc" style="margin-bottom:14px;">
+          Set a memorable 4-digit numeric PIN to protect your rental records whenever the app is opened or backgrounded.
+        </p>
+
+        <div class="form-group" id="group-current-pin" style="display:none;">
+          <label for="input-current-pin">Current 4-Digit PIN *</label>
+          <input type="password" id="input-current-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="input-new-pin">New 4-Digit PIN *</label>
+          <input type="password" id="input-new-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
+          <small style="font-size:0.75rem; color:var(--text-muted);">Must be exactly 4 numbers (0-9).</small>
+        </div>
+
+        <div class="form-group">
+          <label for="input-confirm-pin">Confirm New 4-Digit PIN *</label>
+          <input type="password" id="input-confirm-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-pin-setup">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-pin">Save & Enable PIN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Full-Screen 4-Digit Security PIN Lock Screen -->
+  <div id="app-lock-screen" class="lock-screen-overlay" style="display:none;">
+    <div class="lock-screen-dialog">
+      <div class="lock-icon-circle">
+        <i data-lucide="shield-check"></i>
+      </div>
+      <h2 class="lock-title">RentBill Protected</h2>
+      <p class="lock-subtitle" id="lock-screen-subtitle">Enter 4-Digit PIN to unlock</p>
+
+      <!-- 4 PIN Dot Indicators -->
+      <div class="pin-dots-wrapper" id="lock-pin-dots">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+
+      <!-- Tactile 3x4 Keypad -->
+      <div class="pin-keypad-grid">
+        <button type="button" class="pin-key" data-key="1">1</button>
+        <button type="button" class="pin-key" data-key="2">2</button>
+        <button type="button" class="pin-key" data-key="3">3</button>
+        <button type="button" class="pin-key" data-key="4">4</button>
+        <button type="button" class="pin-key" data-key="5">5</button>
+        <button type="button" class="pin-key" data-key="6">6</button>
+        <button type="button" class="pin-key" data-key="7">7</button>
+        <button type="button" class="pin-key" data-key="8">8</button>
+        <button type="button" class="pin-key" data-key="9">9</button>
+        <button type="button" class="pin-key pin-key-fn" data-key="clear" title="Clear">C</button>
+        <button type="button" class="pin-key" data-key="0">0</button>
+        <button type="button" class="pin-key pin-key-fn" data-key="backspace" title="Delete">⌫</button>
+      </div>
+
+      <div class="lock-screen-footer-hint">
+        <span><i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Protected SQLite Records</span>
       </div>
     </div>
   </div>
