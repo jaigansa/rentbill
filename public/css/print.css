@@ -19,7 +19,8 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide app navigation, main tabs, headers, buttons, toasts, and non-printable modals */
+  /* Pure Print Isolation: Hide all non-printable elements */
+  body > *:not(#modal-invoice):not(#modal-ledger),
   .top-nav,
   .bottom-nav,
   .app-content,
@@ -27,12 +28,16 @@
   .filter-bar,
   .search-filter-card,
   .modal-footer,
+  .modal-header,
   .no-print,
   .toast,
   #toast,
+  #app-lock-screen,
   .modal:not(#modal-invoice):not(#modal-ledger) {
     display: none !important;
     visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* When printing an invoice, hide modal-ledger; when printing a statement, hide modal-invoice */
@@ -42,8 +47,9 @@
     visibility: hidden !important;
   }
 
-  /* Hide modal-invoice modal-header (invoice uses its own inv-header) */
-  #modal-invoice .modal-header {
+  /* Hide modal-invoice internal modal-header (invoice uses its own inv-header) */
+  #modal-invoice .modal-header,
+  #modal-invoice .modal-footer {
     display: none !important;
   }
 
@@ -183,52 +189,53 @@
 
   /* =========================================================
      PRO-STYLE BLACK & WHITE (MONOCHROME) PRINT INVOICE
+     Minimalist, Borderless Canvas & Clean Typography
      ========================================================= */
   .invoice-container {
-    border: 1.5px solid #000000 !important;
+    border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 24px 28px !important;
-    margin: 0 auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    background: #ffffff !important;
+    background: transparent !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .inv-header {
-    border-bottom: 2px solid #000000 !important;
-    padding-bottom: 14px !important;
-    margin-bottom: 18px !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 16px !important;
   }
 
   .inv-title {
-    color: #000000 !important;
-    font-size: 1.7rem !important;
-    font-weight: 900 !important;
-    letter-spacing: 2px !important;
+    color: #111827 !important;
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1.5px !important;
     text-transform: uppercase !important;
   }
 
   .inv-num {
-    color: #000000 !important;
-    font-size: 0.95rem !important;
-    font-weight: 700 !important;
+    color: #374151 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
   }
 
-  /* Monochrome Stamp Status Badge */
+  /* Minimalist Stamp Status Badge */
   .badge {
-    border: 2px solid #000000 !important;
+    border: 1.5px solid #111827 !important;
     background: transparent !important;
-    color: #000000 !important;
-    padding: 3px 12px !important;
-    border-radius: 4px !important;
-    font-weight: 800 !important;
-    font-size: 0.85rem !important;
+    color: #111827 !important;
+    padding: 2px 10px !important;
+    border-radius: 3px !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
     text-transform: uppercase !important;
-    letter-spacing: 1.5px !important;
+    letter-spacing: 1px !important;
     display: inline-block !important;
   }
 
@@ -236,34 +243,35 @@
   .badge-pending,
   .badge-overdue {
     background: transparent !important;
-    color: #000000 !important;
-    border-color: #000000 !important;
+    color: #111827 !important;
+    border-color: #111827 !important;
   }
 
-  /* High-Contrast Crisp Table */
+  /* Clean Minimal Table: No Clutter */
   .inv-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin: 18px 0 !important;
-    font-size: 0.95rem !important;
+    margin: 16px 0 !important;
+    font-size: 0.92rem !important;
+    border: none !important;
   }
 
   .inv-table th {
     background: transparent !important;
-    color: #000000 !important;
-    border-top: 1.5px solid #000000 !important;
-    border-bottom: 1.5px solid #000000 !important;
-    padding: 8px 10px !important;
-    font-weight: 800 !important;
+    color: #111827 !important;
+    border-top: 1px solid #111827 !important;
+    border-bottom: 1px solid #111827 !important;
+    padding: 8px 6px !important;
+    font-weight: 700 !important;
     text-transform: uppercase !important;
-    font-size: 0.82rem !important;
+    font-size: 0.78rem !important;
     letter-spacing: 0.5px !important;
   }
 
   .inv-table td {
-    border-bottom: 1px solid #d4d4d8 !important;
-    padding: 9px 10px !important;
-    color: #000000 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 8px 6px !important;
+    color: #111827 !important;
   }
 
   .inv-table td.num, .inv-table th.num {
@@ -271,38 +279,51 @@
     font-variant-numeric: tabular-nums !important;
   }
 
-  /* Formal Bookkeeping Double-Underline for Totals */
+  /* Formal Bookkeeping Total */
   .inv-total-row td {
-    border-top: 1.5px solid #000000 !important;
-    border-bottom: 3px double #000000 !important;
-    font-weight: 900 !important;
-    font-size: 1.15rem !important;
-    color: #000000 !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 2px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 1.05rem !important;
+    color: #111827 !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
   }
 
-  /* Clean Ink-Friendly Boxes (No heavy grey tints) */
-  .amount-words-box,
+  /* Clean Minimal Boxes: Subtle separator instead of heavy box border */
+  .amount-words-box {
+    background: transparent !important;
+    border: none !important;
+    border-left: 2px solid #9ca3af !important;
+    border-radius: 0 !important;
+    padding: 4px 10px !important;
+    margin-top: 12px !important;
+    color: #374151 !important;
+    font-size: 0.85rem !important;
+  }
+
   .payment-details-box {
     background: transparent !important;
-    border: 1px solid #000000 !important;
+    border: 1px dashed #9ca3af !important;
     border-radius: 4px !important;
-    padding: 10px 14px !important;
-    margin-top: 12px !important;
-    color: #000000 !important;
+    padding: 8px 12px !important;
+    margin-top: 14px !important;
+    color: #111827 !important;
+    font-size: 0.85rem !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .payment-details-box div {
-    color: #000000 !important;
+    color: #111827 !important;
   }
 
   /* Digital Invoice Notice */
   .inv-footer-notice {
-    border-top: 1px solid #000000 !important;
-    color: #3f3f46 !important;
+    border-top: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
     font-size: 0.72rem !important;
-    margin-top: 20px !important;
+    margin-top: 18px !important;
     padding-top: 8px !important;
   }
 }
