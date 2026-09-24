@@ -1443,7 +1443,7 @@ const App = {
                   <i data-lucide="plus"></i> Generate Bill
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.openTenantLedger(${t.id})">
-                  <i data-lucide="book-open"></i> Passbook / Ledger
+                  <i data-lucide="receipt"></i> View Bills
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
                   <i data-lucide="edit-3"></i> Edit Tenant
@@ -1585,46 +1585,17 @@ const App = {
   async openTenantLedger(tenantId) {
     this.currentLedgerTenantId = tenantId;
     const container = document.getElementById('ledger-bills-container');
-    const statementTbody = document.getElementById('ledger-statement-tbody');
     if (container) {
-      container.innerHTML = `<div class="empty-state">Loading tenant ledger...</div>`;
-    }
-    if (statementTbody) {
-      statementTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:16px;">Loading statement...</td></tr>`;
+      container.innerHTML = `<div class="empty-state">Loading bills...</div>`;
     }
 
     const tenant = this.tenants.find(t => t.id == tenantId);
     if (tenant) {
-      document.getElementById('modal-ledger-tenant-name').textContent = `${tenant.name} - Ledger`;
+      document.getElementById('modal-ledger-tenant-name').textContent = `${tenant.name} - Bills`;
       document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tenant.property_name || 'Unassigned'} • Phone: ${tenant.phone}`;
     } else {
-      document.getElementById('modal-ledger-tenant-name').textContent = 'Tenant Bill Ledger';
+      document.getElementById('modal-ledger-tenant-name').textContent = 'Tenant Bills';
       document.getElementById('modal-ledger-unit-info').textContent = '';
-    }
-
-    // Default to bills view
-    const billsContainer = document.getElementById('ledger-bills-container');
-    const stmtContainer = document.getElementById('ledger-statement-container');
-    const btnBills = document.getElementById('btn-ledger-view-bills');
-    const btnStmt = document.getElementById('btn-ledger-view-statement');
-    if (billsContainer && stmtContainer && btnBills && btnStmt) {
-      billsContainer.style.display = 'block';
-      stmtContainer.style.display = 'none';
-      btnBills.classList.add('active');
-      btnStmt.classList.remove('active');
-
-      btnBills.onclick = () => {
-        btnBills.classList.add('active');
-        btnStmt.classList.remove('active');
-        billsContainer.style.display = 'block';
-        stmtContainer.style.display = 'none';
-      };
-      btnStmt.onclick = () => {
-        btnStmt.classList.add('active');
-        btnBills.classList.remove('active');
-        billsContainer.style.display = 'none';
-        stmtContainer.style.display = 'block';
-      };
     }
 
     this.openModal('modal-ledger');
@@ -1642,7 +1613,7 @@ const App = {
         let paymentInfoText = '';
         if (tDetails.payment_upi) paymentInfoText += ` • Pay UPI: ${tDetails.payment_upi}`;
         if (tDetails.payment_bank_name) paymentInfoText += ` • Bank: ${tDetails.payment_bank_name} (${tDetails.payment_account_no || ''})`;
-        document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Ledger & Passbook`;
+        document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Bills`;
         document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tDetails.property_name || 'Unassigned'} • Phone: ${tDetails.phone}${paymentInfoText}`;
       }
 
@@ -1655,7 +1626,7 @@ const App = {
       document.getElementById('ledger-total-paid').textContent = `${curr}${totalPaid.toFixed(2)}`;
       document.getElementById('ledger-total-balance').textContent = `${curr}${totalBalance.toFixed(2)}`;
 
-      // 1. Render Bills Cards
+      // Render Bills Cards
       if (container) {
         if (!bills || bills.length === 0) {
           container.innerHTML = `
@@ -1667,58 +1638,6 @@ const App = {
           container.innerHTML = bills.map(b => this.renderBillCardHtml(b)).join('');
           this.attachBillActionListeners(container);
         }
-      }
-
-      // 2. Render Chronological Passbook Statement
-      if (statementTbody && ledgerData) {
-        if (!ledgerData.entries || ledgerData.entries.length === 0) {
-          statementTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No billing or payment activity recorded yet.</td></tr>`;
-        } else {
-          statementTbody.innerHTML = ledgerData.entries.map(e => `
-            <tr>
-              <td style="white-space:nowrap; font-size:0.75rem; color:var(--text-muted);">${e.date}</td>
-              <td>
-                <div style="font-weight:600; color:var(--text-main);">${e.description}</div>
-                <div style="font-size:0.72rem; color:var(--text-muted);">${e.type === 'BILL' ? 'Status: ' + (e.status || 'PENDING') : (e.referenceNo ? 'Ref: ' + e.referenceNo : 'Payment Received')}</div>
-              </td>
-              <td style="text-align:right; font-weight:600; color:var(--text-main);">
-                ${e.debit > 0 ? curr + e.debit.toFixed(2) : '-'}
-              </td>
-              <td style="text-align:right; font-weight:600; color:var(--success);">
-                ${e.credit > 0 ? curr + e.credit.toFixed(2) : '-'}
-              </td>
-              <td style="text-align:right; font-weight:700; color:${e.running_balance > 0 ? 'var(--danger)' : 'var(--text-main)'};">
-                ${curr}${e.running_balance.toFixed(2)}
-              </td>
-            </tr>
-          `).join('');
-        }
-      }
-
-      // 3. Bind Statement Print & Share Actions
-      const btnShareWa = document.getElementById('btn-ledger-share-wa');
-      if (btnShareWa) {
-        btnShareWa.onclick = () => {
-          const currentData = ledgerData || this.currentLedgerData;
-          if (!currentData) {
-            this.showToast('Statement details are still loading...', 'warning');
-            return;
-          }
-          Share.shareStatement(currentData, tDetails || currentData.tenant);
-        };
-      }
-      const btnPrint = document.getElementById('btn-ledger-print');
-      if (btnPrint) {
-        btnPrint.onclick = () => {
-          // Switch to Passbook Statement view so the table is active and visible
-          if (stmtContainer && billsContainer && btnStmt && btnBills) {
-            btnStmt.classList.add('active');
-            btnBills.classList.remove('active');
-            billsContainer.style.display = 'none';
-            stmtContainer.style.display = 'block';
-          }
-          window.print();
-        };
       }
 
       this.refreshIcons();
