@@ -1970,7 +1970,8 @@ const App = {
       const btn = document.createElement('button');
       btn.type = 'button';
       const isDanger = item.classList.contains('dropdown-item-danger');
-      btn.className = `action-sheet-btn ${isDanger ? 'action-sheet-btn-danger' : ''}`;
+      const isSuccess = item.classList.contains('dropdown-item-success') || item.classList.contains('btn-action-pay');
+      btn.className = `action-sheet-btn ${isDanger ? 'action-sheet-btn-danger' : ''} ${isSuccess ? 'action-sheet-btn-success' : ''}`;
       
       // Transfer inner HTML (icon + label text)
       btn.innerHTML = item.innerHTML;
@@ -2020,7 +2021,7 @@ const App = {
                   <i data-lucide="edit-3"></i> Edit Bill
                 </button>
                 ${b.status !== 'PAID' ? `
-                  <button type="button" class="dropdown-item btn-action-pay" data-bill-id="${b.id}">
+                  <button type="button" class="dropdown-item dropdown-item-success btn-action-pay" data-bill-id="${b.id}">
                     <i data-lucide="credit-card"></i> Record Payment
                   </button>
                 ` : ''}

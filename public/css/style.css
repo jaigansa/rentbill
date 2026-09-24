@@ -445,6 +445,23 @@ textarea:hover::-webkit-scrollbar-thumb {
   background: var(--whatsapp-hover);
 }
 
+.btn-success {
+  background: var(--success);
+  color: white;
+  border: 1px solid var(--success);
+}
+
+.btn-success:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.btn-success:active {
+  background: #047857;
+  border-color: #047857;
+  transform: scale(0.98);
+}
+
 /* Custom Share Fallback Grid */
 .share-action-grid {
   display: grid;
@@ -669,6 +686,20 @@ textarea:hover::-webkit-scrollbar-thumb {
   background: var(--danger-light);
 }
 
+.dropdown-item.dropdown-item-success {
+  color: #047857;
+  font-weight: 600;
+}
+
+.dropdown-item.dropdown-item-success i {
+  color: var(--success);
+}
+
+.dropdown-item.dropdown-item-success:hover,
+.dropdown-item.dropdown-item-success:active {
+  background: var(--success-light);
+}
+
 /* Mobile Full-View Action Sheet Pop-up */
 .action-sheet-modal {
   align-items: flex-end !important;
@@ -801,6 +832,30 @@ textarea:hover::-webkit-scrollbar-thumb {
 .action-sheet-btn.action-sheet-btn-danger:active {
   background: var(--danger-light);
   border-color: var(--danger);
+}
+
+.action-sheet-btn.action-sheet-btn-success {
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  font-weight: 700;
+}
+
+.action-sheet-btn.action-sheet-btn-success i,
+.action-sheet-btn.action-sheet-btn-success svg {
+  color: var(--success);
+}
+
+.action-sheet-btn.action-sheet-btn-success:hover,
+.action-sheet-btn.action-sheet-btn-success:focus-visible {
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.action-sheet-btn.action-sheet-btn-success:active {
+  background: var(--success-light);
+  border-color: var(--success);
+  transform: scale(0.99);
 }
 
 .action-sheet-btn-cancel {
