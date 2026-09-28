@@ -679,7 +679,7 @@ const App = {
         payment_ifsc: document.getElementById('tenant-payment-ifsc').value.trim().toUpperCase(),
         initial_elec_meter: parseFloat(document.getElementById('tenant-init-elec').value) || 0,
         initial_water_meter: parseFloat(document.getElementById('tenant-init-water').value) || 0,
-        preferred_channel: document.getElementById('tenant-channel')?.value || 'SMS_RCS',
+        preferred_channel: 'SMS_RCS',
         co_occupants: coOccupants,
         co_occupant_name: coOccupants[0]?.name || '',
         co_occupant_phone: coOccupants[0]?.phone || '',
@@ -1271,8 +1271,6 @@ const App = {
     document.getElementById('modal-tenant-title').textContent = 'Add New Tenant';
     const propSelect = document.getElementById('tenant-prop-id');
     if (propSelect) propSelect.value = propertyId;
-    const chSelect = document.getElementById('tenant-channel');
-    if (chSelect) chSelect.value = 'SMS_RCS';
   },
 
   async sendOverdueWhatsAppReminder(billId) {
@@ -1614,10 +1612,6 @@ const App = {
             </div>
             <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
               <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
-              ${isWa ? `
-              <span class="channel-badge badge-wa">
-                <i data-lucide="message-circle" style="width:10px; height:10px;"></i> WhatsApp
-              </span>` : ''}
             </div>
           </div>
           <div class="card-top-right">
@@ -1880,10 +1874,6 @@ const App = {
       const statusSelect = document.getElementById('tenant-is-active');
       if (statusSelect) {
         statusSelect.value = t.is_active ? '1' : '0';
-      }
-      const chSelect = document.getElementById('tenant-channel');
-      if (chSelect) {
-        chSelect.value = t.preferred_channel || 'SMS_RCS';
       }
 
       this.openModal('modal-tenant');
@@ -2692,8 +2682,6 @@ const App = {
     if (coListEl) coListEl.innerHTML = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
-    const chSelect = document.getElementById('tenant-channel');
-    if (chSelect) chSelect.value = 'SMS_RCS';
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
   },
