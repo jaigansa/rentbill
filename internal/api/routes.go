@@ -50,6 +50,8 @@ func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
 	// Backup, Restore & Reports
 	mux.HandleFunc("/api/backup/export", server.HandleBackupExport)
 	mux.HandleFunc("/api/backup/restore", server.HandleBackupRestore)
+	mux.HandleFunc("/api/backup/email-send", server.HandleBackupEmailSend)
+	mux.HandleFunc("/api/backup/email-test", server.HandleBackupEmailTest)
 	mux.HandleFunc("/api/reports/csv", server.HandleReportsCSV)
 
 	// Embedded Static Frontend Handler

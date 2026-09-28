@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -415,30 +416,37 @@ func (s *Server) HandlePayments(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Settings Handlers (Supabase / App Settings)
+// Settings Handlers (Email Backup / App Settings)
 func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		supabaseURL := s.db.GetSetting("supabase_url")
-		supabaseKey := s.db.GetSetting("supabase_key")
+		cfg := s.db.GetEmailBackupConfig()
 		currencySymbol := s.db.GetSetting("currency_symbol")
 		if currencySymbol == "" {
 			currencySymbol = "₹"
 		}
-		sendJSON(w, http.StatusOK, map[string]string{
-			"supabase_url":    supabaseURL,
-			"supabase_key":    supabaseKey,
-			"currency_symbol": currencySymbol,
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"currency_symbol":          currencySymbol,
+			"smtp_host":                cfg.Host,
+			"smtp_port":                cfg.Port,
+			"smtp_user":                cfg.User,
+			"smtp_pass":                cfg.Pass,
+			"smtp_to":                  cfg.To,
+			"auto_backup_enabled":      cfg.Enabled,
+			"auto_backup_interval":     cfg.Interval,
+			"last_backup_email_time":   cfg.LastSent,
+			"last_backup_email_status": cfg.LastStatus,
 		})
 
 	case http.MethodPost:
-		var payload map[string]string
+		var payload map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 			sendError(w, http.StatusBadRequest, "Invalid JSON")
 			return
 		}
-		for k, v := range payload {
-			_ = s.db.SetSetting(k, v)
+		for k, rawVal := range payload {
+			strVal := fmt.Sprintf("%v", rawVal)
+			_ = s.db.SetSetting(k, strVal)
 		}
 		sendJSON(w, http.StatusOK, map[string]string{"message": "Settings updated"})
 
@@ -586,6 +594,142 @@ func (s *Server) HandleBackupRestore(w http.ResponseWriter, r *http.Request) {
 		"payments_count": len(data.Payments),
 		"expenses_count": len(data.Expenses),
 	})
+}
+
+// HandleBackupEmailSend immediately triggers an email backup
+func (s *Server) HandleBackupEmailSend(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	cfg := s.db.GetEmailBackupConfig()
+
+	var req struct {
+		Host     string `json:"smtp_host"`
+		Port     string `json:"smtp_port"`
+		User     string `json:"smtp_user"`
+		Pass     string `json:"smtp_pass"`
+		To       string `json:"smtp_to"`
+		Interval string `json:"auto_backup_interval"`
+		Enabled  *bool  `json:"auto_backup_enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+		if req.Host != "" {
+			cfg.Host = req.Host
+		}
+		if req.Port != "" {
+			cfg.Port = req.Port
+		}
+		if req.User != "" {
+			cfg.User = req.User
+		}
+		if req.Pass != "" {
+			cfg.Pass = req.Pass
+		}
+		if req.To != "" {
+			cfg.To = req.To
+		}
+		if req.Interval != "" {
+			cfg.Interval = req.Interval
+		}
+		if req.Enabled != nil {
+			cfg.Enabled = *req.Enabled
+		}
+	}
+
+	if cfg.Host == "" || cfg.User == "" {
+		sendError(w, http.StatusBadRequest, "SMTP Host and Sender Email must be provided")
+		return
+	}
+
+	if err := s.db.SendEmailBackup(cfg); err != nil {
+		sendError(w, http.StatusInternalServerError, "Failed sending backup email: "+err.Error())
+		return
+	}
+
+	target := cfg.To
+	if target == "" {
+		target = cfg.User
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Backup email successfully sent to %s!", target),
+		"time":    s.db.GetSetting("last_backup_email_time"),
+		"status":  s.db.GetSetting("last_backup_email_status"),
+	})
+}
+
+// HandleBackupEmailTest tests the SMTP configuration
+func (s *Server) HandleBackupEmailTest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	cfg := s.db.GetEmailBackupConfig()
+
+	var req struct {
+		Host string `json:"smtp_host"`
+		Port string `json:"smtp_port"`
+		User string `json:"smtp_user"`
+		Pass string `json:"smtp_pass"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+		if req.Host != "" {
+			cfg.Host = req.Host
+		}
+		if req.Port != "" {
+			cfg.Port = req.Port
+		}
+		if req.User != "" {
+			cfg.User = req.User
+		}
+		if req.Pass != "" {
+			cfg.Pass = req.Pass
+		}
+	}
+
+	if cfg.Host == "" {
+		sendError(w, http.StatusBadRequest, "SMTP Host is required")
+		return
+	}
+
+	if err := database.TestSMTP(cfg); err != nil {
+		sendError(w, http.StatusBadRequest, "Connection failed: "+err.Error())
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "SMTP Connection and Authentication succeeded!",
+	})
+}
+
+// StartAutoBackupScheduler begins background execution of scheduled backup checks
+func (s *Server) StartAutoBackupScheduler(stopChan <-chan struct{}) {
+	go func() {
+		// Run initial check 5 seconds after startup
+		time.Sleep(5 * time.Second)
+		if err := s.db.RunAutoBackupCheck(); err != nil {
+			log.Printf("⚠️ Initial auto-backup check failed: %v", err)
+		}
+
+		ticker := time.NewTicker(30 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.db.RunAutoBackupCheck(); err != nil {
+					log.Printf("⚠️ Auto-backup check failed: %v", err)
+				}
+			case <-stopChan:
+				return
+			}
+		}
+	}()
 }
 
 // CSV Report Handler

@@ -95,6 +95,10 @@ func main() {
 	}
 	fmt.Println("======================================================")
 
+	// Start automatic email backup scheduler in background
+	stopScheduler := make(chan struct{})
+	server.StartAutoBackupScheduler(stopScheduler)
+
 	// Graceful shutdown channel
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -106,6 +110,7 @@ func main() {
 	}()
 
 	<-stop
+	close(stopScheduler)
 	fmt.Println("\n🛑 Shutting down RentBill gracefully...")
 	_ = httpServer.Close()
 	fmt.Println("👋 Bye!")
