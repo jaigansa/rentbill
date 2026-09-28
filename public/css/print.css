@@ -103,23 +103,47 @@
   }
 
   .inv-header {
-    border-bottom: 1.5px solid #111827 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
     padding-bottom: 12px !important;
-    margin-bottom: 16px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .inv-brand-section {
+    flex: 1 !important;
   }
 
   .inv-title {
     color: #111827 !important;
-    font-size: 1.5rem !important;
+    font-size: 1.4rem !important;
     font-weight: 800 !important;
-    letter-spacing: 1.5px !important;
+    letter-spacing: 1px !important;
     text-transform: uppercase !important;
+    line-height: 1.2 !important;
   }
 
   .inv-num {
-    color: #374151 !important;
+    color: #111827 !important;
     font-size: 0.9rem !important;
-    font-weight: 600 !important;
+    margin-top: 3px !important;
+  }
+
+  .inv-date {
+    color: #4b5563 !important;
+    font-size: 0.8rem !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-meta-section {
+    text-align: right !important;
+  }
+
+  .inv-period, .inv-due {
+    font-size: 0.85rem !important;
+    color: #111827 !important;
+    margin-top: 3px !important;
   }
 
   /* Minimalist Stamp Status Badge */
@@ -144,31 +168,87 @@
     border-color: #111827 !important;
   }
 
-  /* Clean Minimal Table: No Clutter */
+  /* Parties Section: Two Column Grid */
+  .inv-parties {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    margin-bottom: 14px !important;
+    font-size: 0.85rem !important;
+    padding: 10px 12px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    background: #f9fafb !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .inv-party-col {
+    flex: 1 !important;
+  }
+
+  .inv-party-right {
+    text-align: right !important;
+  }
+
+  .inv-party-label {
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .inv-party-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+  }
+
+  .inv-party-detail {
+    color: #374151 !important;
+    font-size: 0.82rem !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-party-co {
+    color: #4b5563 !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Clean Minimal Table */
   .inv-table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin: 16px 0 !important;
-    font-size: 0.92rem !important;
-    border: none !important;
+    margin: 12px 0 !important;
+    font-size: 0.88rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .inv-table th {
-    background: transparent !important;
+    background: #f3f4f6 !important;
     color: #111827 !important;
-    border-top: 1px solid #111827 !important;
-    border-bottom: 1px solid #111827 !important;
-    padding: 8px 6px !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding: 7px 8px !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
-    font-size: 0.78rem !important;
+    font-size: 0.75rem !important;
     letter-spacing: 0.5px !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .inv-table td {
     border-bottom: 1px solid #e5e7eb !important;
-    padding: 8px 6px !important;
+    padding: 7px 8px !important;
     color: #111827 !important;
+    text-align: left !important;
   }
 
   .inv-table td.num, .inv-table th.num {
@@ -176,43 +256,138 @@
     font-variant-numeric: tabular-nums !important;
   }
 
-  /* Formal Bookkeeping Total */
+  .inv-subtext {
+    font-size: 0.75rem !important;
+    color: #6b7280 !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-row-discount td {
+    background: #f0fdf4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .inv-row-arrears td {
+    background: #fef2f2 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Bookkeeping Totals */
   .inv-total-row td {
     border-top: 1.5px solid #111827 !important;
+    border-bottom: 1px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    color: #111827 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .inv-paid-row td {
+    border-bottom: 1px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+  }
+
+  .inv-balance-row td {
     border-bottom: 2px solid #111827 !important;
     font-weight: 800 !important;
-    font-size: 1.05rem !important;
+    font-size: 1rem !important;
     color: #111827 !important;
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
   }
 
-  /* Clean Minimal Boxes: Subtle separator instead of heavy box border */
+  /* Clean Minimal Amount in Words */
   .amount-words-box {
-    background: transparent !important;
-    border: none !important;
-    border-left: 2px solid #9ca3af !important;
-    border-radius: 0 !important;
-    padding: 4px 10px !important;
-    margin-top: 12px !important;
-    color: #374151 !important;
-    font-size: 0.85rem !important;
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 3px solid #111827 !important;
+    border-radius: 2px !important;
+    padding: 6px 10px !important;
+    margin-top: 10px !important;
+    color: #1f2937 !important;
+    font-size: 0.82rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
+  /* Payment Details Box */
   .payment-details-box {
     background: transparent !important;
-    border: 1px dashed #9ca3af !important;
+    border: 1px dashed #6b7280 !important;
     border-radius: 4px !important;
     padding: 8px 12px !important;
-    margin-top: 14px !important;
+    margin-top: 12px !important;
     color: #111827 !important;
-    font-size: 0.85rem !important;
+    font-size: 0.82rem !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
+  .payment-details-title {
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin-bottom: 4px !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .payment-details-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4px 16px !important;
+  }
+
   .payment-details-box div {
     color: #111827 !important;
+  }
+
+  .mono-val {
+    font-family: monospace !important;
+    font-weight: 600 !important;
+  }
+
+  /* Notes */
+  .inv-notes-box {
+    font-size: 0.8rem !important;
+    color: #4b5563 !important;
+    margin-top: 8px !important;
+    font-style: italic !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Physical Receipt Signatures Block */
+  .inv-signatures {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 36px !important;
+    padding-top: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .inv-sig-block {
+    width: 200px !important;
+    text-align: center !important;
+  }
+
+  .inv-sig-line {
+    border-bottom: 1px solid #111827 !important;
+    margin-bottom: 6px !important;
+  }
+
+  .inv-sig-label {
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    text-transform: uppercase !important;
   }
 
   /* Digital Invoice Notice */
@@ -220,7 +395,10 @@
     border-top: 1px solid #d1d5db !important;
     color: #6b7280 !important;
     font-size: 0.72rem !important;
-    margin-top: 18px !important;
+    margin-top: 20px !important;
     padding-top: 8px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
   }
 }

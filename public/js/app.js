@@ -224,6 +224,9 @@ const App = {
     }
 
     // Invoice actions
+    document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
+      if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
+    });
     document.getElementById('btn-invoice-download-img')?.addEventListener('click', () => {
       if (this.currentBillForInvoice) Share.downloadReceiptImage(this.currentBillForInvoice);
     });
@@ -2416,132 +2419,181 @@ const App = {
     try {
       const b = await API.getBill(billId);
       this.currentBillForInvoice = b;
-      const curr = window.APP_CURRENCY;
+      const curr = window.APP_CURRENCY || '₹';
+      const tenant = (this.tenants || []).find(t => t.id === b.tenant_id);
+      const property = (this.properties || []).find(p => p.id === b.property_id);
+      const propertyAddress = (property && property.address) ? property.address : '';
+      const tenantEmail = (tenant && tenant.email) || b.tenant_email || '';
+
+      let coOccupantsHtml = '';
+      if (tenant && Array.isArray(tenant.co_occupants) && tenant.co_occupants.length > 0) {
+        coOccupantsHtml = `
+          <div class="inv-party-detail inv-party-co">
+            <strong>Co-occupant(s):</strong> ${tenant.co_occupants.map(c => `${c.name}${c.phone ? ` (${c.phone})` : ''}`).join(', ')}
+          </div>
+        `;
+      } else if (tenant && tenant.co_occupant_name) {
+        coOccupantsHtml = `
+          <div class="inv-party-detail inv-party-co">
+            <strong>Co-occupant:</strong> ${tenant.co_occupant_name}${tenant.co_occupant_phone ? ` (${tenant.co_occupant_phone})` : ''}
+          </div>
+        `;
+      }
+
+      const issueDate = b.created_at ? (b.created_at.split('T')[0] || b.created_at.split(' ')[0]) : '';
       const statusBadge = `<span class="badge ${b.status === 'PAID' ? 'badge-paid' : (b.status === 'OVERDUE' ? 'badge-overdue' : 'badge-pending')}">${b.status}</span>`;
+      const numFmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (n || '0.00'));
 
       const html = `
         <div class="inv-header">
-          <div>
-            <div class="inv-title">RENT INVOICE</div>
-            <div class="inv-num">Invoice #${b.bill_number}</div>
-            <div style="font-size:0.8rem; color:var(--text-muted);">Date: ${b.created_at.split('T')[0] || b.created_at.split(' ')[0]}</div>
+          <div class="inv-brand-section">
+            <div class="inv-title">RENT INVOICE / RECEIPT</div>
+            <div class="inv-num">Invoice #: <strong>${b.bill_number}</strong></div>
+            <div class="inv-date">Date: ${issueDate}</div>
           </div>
-          <div style="text-align:right;">
-            ${statusBadge}
-            <div style="font-size:0.85rem; font-weight:700; margin-top:6px;">${b.billing_month}</div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">Due: ${b.due_date}</div>
+          <div class="inv-meta-section">
+            <div class="inv-badge-wrap">${statusBadge}</div>
+            <div class="inv-period">Billing Month: <strong>${b.billing_month}</strong></div>
+            <div class="inv-due">Due Date: <strong>${b.due_date}</strong></div>
           </div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; margin-bottom:14px; font-size:0.85rem;">
-          <div>
-            <strong>Billed To:</strong><br>
-            ${b.tenant_name}<br>
-            Phone: ${b.tenant_phone}
+        <div class="inv-parties">
+          <div class="inv-party-col">
+            <div class="inv-party-label">Billed To (Tenant)</div>
+            <div class="inv-party-name">${b.tenant_name}</div>
+            <div class="inv-party-detail"><strong>Mobile:</strong> ${b.tenant_phone}</div>
+            ${tenantEmail ? `<div class="inv-party-detail"><strong>Email:</strong> ${tenantEmail}</div>` : ''}
+            ${coOccupantsHtml}
           </div>
-          <div style="text-align:right;">
-            <strong>Property Unit:</strong><br>
-            ${b.property_name}
+          <div class="inv-party-col inv-party-right">
+            <div class="inv-party-label">Rental Premises</div>
+            <div class="inv-party-name">${b.property_name}</div>
+            ${propertyAddress ? `<div class="inv-party-detail">${propertyAddress}</div>` : ''}
           </div>
         </div>
 
         <table class="inv-table">
           <thead>
             <tr>
-              <th>Description</th>
-              <th class="num">Amount (${curr})</th>
+              <th style="width:45%;">Line Item / Description</th>
+              <th style="width:35%;">Details / Readings</th>
+              <th class="num" style="width:20%;">Amount (${curr})</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Base House Rent</td>
-              <td class="num">${curr}${b.base_rent.toFixed(2)}</td>
+              <td><strong>Base House Rent</strong></td>
+              <td>Rent for ${b.billing_month}</td>
+              <td class="num">${curr}${numFmt(b.base_rent)}</td>
             </tr>
             ${b.electricity_amount > 0 ? `
               <tr>
+                <td><strong>Electricity Charges</strong></td>
                 <td>
-                  Electricity (${b.electricity_units} units @ ${curr}${b.electricity_rate})<br>
-                  <small style="color:var(--text-muted);">Meter: ${b.prev_electricity_meter} ➔ ${b.curr_electricity_meter}</small>
+                  ${b.electricity_units} units @ ${curr}${b.electricity_rate}
+                  <div class="inv-subtext">Meter: ${b.prev_electricity_meter} ➔ ${b.curr_electricity_meter}</div>
                 </td>
-                <td class="num">${curr}${b.electricity_amount.toFixed(2)}</td>
+                <td class="num">${curr}${numFmt(b.electricity_amount)}</td>
               </tr>
             ` : ''}
             ${b.water_amount > 0 ? `
               <tr>
+                <td><strong>Water Charges</strong></td>
                 <td>
                   ${b.water_billing_type === 'METER' ? `
-                    Water Meter (${b.water_units} units @ ${curr}${b.water_rate})<br>
-                    <small style="color:var(--text-muted);">Meter: ${b.prev_water_meter} ➔ ${b.curr_water_meter}</small>
-                  ` : `Water Charges (Fixed)`}
+                    ${b.water_units} units @ ${curr}${b.water_rate}
+                    <div class="inv-subtext">Meter: ${b.prev_water_meter} ➔ ${b.curr_water_meter}</div>
+                  ` : 'Fixed Monthly Charge'}
                 </td>
-                <td class="num">${curr}${b.water_amount.toFixed(2)}</td>
+                <td class="num">${curr}${numFmt(b.water_amount)}</td>
               </tr>
             ` : ''}
             ${b.maintenance_amount > 0 ? `
               <tr>
-                <td>Maintenance Charges</td>
-                <td class="num">${curr}${b.maintenance_amount.toFixed(2)}</td>
+                <td><strong>Maintenance</strong></td>
+                <td>Society & Maintenance</td>
+                <td class="num">${curr}${numFmt(b.maintenance_amount)}</td>
               </tr>
             ` : ''}
             ${b.other_charges > 0 ? `
               <tr>
-                <td>Other: ${b.other_charges_desc || 'Adjustments'}</td>
-                <td class="num">${curr}${b.other_charges.toFixed(2)}</td>
+                <td><strong>Other Charges</strong></td>
+                <td>${b.other_charges_desc || 'Adjustment'}</td>
+                <td class="num">${curr}${numFmt(b.other_charges)}</td>
               </tr>
             ` : ''}
             ${b.discount_amount > 0 ? `
-              <tr style="background:rgba(22, 163, 74, 0.05);">
-                <td style="color:var(--success); font-weight:600;">
-                  <i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount ${b.discount_reason ? `(${b.discount_reason})` : ''}
-                </td>
-                <td class="num" style="color:var(--success); font-weight:700;">-${curr}${b.discount_amount.toFixed(2)}</td>
+              <tr class="inv-row-discount">
+                <td><strong style="color:var(--success, #16a34a);"><i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount</strong></td>
+                <td>${b.discount_reason || 'Concession'}</td>
+                <td class="num" style="color:var(--success, #16a34a); font-weight:700;">-${curr}${numFmt(b.discount_amount)}</td>
               </tr>
             ` : ''}
             ${b.previous_balance > 0 ? `
-              <tr style="background:rgba(239, 68, 68, 0.05);">
-                <td style="color:var(--danger); font-weight:600;">
-                  <i data-lucide="history" style="width:13px; height:13px; vertical-align:-2px;"></i> Previous Arrears / Unpaid Balance
-                </td>
-                <td class="num" style="color:var(--danger); font-weight:700;">${curr}${b.previous_balance.toFixed(2)}</td>
+              <tr class="inv-row-arrears">
+                <td><strong style="color:var(--danger, #dc2626);"><i data-lucide="history" style="width:13px; height:13px; vertical-align:-2px;"></i> Previous Arrears</strong></td>
+                <td>Unpaid balance carried forward</td>
+                <td class="num" style="color:var(--danger, #dc2626); font-weight:700;">${curr}${numFmt(b.previous_balance)}</td>
               </tr>
             ` : ''}
-            <tr class="inv-total-row" style="border-top:2px solid var(--border);">
-              <td>Total Amount</td>
-              <td class="num" style="color:var(--primary); font-size:1.15rem;">${curr}${b.total_amount.toFixed(2)}</td>
-            </tr>
-            <tr>
-              <td>Paid Amount</td>
-              <td class="num" style="color:var(--success); font-weight:600;">${curr}${b.paid_amount.toFixed(2)}</td>
-            </tr>
-            <tr style="font-weight:700;">
-              <td>Balance Due</td>
-              <td class="num" style="color:${b.balance_amount > 0 ? 'var(--danger)' : 'var(--text-main)'}; font-size:1.05rem;">
-                ${curr}${b.balance_amount.toFixed(2)}
-              </td>
-            </tr>
           </tbody>
+          <tfoot>
+            <tr class="inv-total-row">
+              <td colspan="2"><strong>Total Amount Due</strong></td>
+              <td class="num"><strong>${curr}${numFmt(b.total_amount)}</strong></td>
+            </tr>
+            ${b.paid_amount > 0 ? `
+              <tr class="inv-paid-row">
+                <td colspan="2">Amount Paid</td>
+                <td class="num" style="color:var(--success, #16a34a); font-weight:600;">${curr}${numFmt(b.paid_amount)}</td>
+              </tr>
+              <tr class="inv-balance-row">
+                <td colspan="2"><strong>Outstanding Balance Due</strong></td>
+                <td class="num"><strong style="color:${b.balance_amount > 0 ? 'var(--danger, #dc2626)' : 'inherit'}; font-size:1.05rem;">${curr}${numFmt(b.balance_amount)}</strong></td>
+              </tr>
+            ` : ''}
+          </tfoot>
         </table>
 
-        <div class="amount-words-box" style="font-size:0.82rem; margin-top:8px; padding:6px 10px; background:var(--bg); border-radius:var(--radius-sm); border:1px solid var(--border);">
+        <div class="amount-words-box">
           <strong>Amount in Words:</strong> ${typeof Share !== 'undefined' ? Share.amountInWords(b.total_amount) : ''}
+          ${(b.paid_amount > 0 && b.balance_amount > 0) ? `<br><small><strong>Balance in Words:</strong> ${Share.amountInWords(b.balance_amount)}</small>` : ''}
         </div>
 
         ${(b.payment_upi || b.payment_bank_name) ? `
-          <div class="payment-details-box" style="margin-top:12px; padding:10px 12px; background:var(--surface-alt); border-radius:var(--radius-sm); border:1px dashed var(--border); font-size:0.82rem;">
-            <div style="font-weight:700; color:var(--primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-              <i data-lucide="credit-card" style="width:14px; height:14px;"></i> Payment Details (Pay To)
+          <div class="payment-details-box">
+            <div class="payment-details-title">
+              <i data-lucide="credit-card" style="width:14px; height:14px; vertical-align:-2px;"></i> Payment Details (Pay To):
             </div>
-            ${b.payment_upi ? `<div><strong>UPI ID:</strong> <span style="font-family:monospace; font-size:0.9rem;">${b.payment_upi}</span></div>` : ''}
-            ${b.payment_bank_name ? `<div><strong>Bank:</strong> ${b.payment_bank_name}</div>` : ''}
-            ${b.payment_account_no ? `<div><strong>A/C No:</strong> <span style="font-family:monospace;">${b.payment_account_no}</span></div>` : ''}
-            ${b.payment_ifsc ? `<div><strong>IFSC:</strong> <span style="font-family:monospace;">${b.payment_ifsc}</span></div>` : ''}
+            <div class="payment-details-grid">
+              ${b.payment_upi ? `<div><strong>UPI ID:</strong> <span class="mono-val">${b.payment_upi}</span></div>` : ''}
+              ${b.payment_bank_name ? `<div><strong>Bank:</strong> ${b.payment_bank_name}</div>` : ''}
+              ${b.payment_account_no ? `<div><strong>A/C No:</strong> <span class="mono-val">${b.payment_account_no}</span></div>` : ''}
+              ${b.payment_ifsc ? `<div><strong>IFSC:</strong> <span class="mono-val">${b.payment_ifsc}</span></div>` : ''}
+            </div>
           </div>
         ` : ''}
 
-        ${b.notes ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;"><strong>Note:</strong> ${b.notes}</p>` : ''}
-        
-        <div class="inv-footer-notice" style="margin-top:16px; padding-top:10px; border-top:1px dashed var(--border); display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted);">
-          <span>This is a computer-generated invoice and requires no physical signature.</span>
+        ${b.notes ? `
+          <div class="inv-notes-box">
+            <strong>Note:</strong> ${b.notes}
+          </div>
+        ` : ''}
+
+        <div class="inv-signatures">
+          <div class="inv-sig-block">
+            <div class="inv-sig-line"></div>
+            <div class="inv-sig-label">Tenant Signature</div>
+          </div>
+          <div class="inv-sig-block">
+            <div class="inv-sig-line"></div>
+            <div class="inv-sig-label">Authorized Signatory</div>
+          </div>
+        </div>
+
+        <div class="inv-footer-notice">
+          <span>This is a computer-generated invoice/receipt. Valid without physical signature.</span>
           <span>Generated via <strong>RentBill</strong></span>
         </div>
       `;

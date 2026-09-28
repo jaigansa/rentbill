@@ -862,6 +862,9 @@
       </div>
 
       <div class="modal-footer no-print">
+        <button type="button" class="btn btn-outline" id="btn-invoice-share" title="Share Bill via WhatsApp, SMS, or Email">
+          <i data-lucide="share-2"></i> Share Bill
+        </button>
         <button type="button" class="btn btn-secondary" id="btn-invoice-download-img" title="Download HD Receipt Image (PNG) to Gallery/Files">
           <i data-lucide="image"></i> Save Image
         </button>
@@ -884,13 +887,13 @@
       </div>
       <div class="share-options-body">
         <div class="share-action-grid">
-          <button type="button" class="share-channel-btn btn-sms" id="btn-share-channel-sms">
-            <i data-lucide="message-square"></i>
-            <span>SMS / RCS</span>
-          </button>
           <button type="button" class="share-channel-btn btn-whatsapp" id="btn-share-channel-wa">
             <i data-lucide="message-circle"></i>
             <span>WhatsApp</span>
+          </button>
+          <button type="button" class="share-channel-btn btn-sms" id="btn-share-channel-sms">
+            <i data-lucide="message-square"></i>
+            <span>SMS / RCS</span>
           </button>
           <button type="button" class="share-channel-btn btn-email" id="btn-share-channel-email">
             <i data-lucide="mail"></i>
@@ -902,13 +905,13 @@
           </button>
         </div>
 
-        <!-- Format switch pills: Concise SMS/RCS vs Full breakdown -->
+        <!-- Format switch pills: Full breakdown vs Concise SMS/RCS -->
         <div style="margin-top: 14px; display: flex; gap: 8px;">
-          <button type="button" class="filter-pill active" id="btn-share-fmt-sms" style="flex:1; justify-content:center;">
-            <i data-lucide="message-square" style="width:14px; height:14px; vertical-align:-2px;"></i> Concise SMS / RCS
-          </button>
-          <button type="button" class="filter-pill" id="btn-share-fmt-full" style="flex:1; justify-content:center;">
+          <button type="button" class="filter-pill active" id="btn-share-fmt-full" style="flex:1; justify-content:center;">
             <i data-lucide="file-text" style="width:14px; height:14px; vertical-align:-2px;"></i> Full Breakdown
+          </button>
+          <button type="button" class="filter-pill" id="btn-share-fmt-sms" style="flex:1; justify-content:center;">
+            <i data-lucide="message-square" style="width:14px; height:14px; vertical-align:-2px;"></i> Concise SMS / RCS
           </button>
         </div>
 

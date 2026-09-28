@@ -56,71 +56,88 @@ const Share = {
   // Format the full bill breakdown text (Rich WhatsApp / detailed format)
   buildBillText(bill) {
     const currency = window.APP_CURRENCY || '₹';
+    const numFmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (n || '0.00'));
+
     const lines = [
-      `RENT & UTILITY BILL`,
-      `----------------------------------`,
-      `Bill No: ${bill.bill_number}`,
-      `Tenant: ${bill.tenant_name}`,
-      `Unit: ${bill.property_name}`,
-      `Month: ${bill.billing_month}`,
-      `Due Date: ${bill.due_date}`,
-      `----------------------------------`,
-      `Breakdown:`,
-      `* Base Rent: ${currency}${bill.base_rent.toFixed(2)}`,
+      `🏠 *RENT & UTILITY INVOICE*`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📄 *Bill No:* #${bill.bill_number}`,
+      `👤 *Tenant:* ${bill.tenant_name}`,
+      `🏢 *Unit:* ${bill.property_name}`,
+      `📅 *Month:* ${bill.billing_month}`,
+      `⏰ *Due Date:* ${bill.due_date}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📋 *CHARGES BREAKDOWN:*`,
+      `▫️ *Base Rent:* ${currency}${numFmt(bill.base_rent)}`,
     ];
 
     if (bill.electricity_units > 0 || bill.electricity_amount > 0) {
-      lines.push(
-        `* Electricity: ${bill.electricity_units} units @ ${currency}${bill.electricity_rate} = ${currency}${bill.electricity_amount.toFixed(2)} ` +
-        `(Meter: ${bill.prev_electricity_meter} -> ${bill.curr_electricity_meter})`
-      );
+      let elecLine = `▫️ *Electricity:* ${bill.electricity_units} units @ ${currency}${bill.electricity_rate} = ${currency}${numFmt(bill.electricity_amount)}`;
+      if (bill.prev_electricity_meter !== undefined && bill.curr_electricity_meter !== undefined) {
+        elecLine += `\n   ↳ _Meter: ${bill.prev_electricity_meter} ➔ ${bill.curr_electricity_meter}_`;
+      }
+      lines.push(elecLine);
     }
+
     if (bill.water_amount > 0) {
       if (bill.water_billing_type === 'METER' && bill.water_units > 0) {
         lines.push(
-          `* Water (Metered): ${bill.water_units} units @ ${currency}${bill.water_rate} = ${currency}${bill.water_amount.toFixed(2)} ` +
-          `(Meter: ${bill.prev_water_meter} -> ${bill.curr_water_meter})`
+          `▫️ *Water (Metered):* ${bill.water_units} units @ ${currency}${bill.water_rate} = ${currency}${numFmt(bill.water_amount)}\n` +
+          `   ↳ _Meter: ${bill.prev_water_meter} ➔ ${bill.curr_water_meter}_`
         );
       } else {
-        lines.push(`* Water (Fixed): ${currency}${bill.water_amount.toFixed(2)}`);
+        lines.push(`▫️ *Water (Fixed):* ${currency}${numFmt(bill.water_amount)}`);
       }
-    }
-    if (bill.maintenance_amount > 0) {
-      lines.push(`* Maintenance: ${currency}${bill.maintenance_amount.toFixed(2)}`);
-    }
-    if (bill.other_charges > 0) {
-      lines.push(`* Other Charges (${bill.other_charges_desc || 'Adjustment'}): ${currency}${bill.other_charges.toFixed(2)}`);
-    }
-    if (bill.discount_amount > 0) {
-      lines.push(`* Discount${bill.discount_reason ? ` (${bill.discount_reason})` : ''}: -${currency}${bill.discount_amount.toFixed(2)}`);
-    }
-    if (bill.previous_balance > 0) {
-      lines.push(`* Previous Arrears / Unpaid Due: ${currency}${bill.previous_balance.toFixed(2)}`);
     }
 
-    lines.push(`----------------------------------`);
-    lines.push(`TOTAL DUE: ${currency}${bill.total_amount.toFixed(2)}`);
-    lines.push(`Amount in Words: ${this.amountInWords(bill.total_amount)}`);
+    if (bill.maintenance_amount > 0) {
+      lines.push(`▫️ *Maintenance:* ${currency}${numFmt(bill.maintenance_amount)}`);
+    }
+
+    if (bill.other_charges > 0) {
+      lines.push(`▫️ *Other Charges (${bill.other_charges_desc || 'Adjustment'}):* ${currency}${numFmt(bill.other_charges)}`);
+    }
+
+    if (bill.discount_amount > 0) {
+      lines.push(`▫️ *Discount (${bill.discount_reason || 'Concession'}):* -${currency}${numFmt(bill.discount_amount)}`);
+    }
+
+    if (bill.previous_balance > 0) {
+      lines.push(`▫️ *Previous Arrears:* ${currency}${numFmt(bill.previous_balance)}`);
+    }
+
+    lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`💰 *TOTAL DUE: ${currency}${numFmt(bill.total_amount)}*`);
+    lines.push(`📝 *In Words:* _${this.amountInWords(bill.total_amount)}_`);
+
+    const balance = (bill.balance_amount !== undefined && bill.balance_amount !== null)
+      ? bill.balance_amount
+      : (bill.total_amount - (bill.paid_amount || 0));
+
     if (bill.paid_amount > 0) {
-      lines.push(`Paid: ${currency}${bill.paid_amount.toFixed(2)}`);
-      lines.push(`Balance: ${currency}${bill.balance_amount.toFixed(2)}`);
-      if (bill.balance_amount > 0) {
-        lines.push(`Balance in Words: ${this.amountInWords(bill.balance_amount)}`);
+      lines.push(`✅ *Paid Amount:* ${currency}${numFmt(bill.paid_amount)}`);
+      lines.push(`⚠️ *Balance Due: ${currency}${numFmt(balance)}*`);
+      if (balance > 0) {
+        lines.push(`📝 *Balance in Words:* _${this.amountInWords(balance)}_`);
       }
     }
-    lines.push(`----------------------------------`);
+
     if (bill.payment_upi || bill.payment_bank_name) {
-      lines.push(`PAYMENT DETAILS:`);
-      if (bill.payment_upi) lines.push(`* UPI: ${bill.payment_upi}`);
-      if (bill.payment_bank_name) lines.push(`* Bank: ${bill.payment_bank_name}`);
-      if (bill.payment_account_no) lines.push(`* A/C: ${bill.payment_account_no}`);
-      if (bill.payment_ifsc) lines.push(`* IFSC: ${bill.payment_ifsc}`);
-      lines.push(`----------------------------------`);
+      lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      lines.push(`💳 *PAYMENT DETAILS (PAY TO):*`);
+      if (bill.payment_upi) lines.push(`▫️ *UPI ID:* \`${bill.payment_upi}\``);
+      if (bill.payment_bank_name) lines.push(`▫️ *Bank:* ${bill.payment_bank_name}`);
+      if (bill.payment_account_no) lines.push(`▫️ *A/C No:* \`${bill.payment_account_no}\``);
+      if (bill.payment_ifsc) lines.push(`▫️ *IFSC:* \`${bill.payment_ifsc}\``);
     }
+
     if (bill.notes) {
-      lines.push(`Note: ${bill.notes}`);
+      lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      lines.push(`📌 *Note:* ${bill.notes}`);
     }
-    lines.push(`Generated by RentBill`);
+
+    lines.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    lines.push(`_Generated via RentBill_`);
 
     return lines.join('\n');
   },
@@ -128,6 +145,7 @@ const Share = {
   // Format concise SMS / RCS bill notice (fits mobile text messages, zero messy asterisks)
   buildSmsRcsBillText(bill, isCompact = false) {
     const currency = window.APP_CURRENCY || '₹';
+    const numFmt = (n) => (typeof n === 'number' ? n.toFixed(2) : (n || '0.00'));
     const due = bill.due_date || '';
     const balance = (bill.balance_amount !== undefined && bill.balance_amount !== null)
       ? bill.balance_amount
@@ -141,9 +159,9 @@ const Share = {
     }
 
     if (isCompact) {
-      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${bill.billing_month}) is ${currency}${bill.total_amount.toFixed(2)}. Due: ${due}.`;
+      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${bill.billing_month}) is ${currency}${numFmt(bill.total_amount)}. Due: ${due}.`;
       if (balance > 0 && balance !== bill.total_amount) {
-        msg += ` Due Bal: ${currency}${balance.toFixed(2)}.`;
+        msg += ` Due Bal: ${currency}${numFmt(balance)}.`;
       }
       if (payDetails) msg += ` ${payDetails}.`;
       msg += ` Thank you!`;
@@ -157,31 +175,31 @@ const Share = {
       `Bill #: ${bill.bill_number}`,
       `Due Date: ${due}`,
       `-----------------------------`,
-      `Rent: ${currency}${bill.base_rent.toFixed(2)}`,
+      `Base Rent: ${currency}${numFmt(bill.base_rent)}`,
     ];
 
     if (bill.electricity_amount > 0) {
-      lines.push(`Electricity: ${bill.electricity_units} units = ${currency}${bill.electricity_amount.toFixed(2)}`);
+      lines.push(`Electricity: ${bill.electricity_units} units = ${currency}${numFmt(bill.electricity_amount)}`);
     }
     if (bill.water_amount > 0) {
-      lines.push(`Water: ${currency}${bill.water_amount.toFixed(2)}`);
+      lines.push(`Water: ${currency}${numFmt(bill.water_amount)}`);
     }
     if (bill.maintenance_amount > 0) {
-      lines.push(`Maintenance: ${currency}${bill.maintenance_amount.toFixed(2)}`);
+      lines.push(`Maintenance: ${currency}${numFmt(bill.maintenance_amount)}`);
     }
     if (bill.other_charges > 0) {
-      lines.push(`Other: ${currency}${bill.other_charges.toFixed(2)}`);
+      lines.push(`Other Charges: ${currency}${numFmt(bill.other_charges)}`);
     }
     if (bill.discount_amount > 0) {
-      lines.push(`Discount: -${currency}${bill.discount_amount.toFixed(2)}`);
+      lines.push(`Discount: -${currency}${numFmt(bill.discount_amount)}`);
     }
     if (bill.previous_balance > 0) {
-      lines.push(`Previous Due: ${currency}${bill.previous_balance.toFixed(2)}`);
+      lines.push(`Previous Due: ${currency}${numFmt(bill.previous_balance)}`);
     }
     lines.push(`-----------------------------`);
-    lines.push(`TOTAL DUE: ${currency}${bill.total_amount.toFixed(2)}`);
+    lines.push(`TOTAL DUE: ${currency}${numFmt(bill.total_amount)}`);
     if (bill.paid_amount > 0) {
-      lines.push(`Paid: ${currency}${bill.paid_amount.toFixed(2)} | Balance: ${currency}${balance.toFixed(2)}`);
+      lines.push(`Paid: ${currency}${numFmt(bill.paid_amount)} | Balance: ${currency}${numFmt(balance)}`);
     }
     if (payDetails) {
       lines.push(payDetails);
@@ -196,10 +214,8 @@ const Share = {
     if (!bill) return;
 
     const title = `Rent Bill - ${bill.property_name} (${bill.billing_month})`;
-    // Default to concise SMS/RCS if tenant prefers SMS_RCS, else full text
-    const defaultText = (bill.preferred_channel === 'WHATSAPP')
-      ? this.buildBillText(bill)
-      : this.buildSmsRcsBillText(bill, false);
+    // Default to rich formatted bill text for mobile share sheet & WhatsApp
+    const defaultText = this.buildBillText(bill);
     const shareData = { title: title, text: defaultText };
 
     let canNativeShare = false;
@@ -237,7 +253,7 @@ const Share = {
     const btnFmtSms = document.getElementById('btn-share-fmt-sms');
     const btnFmtFull = document.getElementById('btn-share-fmt-full');
 
-    let currentFormat = 'sms'; // 'sms' or 'full'
+    let currentFormat = 'full'; // 'full' (WhatsApp) or 'sms'
     const fullText = this.buildBillText(bill);
     const smsText = this.buildSmsRcsBillText(bill, false);
 
@@ -265,25 +281,25 @@ const Share = {
     if (btnFmtSms) btnFmtSms.onclick = () => updatePreview('sms');
     if (btnFmtFull) btnFmtFull.onclick = () => updatePreview('full');
 
-    // Initialize with sms format
-    updatePreview('sms');
+    // Default to rich WhatsApp format
+    updatePreview('full');
 
     const cleanPhone = (bill.tenant_phone || '').replace(/[^0-9]/g, '');
 
-    // Bind SMS / RCS channel button
+    // Bind SMS / RCS channel button: sends clean SMS text
     const btnSms = document.getElementById('btn-share-channel-sms');
     if (btnSms) {
       btnSms.onclick = () => {
-        const text = previewEl ? previewEl.value : smsText;
+        const text = currentFormat === 'sms' && previewEl ? previewEl.value : smsText;
         this.sendSmsRcsDirect(cleanPhone, text);
       };
     }
 
-    // Bind WhatsApp channel button
+    // Bind WhatsApp channel button: sends rich WhatsApp text
     const btnWa = document.getElementById('btn-share-channel-wa');
     if (btnWa) {
       btnWa.onclick = () => {
-        const text = previewEl ? previewEl.value : fullText;
+        const text = currentFormat === 'full' && previewEl ? previewEl.value : fullText;
         this.sendWhatsAppDirect(cleanPhone, text);
       };
     }
@@ -294,7 +310,12 @@ const Share = {
       btnEmail.onclick = () => {
         const text = previewEl ? previewEl.value : fullText;
         const subject = `Rent Bill for ${bill.property_name} - ${bill.billing_month}`;
-        this.sendEmailDirect(bill.tenant_email || '', subject, text);
+        let email = bill.tenant_email || '';
+        if (!email && window.App && Array.isArray(window.App.tenants)) {
+          const t = window.App.tenants.find(item => item.id === bill.tenant_id);
+          if (t && t.email) email = t.email;
+        }
+        this.sendEmailDirect(email, subject, text);
       };
     }
 
@@ -302,7 +323,7 @@ const Share = {
     const btnCopy = document.getElementById('btn-share-channel-copy');
     if (btnCopy) {
       btnCopy.onclick = async () => {
-        const textToCopy = previewEl ? previewEl.value : smsText;
+        const textToCopy = previewEl ? previewEl.value : (currentFormat === 'sms' ? smsText : fullText);
         try {
           if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(textToCopy);
@@ -347,7 +368,7 @@ const Share = {
 
     const width = 640;
     // Calculate required height based on dynamic sections
-    let height = 540;
+    let height = 580;
     if (bill.electricity_amount > 0) height += 35;
     if (bill.water_amount > 0) height += 35;
     if (bill.maintenance_amount > 0) height += 30;
@@ -487,7 +508,7 @@ const Share = {
       drawRow('Maintenance Charges', '', bill.maintenance_amount);
     }
     if (bill.other_charges > 0) {
-      drawRow(`Other: ${bill.other_charges_desc || 'Adjustments'}`, '', bill.other_charges);
+      drawRow(`Other Charges: ${bill.other_charges_desc || 'Adjustment'}`, '', bill.other_charges);
     }
     if (bill.discount_amount > 0) {
       drawRow(`Discount: ${bill.discount_reason || 'Concession'}`, '', bill.discount_amount, false, true);
