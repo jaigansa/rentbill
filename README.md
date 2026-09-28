@@ -17,8 +17,7 @@ It includes a built-in embedded frontend (Pure HTML, CSS, Vanilla JS), an embedd
 - **WhatsApp Bill Sharing**: One-tap pre-formatted bill breakdown ready to send directly to your tenant's WhatsApp.
 - **Receipt & PDF Invoices**: Clean, printable invoices formatted with `@media print`.
 - **Payment Tracking**: Record Cash, UPI, and Bank payments with balance and overdue status tracking.
-- **Local Network (Wi-Fi) Mobile Access**: On startup, displays your computer's local Wi-Fi URL so you can open it on your phone instantly.
-- **Optional Supabase Cloud Backup**: Settings page allows you to link your Supabase account whenever you want cloud backup.
+- **Automatic Email Cloud Backup**: Settings page allows you to link your Gmail, Outlook, or custom SMTP to receive automated daily or weekly database backups directly in your inbox.
 
 ---
 
@@ -93,8 +92,7 @@ rentbill/
 ├── Makefile              # Build & cross-compilation shortcuts
 ├── internal/
 │   ├── api/              # REST API handlers and routing
-│   ├── database/         # SQLite schema, queries, and calculations
-│   └── sync/             # Optional Supabase cloud backup client
+│   └── database/         # SQLite schema, queries, calculations & email backup
 └── public/               # Pure HTML, CSS, and Vanilla JS (Embedded directly into the binary)
     ├── index.html        # Single-page mobile app shell
     ├── manifest.json     # PWA manifest

@@ -825,7 +825,7 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 	return &summary, nil
 }
 
-// --- App Settings (Supabase / Config) ---
+// --- App Settings (Email Backup / Config) ---
 
 func (db *DB) SetSetting(key, value string) error {
 	_, err := db.Exec("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", key, value)

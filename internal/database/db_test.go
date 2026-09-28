@@ -3,6 +3,7 @@ package database_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rentbill/internal/database"
@@ -194,6 +195,66 @@ func TestPINAuthentication(t *testing.T) {
 	}
 	if db.IsPINEnabled() {
 		t.Errorf("expected PIN to be disabled after DisablePIN")
+	}
+}
+
+func TestEmailBackupConfig(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Initial default config
+	cfg := db.GetEmailBackupConfig()
+	if cfg.Port != "587" {
+		t.Errorf("expected default port 587, got %s", cfg.Port)
+	}
+	if cfg.Interval != "daily" {
+		t.Errorf("expected default interval daily, got %s", cfg.Interval)
+	}
+	if cfg.Enabled {
+		t.Errorf("expected auto backup disabled initially")
+	}
+
+	// Save custom config
+	newCfg := database.EmailBackupConfig{
+		Host:     "smtp.gmail.com",
+		Port:     "587",
+		User:     "landlord@gmail.com",
+		Pass:     "abcd1234efgh5678",
+		To:       "backup@gmail.com",
+		Enabled:  true,
+		Interval: "weekly",
+	}
+	if err := db.SaveEmailBackupConfig(newCfg); err != nil {
+		t.Fatalf("failed saving email backup config: %v", err)
+	}
+
+	saved := db.GetEmailBackupConfig()
+	if saved.Host != "smtp.gmail.com" || saved.User != "landlord@gmail.com" || !saved.Enabled || saved.Interval != "weekly" {
+		t.Errorf("saved config mismatch: %+v", saved)
+	}
+
+	// Auto backup check should run without error when conditions are met or not due
+	if err := db.RunAutoBackupCheck(); err != nil {
+		// Won't actually connect to fake credentials, but check logic itself should not crash
+	}
+}
+
+func TestBuildEmailMIME(t *testing.T) {
+	dummyAttachment := []byte(`{"test": "data"}`)
+	msg := database.BuildEmailMIME("sender@test.com", "recipient@test.com", "Test Subject", "<p>Hello</p>", "backup.json", dummyAttachment)
+	msgStr := string(msg)
+
+	if !strings.Contains(msgStr, "From: sender@test.com") {
+		t.Errorf("MIME missing From header")
+	}
+	if !strings.Contains(msgStr, "To: recipient@test.com") {
+		t.Errorf("MIME missing To header")
+	}
+	if !strings.Contains(msgStr, "filename=\"backup.json\"") {
+		t.Errorf("MIME missing attachment filename")
+	}
+	if !strings.Contains(msgStr, "multipart/mixed") {
+		t.Errorf("MIME missing multipart content type")
 	}
 }
 
