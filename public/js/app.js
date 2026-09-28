@@ -640,6 +640,8 @@ const App = {
         initial_elec_meter: parseFloat(document.getElementById('tenant-init-elec').value) || 0,
         initial_water_meter: parseFloat(document.getElementById('tenant-init-water').value) || 0,
         preferred_channel: document.getElementById('tenant-channel')?.value || 'SMS_RCS',
+        co_occupant_name: document.getElementById('tenant-co-occupant-name')?.value.trim() || '',
+        co_occupant_phone: document.getElementById('tenant-co-occupant-phone')?.value.trim() || '',
         is_active: isActiveVal
       };
 
@@ -1643,6 +1645,20 @@ const App = {
               <span class="detail-val"><a href="mailto:${t.email}" class="phone-link">${t.email}</a></span>
             </div>
             ` : ''}
+            ${(t.co_occupant_name || t.co_occupant_phone) ? `
+            <div class="tenant-detail-item" style="grid-column: span 2;">
+              <span class="detail-label">Co-occupant / Roommate</span>
+              <span class="detail-val" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span>${t.co_occupant_name || 'Co-occupant'}</span>
+                ${t.co_occupant_phone ? `
+                  <span style="color:var(--text-muted); opacity:0.6;">•</span>
+                  <a href="tel:${t.co_occupant_phone.replace(/[^0-9+]/g, '')}" class="phone-link" title="Tap to call ${t.co_occupant_phone}">
+                    <i data-lucide="phone" style="width:12px; height:12px; vertical-align:-2px;"></i> ${t.co_occupant_phone}
+                  </a>
+                ` : ''}
+              </span>
+            </div>
+            ` : ''}
             ${(t.payment_upi || t.payment_bank_name) ? `
             <div class="tenant-detail-item" style="grid-column: span 2;">
               <span class="detail-label">Payment / Bank Info</span>
@@ -1772,6 +1788,10 @@ const App = {
       document.getElementById('tenant-name').value = t.name;
       document.getElementById('tenant-phone').value = t.phone;
       document.getElementById('tenant-email').value = t.email || '';
+      const coNameEl = document.getElementById('tenant-co-occupant-name');
+      if (coNameEl) coNameEl.value = t.co_occupant_name || '';
+      const coPhoneEl = document.getElementById('tenant-co-occupant-phone');
+      if (coPhoneEl) coPhoneEl.value = t.co_occupant_phone || '';
       document.getElementById('tenant-prop-id').value = t.property_id || '';
       document.getElementById('tenant-deposit').value = t.security_deposit || 0;
       document.getElementById('tenant-move-in').value = t.move_in_date || '';

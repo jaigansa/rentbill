@@ -98,14 +98,16 @@ func (db *DB) CreateTenant(t *Tenant) (int64, error) {
 	INSERT INTO tenants (
 		name, phone, email, property_id, security_deposit, move_in_date,
 		payment_upi, payment_bank_name, payment_account_no, payment_ifsc,
-		initial_elec_meter, initial_water_meter, preferred_channel, is_active
+		initial_elec_meter, initial_water_meter, preferred_channel,
+		co_occupant_name, co_occupant_phone, is_active
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
-		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel, 1,
+		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
+		t.CoOccupantName, t.CoOccupantPhone, 1,
 	)
 	if err != nil {
 		return 0, err
@@ -121,6 +123,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
+	       COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, 0.0) AS total_due
@@ -151,6 +154,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 			&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 			&t.InitialElecMeter, &t.InitialWaterMeter,
 			&t.PreferredChannel,
+			&t.CoOccupantName, &t.CoOccupantPhone,
 			&isActiveInt, &t.CreatedAt,
 			&t.TotalPaid, &t.TotalDue,
 		)
@@ -171,6 +175,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
+	       COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, 0.0) AS total_due
@@ -194,6 +199,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 		&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 		&t.InitialElecMeter, &t.InitialWaterMeter,
 		&t.PreferredChannel,
+		&t.CoOccupantName, &t.CoOccupantPhone,
 		&isActiveInt, &t.CreatedAt,
 		&t.TotalPaid, &t.TotalDue,
 	)
@@ -216,13 +222,15 @@ func (db *DB) UpdateTenant(t *Tenant) error {
 	UPDATE tenants
 	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, move_in_date = ?,
 	    payment_upi = ?, payment_bank_name = ?, payment_account_no = ?, payment_ifsc = ?,
-	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?, is_active = ?
+	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?,
+	    co_occupant_name = ?, co_occupant_phone = ?, is_active = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
-		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel, activeInt, t.ID,
+		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
+		t.CoOccupantName, t.CoOccupantPhone, activeInt, t.ID,
 	)
 	return err
 }
