@@ -2604,17 +2604,6 @@ const App = {
           </div>
         ` : ''}
 
-        <div class="inv-signatures">
-          <div class="inv-sig-block">
-            <div class="inv-sig-line"></div>
-            <div class="inv-sig-label">Tenant Signature</div>
-          </div>
-          <div class="inv-sig-block">
-            <div class="inv-sig-line"></div>
-            <div class="inv-sig-label">Authorized Signatory</div>
-          </div>
-        </div>
-
         <div class="inv-footer-notice">
           <span>This is a computer-generated invoice/receipt. Valid without physical signature.</span>
           <span>Generated via <strong>RentBill</strong></span>

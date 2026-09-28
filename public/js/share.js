@@ -390,43 +390,9 @@ const Share = {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const scale = 2; // Retina 2x scale for ultra-crisp text
+    // 16:9 vertical ratio (9:16 portrait ratio: 720 x 1280 -> 1440 x 2560 px output)
     const width = 720;
-
-    // Calculate required height based on dynamic sections
-    let height = 150; // Top accent + header + divider
-    let partyH = 76;
-    if (email) partyH += 18;
-    if (coOccupants) partyH += 18;
-    if (address) partyH += 18;
-    height += partyH + 20;
-
-    // Table header + line items
-    height += 36; // Table header
-    height += 38; // Base Rent
-    if (bill.electricity_amount > 0) height += 42;
-    if (bill.water_amount > 0) height += (bill.water_billing_type === 'METER' ? 42 : 36);
-    if (bill.maintenance_amount > 0) height += 36;
-    if (bill.other_charges > 0) height += 36;
-    if (bill.discount_amount > 0) height += 36;
-    if (bill.previous_balance > 0) height += 36;
-
-    // Summary box
-    height += (bill.paid_amount > 0 ? 104 : 68) + 16;
-
-    // Amount in words
-    height += ((bill.paid_amount > 0 && bill.balance_amount > 0) ? 60 : 42) + 14;
-
-    // Payment details
-    if (bill.payment_upi || bill.payment_bank_name) height += 88;
-
-    // Notes
-    if (bill.notes) height += 38;
-
-    // Signatures
-    height += 92;
-
-    // Footer notice
-    height += 48;
+    const height = 1280;
 
     canvas.width = width * scale;
     canvas.height = height * scale;
@@ -452,25 +418,12 @@ const Share = {
       }
     }
 
-    // 1. Background
+    // 1. Background (Pure clean canvas with no top border color)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Top Header Accent Banner (Brand gradient)
-    const grad = ctx.createLinearGradient(0, 0, width, 0);
-    grad.addColorStop(0, '#2563eb');
-    grad.addColorStop(1, '#1d4ed8');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, 8);
-
-    // 3. Subtle Outer Border
-    ctx.strokeStyle = '#e2e8f0';
-    ctx.lineWidth = 1;
-    roundRect(ctx, 1, 1, width - 2, height - 2, 8);
-    ctx.stroke();
-
-    // 4. Header Section
-    let y = 42;
+    // 2. Header Section
+    let y = 48;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -529,8 +482,13 @@ const Share = {
     ctx.lineTo(width - 32, y);
     ctx.stroke();
 
-    // 5. Parties Section (Billed To & Premises Card)
-    y += 14;
+    // 3. Parties Section (Billed To & Premises Card)
+    y += 16;
+    let partyH = 76;
+    if (email) partyH += 18;
+    if (coOccupants) partyH += 18;
+    if (address) partyH += 18;
+
     ctx.fillStyle = '#f8fafc';
     roundRect(ctx, 32, y, width - 64, partyH, 8);
     ctx.fill();
@@ -583,9 +541,9 @@ const Share = {
       ctx.fillText(address, width - 48, y + 55);
     }
 
-    y += partyH + 18;
+    y += partyH + 20;
 
-    // 6. Itemized Table Header
+    // 4. Itemized Table Header
     ctx.fillStyle = '#f1f5f9';
     roundRect(ctx, 32, y, width - 64, 32, 6);
     ctx.fill();
@@ -668,8 +626,8 @@ const Share = {
       drawItemRow('Previous Arrears', 'Carried forward unpaid balance', `${curr}${numFmt(bill.previous_balance)}`, false, true);
     }
 
-    // 7. Total Summary Card
-    y += 14;
+    // 5. Total Summary Card
+    y += 16;
     const summaryCardH = bill.paid_amount > 0 ? 104 : 68;
     ctx.fillStyle = '#f8fafc';
     roundRect(ctx, 32, y, width - 64, summaryCardH, 8);
@@ -707,9 +665,9 @@ const Share = {
       ctx.fillText(`Balance Due: ${curr}${numFmt(bill.balance_amount)}`, width - 48, y + 68);
     }
 
-    y += summaryCardH + 12;
+    y += summaryCardH + 14;
 
-    // 8. Amount in Words Box
+    // 6. Amount in Words Box
     const wordsBoxH = (bill.paid_amount > 0 && bill.balance_amount > 0) ? 58 : 40;
     ctx.fillStyle = '#f8fafc';
     roundRect(ctx, 32, y, width - 64, wordsBoxH, 4);
@@ -734,9 +692,9 @@ const Share = {
       ctx.fillText(`Balance in Words: ${this.amountInWords(bill.balance_amount)}`, 48, y + 44);
     }
 
-    y += wordsBoxH + 14;
+    y += wordsBoxH + 16;
 
-    // 9. Payment Details (Pay To) Box
+    // 7. Payment Details (Pay To) Box
     if (bill.payment_upi || bill.payment_bank_name) {
       ctx.fillStyle = '#f8fafc';
       roundRect(ctx, 32, y, width - 64, 76, 6);
@@ -761,63 +719,37 @@ const Share = {
       if (bill.payment_account_no) ctx.fillText(`A/C: ${bill.payment_account_no}`, 360, y + 42);
       if (bill.payment_ifsc) ctx.fillText(`IFSC: ${bill.payment_ifsc}`, 360, y + 60);
 
-      y += 88;
+      y += 92;
     }
 
-    // 10. Notes
+    // 8. Notes
     if (bill.notes) {
       ctx.textAlign = 'left';
       ctx.fillStyle = '#475569';
       ctx.font = 'italic 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillText(`Note: ${bill.notes}`, 32, y + 16);
-      y += 32;
     }
 
-    // 11. Signatures Block
-    y += 18;
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 1;
-
-    // Left Signature
-    ctx.beginPath();
-    ctx.moveTo(48, y + 36);
-    ctx.lineTo(240, y + 36);
-    ctx.stroke();
-
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#64748b';
-    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('TENANT SIGNATURE', 144, y + 54);
-
-    // Right Signature
-    ctx.beginPath();
-    ctx.moveTo(width - 240, y + 36);
-    ctx.lineTo(width - 48, y + 36);
-    ctx.stroke();
-
-    ctx.fillText('AUTHORIZED SIGNATORY', width - 144, y + 54);
-    y += 72;
-
-    // 12. Footer
+    // 9. Footer Notice (Anchored at the bottom of the 16:9 vertical canvas)
+    const footerY = height - 36;
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(32, y);
-    ctx.lineTo(width - 32, y);
+    ctx.moveTo(32, footerY - 18);
+    ctx.lineTo(width - 32, footerY - 18);
     ctx.stroke();
 
-    y += 18;
     ctx.textAlign = 'left';
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('This is a computer-generated invoice/receipt. Valid without physical signature.', 32, y);
+    ctx.fillText('This is a computer-generated invoice/receipt. Valid without physical signature.', 32, footerY);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#64748b';
     ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText('Generated via RentBill', width - 32, y);
+    ctx.fillText('Generated via RentBill', width - 32, footerY);
 
-    // 13. Download as PNG
+    // 10. Download as PNG
     return new Promise((resolve, reject) => {
       canvas.toBlob((blob) => {
         if (!blob) {

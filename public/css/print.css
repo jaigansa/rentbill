@@ -363,33 +363,6 @@
     break-inside: avoid !important;
   }
 
-  /* Physical Receipt Signatures Block */
-  .inv-signatures {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin-top: 36px !important;
-    padding-top: 10px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .inv-sig-block {
-    width: 200px !important;
-    text-align: center !important;
-  }
-
-  .inv-sig-line {
-    border-bottom: 1px solid #111827 !important;
-    margin-bottom: 6px !important;
-  }
-
-  .inv-sig-label {
-    font-size: 0.72rem !important;
-    font-weight: 600 !important;
-    color: #374151 !important;
-    text-transform: uppercase !important;
-  }
-
   /* Digital Invoice Notice */
   .inv-footer-notice {
     border-top: 1px solid #d1d5db !important;

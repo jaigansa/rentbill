@@ -1527,31 +1527,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   font-style: italic;
 }
 
-.inv-signatures {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 28px;
-  padding-top: 10px;
-}
-
-.inv-sig-block {
-  width: 180px;
-  text-align: center;
-}
-
-.inv-sig-line {
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
-}
-
-.inv-sig-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
 .inv-footer-notice {
   margin-top: 18px;
   padding-top: 10px;
@@ -1573,13 +1548,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   }
   .payment-details-grid {
     grid-template-columns: 1fr;
-  }
-  .inv-signatures {
-    flex-direction: column;
-    gap: 20px;
-  }
-  .inv-sig-block {
-    width: 100%;
   }
   .inv-footer-notice {
     flex-direction: column;
