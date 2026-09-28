@@ -337,8 +337,11 @@ func (db *DB) CreateBill(b *Bill) (int64, error) {
 		b.WaterUnits = 0
 	}
 
-	// Calculate total amount including previous balance (arrears)
-	b.TotalAmount = b.BaseRent + b.ElectricityAmount + b.WaterAmount + b.MaintenanceAmount + b.OtherCharges + b.PreviousBalance
+	// Calculate total amount including previous balance (arrears) and minus discount
+	b.TotalAmount = b.BaseRent + b.ElectricityAmount + b.WaterAmount + b.MaintenanceAmount + b.OtherCharges + b.PreviousBalance - b.DiscountAmount
+	if b.TotalAmount < 0 {
+		b.TotalAmount = 0
+	}
 	b.PaidAmount = 0
 	b.Status = "PENDING"
 
@@ -348,15 +351,15 @@ func (db *DB) CreateBill(b *Bill) (int64, error) {
 		due_date, base_rent, prev_electricity_meter, curr_electricity_meter, electricity_rate,
 		electricity_units, electricity_amount, water_billing_type, prev_water_meter, curr_water_meter,
 		water_rate, water_units, water_amount, maintenance_amount, other_charges,
-		other_charges_desc, previous_balance, total_amount, paid_amount, status, notes
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		other_charges_desc, discount_amount, discount_reason, previous_balance, total_amount, paid_amount, status, notes
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
 		b.BillNumber, b.TenantID, b.PropertyID, b.BillingMonth, b.BillingPeriodStart, b.BillingPeriodEnd,
 		b.DueDate, b.BaseRent, b.PrevElectricityMeter, b.CurrElectricityMeter, b.ElectricityRate,
 		b.ElectricityUnits, b.ElectricityAmount, b.WaterBillingType, b.PrevWaterMeter, b.CurrWaterMeter,
 		b.WaterRate, b.WaterUnits, b.WaterAmount, b.MaintenanceAmount, b.OtherCharges,
-		b.OtherChargesDesc, b.PreviousBalance, b.TotalAmount, b.PaidAmount, b.Status, b.Notes,
+		b.OtherChargesDesc, b.DiscountAmount, b.DiscountReason, b.PreviousBalance, b.TotalAmount, b.PaidAmount, b.Status, b.Notes,
 	)
 	if err != nil {
 		return 0, err
@@ -376,6 +379,7 @@ func (db *DB) GetAllBills() ([]Bill, error) {
 	       COALESCE(b.water_billing_type, 'FIXED'), b.prev_water_meter, b.curr_water_meter,
 	       b.water_rate, b.water_units, b.water_amount,
 	       b.maintenance_amount, b.other_charges, COALESCE(b.other_charges_desc, ''),
+	       COALESCE(b.discount_amount, 0), COALESCE(b.discount_reason, ''),
 	       COALESCE(b.previous_balance, 0),
 	       b.total_amount, b.paid_amount, b.status, COALESCE(b.notes, ''), b.created_at
 	FROM bills b
@@ -403,6 +407,7 @@ func (db *DB) GetAllBills() ([]Bill, error) {
 			&b.WaterBillingType, &b.PrevWaterMeter, &b.CurrWaterMeter,
 			&b.WaterRate, &b.WaterUnits, &b.WaterAmount,
 			&b.MaintenanceAmount, &b.OtherCharges, &b.OtherChargesDesc,
+			&b.DiscountAmount, &b.DiscountReason,
 			&b.PreviousBalance,
 			&b.TotalAmount, &b.PaidAmount, &b.Status, &b.Notes, &b.CreatedAt,
 		)
@@ -432,6 +437,7 @@ func (db *DB) GetBillsByTenant(tenantID int64) ([]Bill, error) {
 	       COALESCE(b.water_billing_type, 'FIXED'), b.prev_water_meter, b.curr_water_meter,
 	       b.water_rate, b.water_units, b.water_amount,
 	       b.maintenance_amount, b.other_charges, COALESCE(b.other_charges_desc, ''),
+	       COALESCE(b.discount_amount, 0), COALESCE(b.discount_reason, ''),
 	       COALESCE(b.previous_balance, 0),
 	       b.total_amount, b.paid_amount, b.status, COALESCE(b.notes, ''), b.created_at
 	FROM bills b
@@ -460,6 +466,7 @@ func (db *DB) GetBillsByTenant(tenantID int64) ([]Bill, error) {
 			&b.WaterBillingType, &b.PrevWaterMeter, &b.CurrWaterMeter,
 			&b.WaterRate, &b.WaterUnits, &b.WaterAmount,
 			&b.MaintenanceAmount, &b.OtherCharges, &b.OtherChargesDesc,
+			&b.DiscountAmount, &b.DiscountReason,
 			&b.PreviousBalance,
 			&b.TotalAmount, &b.PaidAmount, &b.Status, &b.Notes, &b.CreatedAt,
 		)
@@ -488,6 +495,7 @@ func (db *DB) GetBillByID(id int64) (*Bill, error) {
 	       COALESCE(b.water_billing_type, 'FIXED'), b.prev_water_meter, b.curr_water_meter,
 	       b.water_rate, b.water_units, b.water_amount,
 	       b.maintenance_amount, b.other_charges, COALESCE(b.other_charges_desc, ''),
+	       COALESCE(b.discount_amount, 0), COALESCE(b.discount_reason, ''),
 	       COALESCE(b.previous_balance, 0),
 	       b.total_amount, b.paid_amount, b.status, COALESCE(b.notes, ''), b.created_at
 	FROM bills b
@@ -506,6 +514,7 @@ func (db *DB) GetBillByID(id int64) (*Bill, error) {
 		&b.WaterBillingType, &b.PrevWaterMeter, &b.CurrWaterMeter,
 		&b.WaterRate, &b.WaterUnits, &b.WaterAmount,
 		&b.MaintenanceAmount, &b.OtherCharges, &b.OtherChargesDesc,
+		&b.DiscountAmount, &b.DiscountReason,
 		&b.PreviousBalance,
 		&b.TotalAmount, &b.PaidAmount, &b.Status, &b.Notes, &b.CreatedAt,
 	)
@@ -542,7 +551,10 @@ func (db *DB) UpdateBill(b *Bill) error {
 		b.WaterUnits = 0
 	}
 
-	b.TotalAmount = b.BaseRent + b.ElectricityAmount + b.WaterAmount + b.MaintenanceAmount + b.OtherCharges + b.PreviousBalance
+	b.TotalAmount = b.BaseRent + b.ElectricityAmount + b.WaterAmount + b.MaintenanceAmount + b.OtherCharges + b.PreviousBalance - b.DiscountAmount
+	if b.TotalAmount < 0 {
+		b.TotalAmount = 0
+	}
 
 	// Recheck status based on paid amount
 	today := time.Now().Format("2006-01-02")
@@ -561,14 +573,14 @@ func (db *DB) UpdateBill(b *Bill) error {
 	SET billing_month = ?, due_date = ?, base_rent = ?, prev_electricity_meter = ?, curr_electricity_meter = ?,
 	    electricity_rate = ?, electricity_units = ?, electricity_amount = ?, water_billing_type = ?,
 	    prev_water_meter = ?, curr_water_meter = ?, water_rate = ?, water_units = ?, water_amount = ?,
-	    maintenance_amount = ?, other_charges = ?, other_charges_desc = ?, previous_balance = ?, total_amount = ?, status = ?, notes = ?
+	    maintenance_amount = ?, other_charges = ?, other_charges_desc = ?, discount_amount = ?, discount_reason = ?, previous_balance = ?, total_amount = ?, status = ?, notes = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
 		b.BillingMonth, b.DueDate, b.BaseRent, b.PrevElectricityMeter, b.CurrElectricityMeter,
 		b.ElectricityRate, b.ElectricityUnits, b.ElectricityAmount, b.WaterBillingType,
 		b.PrevWaterMeter, b.CurrWaterMeter, b.WaterRate, b.WaterUnits, b.WaterAmount,
-		b.MaintenanceAmount, b.OtherCharges, b.OtherChargesDesc, b.PreviousBalance, b.TotalAmount, b.Status, b.Notes,
+		b.MaintenanceAmount, b.OtherCharges, b.OtherChargesDesc, b.DiscountAmount, b.DiscountReason, b.PreviousBalance, b.TotalAmount, b.Status, b.Notes,
 		b.ID,
 	)
 	return err

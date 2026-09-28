@@ -315,3 +315,72 @@ func TestMultipleCoOccupants(t *testing.T) {
 		t.Errorf("co-occupant 2 mismatch: %+v", updated.CoOccupants[2])
 	}
 }
+
+func TestBillDiscount(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	propID, err := db.CreateProperty(&database.Property{
+		Name:        "Flat 202",
+		DefaultRent: 15000,
+	})
+	if err != nil {
+		t.Fatalf("failed creating property: %v", err)
+	}
+
+	tenantID, err := db.CreateTenant(&database.Tenant{
+		Name:       "Suresh Nair",
+		Phone:      "9876500000",
+		PropertyID: &propID,
+	})
+	if err != nil {
+		t.Fatalf("failed creating tenant: %v", err)
+	}
+
+	// Create bill with discount: rent 15000, discount 1500 => total 13500
+	billID, err := db.CreateBill(&database.Bill{
+		TenantID:       tenantID,
+		PropertyID:     propID,
+		BillingMonth:   "2026-10",
+		DueDate:        "2026-11-05",
+		BaseRent:       15000,
+		DiscountAmount: 1500,
+		DiscountReason: "Early bird concession",
+	})
+	if err != nil {
+		t.Fatalf("failed creating bill with discount: %v", err)
+	}
+
+	b, err := db.GetBillByID(billID)
+	if err != nil {
+		t.Fatalf("failed getting bill: %v", err)
+	}
+	if b.DiscountAmount != 1500 {
+		t.Errorf("expected discount 1500, got %f", b.DiscountAmount)
+	}
+	if b.DiscountReason != "Early bird concession" {
+		t.Errorf("expected discount reason 'Early bird concession', got '%s'", b.DiscountReason)
+	}
+	if b.TotalAmount != 13500 {
+		t.Errorf("expected total amount 13500, got %f", b.TotalAmount)
+	}
+
+	// Test UpdateBill with adjusted discount
+	b.DiscountAmount = 2000
+	b.DiscountReason = "Special festival waiver"
+	if err := db.UpdateBill(b); err != nil {
+		t.Fatalf("failed updating bill: %v", err)
+	}
+
+	updated, err := db.GetBillByID(billID)
+	if err != nil {
+		t.Fatalf("failed getting updated bill: %v", err)
+	}
+	if updated.DiscountAmount != 2000 {
+		t.Errorf("expected discount 2000, got %f", updated.DiscountAmount)
+	}
+	if updated.TotalAmount != 13000 {
+		t.Errorf("expected total amount 13000, got %f", updated.TotalAmount)
+	}
+}
+

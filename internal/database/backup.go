@@ -163,9 +163,9 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 			wType = "FIXED"
 		}
 		_, err := tx.Exec(`
-			INSERT INTO bills (id, bill_number, tenant_id, property_id, billing_month, billing_period_start, billing_period_end, due_date, base_rent, prev_electricity_meter, curr_electricity_meter, electricity_rate, electricity_units, electricity_amount, water_billing_type, prev_water_meter, curr_water_meter, water_rate, water_units, water_amount, maintenance_amount, other_charges, other_charges_desc, previous_balance, total_amount, paid_amount, status, notes, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, b.ID, b.BillNumber, b.TenantID, b.PropertyID, b.BillingMonth, b.BillingPeriodStart, b.BillingPeriodEnd, b.DueDate, b.BaseRent, b.PrevElectricityMeter, b.CurrElectricityMeter, b.ElectricityRate, b.ElectricityUnits, b.ElectricityAmount, wType, b.PrevWaterMeter, b.CurrWaterMeter, b.WaterRate, b.WaterUnits, b.WaterAmount, b.MaintenanceAmount, b.OtherCharges, b.OtherChargesDesc, b.PreviousBalance, b.TotalAmount, b.PaidAmount, b.Status, b.Notes, b.CreatedAt)
+			INSERT INTO bills (id, bill_number, tenant_id, property_id, billing_month, billing_period_start, billing_period_end, due_date, base_rent, prev_electricity_meter, curr_electricity_meter, electricity_rate, electricity_units, electricity_amount, water_billing_type, prev_water_meter, curr_water_meter, water_rate, water_units, water_amount, maintenance_amount, other_charges, other_charges_desc, discount_amount, discount_reason, previous_balance, total_amount, paid_amount, status, notes, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, b.ID, b.BillNumber, b.TenantID, b.PropertyID, b.BillingMonth, b.BillingPeriodStart, b.BillingPeriodEnd, b.DueDate, b.BaseRent, b.PrevElectricityMeter, b.CurrElectricityMeter, b.ElectricityRate, b.ElectricityUnits, b.ElectricityAmount, wType, b.PrevWaterMeter, b.CurrWaterMeter, b.WaterRate, b.WaterUnits, b.WaterAmount, b.MaintenanceAmount, b.OtherCharges, b.OtherChargesDesc, b.DiscountAmount, b.DiscountReason, b.PreviousBalance, b.TotalAmount, b.PaidAmount, b.Status, b.Notes, b.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("failed restoring bill %s: %w", b.BillNumber, err)
 		}

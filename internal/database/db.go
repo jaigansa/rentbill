@@ -101,6 +101,8 @@ func createTables(db *sql.DB) error {
 		maintenance_amount REAL DEFAULT 0.0,
 		other_charges REAL DEFAULT 0.0,
 		other_charges_desc TEXT,
+		discount_amount REAL DEFAULT 0.0,
+		discount_reason TEXT DEFAULT '',
 		previous_balance REAL DEFAULT 0.0,
 		total_amount REAL NOT NULL,
 		paid_amount REAL DEFAULT 0.0,
@@ -157,6 +159,8 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE bills ADD COLUMN water_rate REAL DEFAULT 0.0",
 		"ALTER TABLE bills ADD COLUMN water_units REAL DEFAULT 0.0",
 		"ALTER TABLE bills ADD COLUMN previous_balance REAL DEFAULT 0.0",
+		"ALTER TABLE bills ADD COLUMN discount_amount REAL DEFAULT 0.0",
+		"ALTER TABLE bills ADD COLUMN discount_reason TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN payment_upi TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN payment_bank_name TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN payment_account_no TEXT DEFAULT ''",
@@ -268,6 +272,8 @@ type Bill struct {
 	MaintenanceAmount    float64 `json:"maintenance_amount"`
 	OtherCharges         float64 `json:"other_charges"`
 	OtherChargesDesc     string  `json:"other_charges_desc"`
+	DiscountAmount       float64 `json:"discount_amount"`
+	DiscountReason       string  `json:"discount_reason"`
 	PreviousBalance      float64 `json:"previous_balance"`
 	TotalAmount          float64 `json:"total_amount"`
 	PaidAmount           float64 `json:"paid_amount"`

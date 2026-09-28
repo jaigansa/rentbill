@@ -91,6 +91,9 @@ const Share = {
     if (bill.other_charges > 0) {
       lines.push(`* Other Charges (${bill.other_charges_desc || 'Adjustment'}): ${currency}${bill.other_charges.toFixed(2)}`);
     }
+    if (bill.discount_amount > 0) {
+      lines.push(`* Discount / Concession${bill.discount_reason ? ` (${bill.discount_reason})` : ''}: -${currency}${bill.discount_amount.toFixed(2)}`);
+    }
     if (bill.previous_balance > 0) {
       lines.push(`* Previous Arrears / Unpaid Due: ${currency}${bill.previous_balance.toFixed(2)}`);
     }
@@ -168,6 +171,9 @@ const Share = {
     }
     if (bill.other_charges > 0) {
       lines.push(`Other: ${currency}${bill.other_charges.toFixed(2)}`);
+    }
+    if (bill.discount_amount > 0) {
+      lines.push(`Discount: -${currency}${bill.discount_amount.toFixed(2)}`);
     }
     if (bill.previous_balance > 0) {
       lines.push(`Previous Due: ${currency}${bill.previous_balance.toFixed(2)}`);
@@ -346,6 +352,7 @@ const Share = {
     if (bill.water_amount > 0) height += 35;
     if (bill.maintenance_amount > 0) height += 30;
     if (bill.other_charges > 0) height += 30;
+    if (bill.discount_amount > 0) height += 30;
     if (bill.previous_balance > 0) height += 35;
     if (bill.payment_upi || bill.payment_bank_name) height += 90;
     if (bill.notes) height += 35;
@@ -436,11 +443,11 @@ const Share = {
     ctx.fillText(`AMOUNT (${curr})`, width - 38, y + 12);
 
     // Helper for table rows
-    const drawRow = (desc, sub, amount, isRed = false) => {
+    const drawRow = (desc, sub, amount, isRed = false, isGreen = false) => {
       y += 30;
       ctx.textAlign = 'left';
-      ctx.fillStyle = isRed ? '#dc2626' : '#1e293b';
-      ctx.font = isRed ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = isRed ? '#dc2626' : (isGreen ? '#16a34a' : '#1e293b');
+      ctx.font = (isRed || isGreen) ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
       ctx.fillText(desc, 38, y);
 
       if (sub) {
@@ -450,9 +457,10 @@ const Share = {
       }
 
       ctx.textAlign = 'right';
-      ctx.fillStyle = isRed ? '#dc2626' : '#0f172a';
-      ctx.font = isRed ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`${curr}${amount.toFixed(2)}`, width - 38, y);
+      ctx.fillStyle = isRed ? '#dc2626' : (isGreen ? '#16a34a' : '#0f172a');
+      ctx.font = (isRed || isGreen) ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
+      const prefix = isGreen ? '-' : '';
+      ctx.fillText(`${prefix}${curr}${amount.toFixed(2)}`, width - 38, y);
 
       if (sub) y += 6;
       ctx.strokeStyle = '#f1f5f9';
@@ -480,6 +488,9 @@ const Share = {
     }
     if (bill.other_charges > 0) {
       drawRow(`Other: ${bill.other_charges_desc || 'Adjustments'}`, '', bill.other_charges);
+    }
+    if (bill.discount_amount > 0) {
+      drawRow(`Discount: ${bill.discount_reason || 'Concession'}`, '', bill.discount_amount, false, true);
     }
     if (bill.previous_balance > 0) {
       drawRow('Previous Arrears / Unpaid Due', 'Carried forward from previous bill', bill.previous_balance, true);

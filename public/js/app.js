@@ -486,11 +486,13 @@ const App = {
         waterTotal = parseFloat(waterFixed.value) || 0;
       }
 
-      const total = rent + elecSub + waterTotal + m + o + arrear;
+      const discount = parseFloat(document.getElementById('bill-discount')?.value) || 0;
+      const subtotal = rent + elecSub + waterTotal + m + o + arrear;
+      const total = Math.max(0, subtotal - discount);
       document.getElementById('bill-calculated-total').textContent = `${window.APP_CURRENCY}${total.toFixed(2)}`;
     };
 
-    [prevElecMeter, currElecMeter, elecRate, baseRent, waterFixed, prevWaterMeter, currWaterMeter, waterRate, maint, other, prevBalance].forEach(inp => {
+    [prevElecMeter, currElecMeter, elecRate, baseRent, waterFixed, prevWaterMeter, currWaterMeter, waterRate, maint, other, prevBalance, document.getElementById('bill-discount')].forEach(inp => {
       if (inp) inp.addEventListener('input', updateCalc);
     });
 
@@ -747,6 +749,8 @@ const App = {
         maintenance_amount: parseFloat(document.getElementById('bill-maint').value) || 0,
         other_charges: parseFloat(document.getElementById('bill-other').value) || 0,
         other_charges_desc: document.getElementById('bill-other-desc').value.trim(),
+        discount_amount: parseFloat(document.getElementById('bill-discount')?.value) || 0,
+        discount_reason: document.getElementById('bill-discount-reason')?.value.trim() || '',
         previous_balance: parseFloat(document.getElementById('bill-prev-balance')?.value) || 0,
         notes: document.getElementById('bill-notes').value.trim()
       };
@@ -2501,6 +2505,14 @@ const App = {
                 <td class="num">${curr}${b.other_charges.toFixed(2)}</td>
               </tr>
             ` : ''}
+            ${b.discount_amount > 0 ? `
+              <tr style="background:rgba(22, 163, 74, 0.05);">
+                <td style="color:var(--success); font-weight:600;">
+                  <i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount / Concession ${b.discount_reason ? `(${b.discount_reason})` : ''}
+                </td>
+                <td class="num" style="color:var(--success); font-weight:700;">-${curr}${b.discount_amount.toFixed(2)}</td>
+              </tr>
+            ` : ''}
             ${b.previous_balance > 0 ? `
               <tr style="background:rgba(239, 68, 68, 0.05);">
                 <td style="color:var(--danger); font-weight:600;">
@@ -2659,6 +2671,8 @@ const App = {
       document.getElementById('bill-maint').value = b.maintenance_amount || 0;
       document.getElementById('bill-other').value = b.other_charges || 0;
       document.getElementById('bill-other-desc').value = b.other_charges_desc || '';
+      document.getElementById('bill-discount').value = b.discount_amount || 0;
+      document.getElementById('bill-discount-reason').value = b.discount_reason || '';
       const elPrevBal = document.getElementById('bill-prev-balance');
       if (elPrevBal) elPrevBal.value = b.previous_balance || 0;
       document.getElementById('bill-notes').value = b.notes || '';
