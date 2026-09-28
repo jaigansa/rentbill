@@ -1550,15 +1550,22 @@ const App = {
         ? Number(t.total_due)
         : tenantBills.reduce((sum, b) => sum + (Number(b.balance_amount) || (Number(b.total_amount) - Number(b.paid_amount)) || 0), 0);
 
+      const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
+
       return `
-      <div class="app-card">
+      <div class="app-card tenant-card" id="tenant-card-${t.id}" data-tenant-id="${t.id}">
         <div class="card-top">
           <div>
-            <div class="card-title">${t.name}</div>
+            <div class="card-title">
+              <a href="tel:${cleanPhone}" class="tenant-name-call" title="Tap to call ${t.name}">
+                <span>${t.name}</span>
+                <i data-lucide="phone-call" style="width:13px; height:13px; margin-left:4px; opacity:0.65; vertical-align:-1px;"></i>
+              </a>
+            </div>
             <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
               <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
               <span style="color:var(--text-muted); opacity:0.6;">•</span>
-              <a href="tel:${(t.phone || '').replace(/[^0-9+]/g, '')}" class="phone-link" title="Tap to call ${t.phone}">
+              <a href="tel:${cleanPhone}" class="phone-link" title="Tap to call ${t.phone}">
                 <i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone}
               </a>
               ${t.email ? `<span style="color:var(--text-muted); opacity:0.6;">•</span> <a href="mailto:${t.email}" class="phone-link" title="Tap to email ${t.email}">${t.email}</a>` : ''}
@@ -1610,10 +1617,151 @@ const App = {
             <div class="card-amount-val" style="color:${totalDue > 0 ? 'var(--danger, #dc2626)' : 'var(--text-muted)'};" title="${this.formatFullMoney(totalDue)}">${this.formatMoney(totalDue, true)}</div>
           </div>
         </div>
+
+        <!-- Expandable Details on Long Press -->
+        <div class="tenant-card-details" id="tenant-details-${t.id}" style="display:none;">
+          <div class="tenant-details-grid">
+            <div class="tenant-detail-item">
+              <span class="detail-label">Security Deposit</span>
+              <span class="detail-val">${curr}${t.security_deposit ? t.security_deposit.toFixed(2) : '0.00'}</span>
+            </div>
+            <div class="tenant-detail-item">
+              <span class="detail-label">Move-in Date</span>
+              <span class="detail-val">${t.move_in_date || 'Not set'}</span>
+            </div>
+            <div class="tenant-detail-item">
+              <span class="detail-label">Initial Elec Reading</span>
+              <span class="detail-val">${t.initial_elec_meter || 0} kWh</span>
+            </div>
+            <div class="tenant-detail-item">
+              <span class="detail-label">Initial Water Reading</span>
+              <span class="detail-val">${t.initial_water_meter || 0} Units</span>
+            </div>
+            ${t.email ? `
+            <div class="tenant-detail-item" style="grid-column: span 2;">
+              <span class="detail-label">Email Address</span>
+              <span class="detail-val"><a href="mailto:${t.email}" class="phone-link">${t.email}</a></span>
+            </div>
+            ` : ''}
+            ${(t.payment_upi || t.payment_bank_name) ? `
+            <div class="tenant-detail-item" style="grid-column: span 2;">
+              <span class="detail-label">Payment / Bank Info</span>
+              <span class="detail-val" style="display:flex; flex-direction:column; gap:2px;">
+                ${t.payment_upi ? `<span>UPI: <strong>${t.payment_upi}</strong></span>` : ''}
+                ${t.payment_bank_name ? `<span>Bank: <strong>${t.payment_bank_name}</strong> ${t.payment_account_no ? `(A/C: ${t.payment_account_no})` : ''}</span>` : ''}
+                ${t.payment_ifsc ? `<span>IFSC: <strong>${t.payment_ifsc}</strong></span>` : ''}
+              </span>
+            </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="tenant-card-footer-hint" onclick="App.toggleTenantCardExpand(${t.id})">
+          <span>Long-press card to toggle details</span>
+          <i data-lucide="chevron-down" style="width:12px; height:12px;"></i>
+        </div>
       </div>
     `;
     }).join('');
+    this.attachTenantLongPressListeners(container);
     this.refreshIcons();
+  },
+
+  attachTenantLongPressListeners(container) {
+    if (!container) return;
+    container.querySelectorAll('.tenant-card').forEach(card => {
+      let timer = null;
+      let isLongPress = false;
+      let startX = 0;
+      let startY = 0;
+
+      const tenantId = card.getAttribute('data-tenant-id');
+
+      const triggerExpand = () => {
+        isLongPress = true;
+        this.toggleTenantCardExpand(tenantId);
+        if (navigator.vibrate) {
+          try { navigator.vibrate(50); } catch (e) {}
+        }
+      };
+
+      const startPress = (e) => {
+        // Ignore if clicking interactive children (links, buttons, dropdowns)
+        if (e.target.closest('a, button, .card-dropdown, .card-dropdown-menu')) {
+          return;
+        }
+        isLongPress = false;
+        if (e.touches && e.touches[0]) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        } else {
+          startX = e.clientX;
+          startY = e.clientY;
+        }
+
+        card.classList.add('pressing');
+        timer = setTimeout(() => {
+          card.classList.remove('pressing');
+          triggerExpand();
+        }, 500); // 500ms long press threshold
+      };
+
+      const cancelPress = () => {
+        card.classList.remove('pressing');
+        if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      };
+
+      const movePress = (e) => {
+        if (!timer) return;
+        const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+        const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+        if (Math.hypot(currentX - startX, currentY - startY) > 10) {
+          cancelPress();
+        }
+      };
+
+      card.addEventListener('touchstart', startPress, { passive: true });
+      card.addEventListener('touchend', cancelPress);
+      card.addEventListener('touchcancel', cancelPress);
+      card.addEventListener('touchmove', movePress, { passive: true });
+
+      card.addEventListener('mousedown', startPress);
+      card.addEventListener('mouseup', cancelPress);
+      card.addEventListener('mouseleave', cancelPress);
+      card.addEventListener('mousemove', movePress);
+
+      card.addEventListener('contextmenu', (e) => {
+        if (isLongPress) {
+          e.preventDefault();
+        }
+      });
+    });
+  },
+
+  toggleTenantCardExpand(tenantId) {
+    const details = document.getElementById(`tenant-details-${tenantId}`);
+    const card = document.getElementById(`tenant-card-${tenantId}`);
+    if (!details || !card) return;
+
+    const isExpanded = card.classList.contains('expanded');
+    if (isExpanded) {
+      card.classList.remove('expanded');
+      details.style.maxHeight = '0px';
+      setTimeout(() => {
+        details.style.display = 'none';
+      }, 250);
+    } else {
+      card.classList.add('expanded');
+      details.style.display = 'block';
+      details.style.maxHeight = '0px';
+      requestAnimationFrame(() => {
+        details.style.maxHeight = details.scrollHeight + 'px';
+      });
+      this.refreshIcons();
+    }
   },
 
   async editTenant(id) {

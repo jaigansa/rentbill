@@ -2155,6 +2155,104 @@ textarea:hover::-webkit-scrollbar-thumb {
   text-decoration: underline;
 }
 
+/* Tenant Name Call Link */
+.tenant-name-call {
+  color: var(--text-main);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.tenant-name-call:hover,
+.tenant-name-call:active {
+  color: var(--primary);
+}
+
+.tenant-name-call:hover i,
+.tenant-name-call:active i {
+  opacity: 1 !important;
+  color: var(--primary);
+}
+
+/* Tenant Card Press Effect & Expand Drawer */
+.tenant-card {
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+}
+
+.tenant-card.pressing {
+  transform: scale(0.985);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+
+.tenant-card.expanded {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
+}
+
+.tenant-card-details {
+  overflow: hidden;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  border-top: 1px dashed var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.tenant-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  font-size: 0.8rem;
+}
+
+.tenant-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tenant-detail-item .detail-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
+.tenant-detail-item .detail-val {
+  color: var(--text-main);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.tenant-card-footer-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.65;
+  margin-top: 8px;
+  padding-top: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.tenant-card:hover .tenant-card-footer-hint {
+  opacity: 1;
+}
+
+.tenant-card.expanded .tenant-card-footer-hint i {
+  transform: rotate(180deg);
+}
+
 /* Reminder Templates Grid */
 .reminder-templates-grid {
   display: grid;
