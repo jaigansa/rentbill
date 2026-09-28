@@ -359,14 +359,15 @@
           <label for="tenant-email">Email (Optional)</label>
           <input type="email" id="tenant-email" placeholder="e.g. rahul@example.com">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="tenant-co-occupant-name">Co-occupant Name</label>
-            <input type="text" id="tenant-co-occupant-name" placeholder="e.g. Spouse / Roommate">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="margin-bottom:0; font-weight:600; font-size:0.85rem;">Co-occupants / Roommates</label>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-add-co-occupant" style="padding: 2px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-sm);">
+              <i data-lucide="plus" style="width:12px; height:12px;"></i> Add Person
+            </button>
           </div>
-          <div class="form-group">
-            <label for="tenant-co-occupant-phone">Co-occupant Mobile</label>
-            <input type="tel" id="tenant-co-occupant-phone" placeholder="e.g. 9876543211">
+          <div id="co-occupants-list" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Dynamic rows of co-occupants will be injected here -->
           </div>
         </div>
         <div class="form-group">

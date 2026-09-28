@@ -69,6 +69,7 @@ func createTables(db *sql.DB) error {
 		initial_elec_meter REAL DEFAULT 0.0,
 		initial_water_meter REAL DEFAULT 0.0,
 		preferred_channel TEXT DEFAULT 'SMS_RCS',
+		co_occupants TEXT DEFAULT '[]',
 		co_occupant_name TEXT DEFAULT '',
 		co_occupant_phone TEXT DEFAULT '',
 		is_active INTEGER DEFAULT 1,
@@ -163,6 +164,7 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE tenants ADD COLUMN initial_elec_meter REAL DEFAULT 0.0",
 		"ALTER TABLE tenants ADD COLUMN initial_water_meter REAL DEFAULT 0.0",
 		"ALTER TABLE tenants ADD COLUMN preferred_channel TEXT DEFAULT 'SMS_RCS'",
+		"ALTER TABLE tenants ADD COLUMN co_occupants TEXT DEFAULT '[]'",
 		"ALTER TABLE tenants ADD COLUMN co_occupant_name TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN co_occupant_phone TEXT DEFAULT ''",
 	}
@@ -205,28 +207,34 @@ type Expense struct {
 	CreatedAt     string  `json:"created_at"`
 }
 
+type CoOccupant struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
+}
+
 type Tenant struct {
-	ID                int64   `json:"id"`
-	Name              string  `json:"name"`
-	Phone             string  `json:"phone"`
-	Email             string  `json:"email"`
-	PropertyID        *int64  `json:"property_id"`
-	PropertyName      string  `json:"property_name,omitempty"`
-	SecurityDeposit   float64 `json:"security_deposit"`
-	MoveInDate        string  `json:"move_in_date"`
-	PaymentUPI        string  `json:"payment_upi"`
-	PaymentBankName   string  `json:"payment_bank_name"`
-	PaymentAccountNo  string  `json:"payment_account_no"`
-	PaymentIFSC       string  `json:"payment_ifsc"`
-	InitialElecMeter  float64 `json:"initial_elec_meter"`
-	InitialWaterMeter float64 `json:"initial_water_meter"`
-	PreferredChannel  string  `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
-	CoOccupantName    string  `json:"co_occupant_name"`
-	CoOccupantPhone   string  `json:"co_occupant_phone"`
-	IsActive          bool    `json:"is_active"`
-	TotalPaid         float64 `json:"total_paid"`
-	TotalDue          float64 `json:"total_due"`
-	CreatedAt         string  `json:"created_at"`
+	ID                int64        `json:"id"`
+	Name              string       `json:"name"`
+	Phone             string       `json:"phone"`
+	Email             string       `json:"email"`
+	PropertyID        *int64       `json:"property_id"`
+	PropertyName      string       `json:"property_name,omitempty"`
+	SecurityDeposit   float64      `json:"security_deposit"`
+	MoveInDate        string       `json:"move_in_date"`
+	PaymentUPI        string       `json:"payment_upi"`
+	PaymentBankName   string       `json:"payment_bank_name"`
+	PaymentAccountNo  string       `json:"payment_account_no"`
+	PaymentIFSC       string       `json:"payment_ifsc"`
+	InitialElecMeter  float64      `json:"initial_elec_meter"`
+	InitialWaterMeter float64      `json:"initial_water_meter"`
+	PreferredChannel  string       `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
+	CoOccupants       []CoOccupant `json:"co_occupants"`
+	CoOccupantName    string       `json:"co_occupant_name"`
+	CoOccupantPhone   string       `json:"co_occupant_phone"`
+	IsActive          bool         `json:"is_active"`
+	TotalPaid         float64      `json:"total_paid"`
+	TotalDue          float64      `json:"total_due"`
+	CreatedAt         string       `json:"created_at"`
 }
 
 type Bill struct {

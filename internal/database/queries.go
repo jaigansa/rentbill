@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -94,20 +95,36 @@ func (db *DB) CreateTenant(t *Tenant) (int64, error) {
 	if t.PreferredChannel == "" {
 		t.PreferredChannel = "SMS_RCS"
 	}
+	if len(t.CoOccupants) > 0 {
+		if t.CoOccupantName == "" {
+			t.CoOccupantName = t.CoOccupants[0].Name
+		}
+		if t.CoOccupantPhone == "" {
+			t.CoOccupantPhone = t.CoOccupants[0].Phone
+		}
+	} else if t.CoOccupantName != "" || t.CoOccupantPhone != "" {
+		t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
+	}
+	coBytes, _ := json.Marshal(t.CoOccupants)
+	coJSON := string(coBytes)
+	if coJSON == "" || coJSON == "null" {
+		coJSON = "[]"
+	}
+
 	query := `
 	INSERT INTO tenants (
 		name, phone, email, property_id, security_deposit, move_in_date,
 		payment_upi, payment_bank_name, payment_account_no, payment_ifsc,
 		initial_elec_meter, initial_water_meter, preferred_channel,
-		co_occupant_name, co_occupant_phone, is_active
+		co_occupants, co_occupant_name, co_occupant_phone, is_active
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
-		t.CoOccupantName, t.CoOccupantPhone, 1,
+		coJSON, t.CoOccupantName, t.CoOccupantPhone, 1,
 	)
 	if err != nil {
 		return 0, err
@@ -123,7 +140,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
-	       COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
+	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, 0.0) AS total_due
@@ -148,18 +165,26 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	for rows.Next() {
 		var t Tenant
 		var isActiveInt int
+		var coJSON string
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
 			&t.SecurityDeposit, &t.MoveInDate,
 			&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 			&t.InitialElecMeter, &t.InitialWaterMeter,
 			&t.PreferredChannel,
-			&t.CoOccupantName, &t.CoOccupantPhone,
+			&coJSON, &t.CoOccupantName, &t.CoOccupantPhone,
 			&isActiveInt, &t.CreatedAt,
 			&t.TotalPaid, &t.TotalDue,
 		)
 		if err != nil {
 			return nil, err
+		}
+		t.CoOccupants = []CoOccupant{}
+		if coJSON != "" && coJSON != "[]" {
+			_ = json.Unmarshal([]byte(coJSON), &t.CoOccupants)
+		}
+		if len(t.CoOccupants) == 0 && (t.CoOccupantName != "" || t.CoOccupantPhone != "") {
+			t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
 		}
 		t.IsActive = (isActiveInt == 1)
 		tenants = append(tenants, t)
@@ -175,7 +200,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
-	       COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
+	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, 0.0) AS total_due
@@ -193,18 +218,26 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	`
 	var t Tenant
 	var isActiveInt int
+	var coJSON string
 	err := db.QueryRow(query, id, id).Scan(
 		&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
 		&t.SecurityDeposit, &t.MoveInDate,
 		&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 		&t.InitialElecMeter, &t.InitialWaterMeter,
 		&t.PreferredChannel,
-		&t.CoOccupantName, &t.CoOccupantPhone,
+		&coJSON, &t.CoOccupantName, &t.CoOccupantPhone,
 		&isActiveInt, &t.CreatedAt,
 		&t.TotalPaid, &t.TotalDue,
 	)
 	if err != nil {
 		return nil, err
+	}
+	t.CoOccupants = []CoOccupant{}
+	if coJSON != "" && coJSON != "[]" {
+		_ = json.Unmarshal([]byte(coJSON), &t.CoOccupants)
+	}
+	if len(t.CoOccupants) == 0 && (t.CoOccupantName != "" || t.CoOccupantPhone != "") {
+		t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
 	}
 	t.IsActive = (isActiveInt == 1)
 	return &t, nil
@@ -218,19 +251,35 @@ func (db *DB) UpdateTenant(t *Tenant) error {
 	if t.PreferredChannel == "" {
 		t.PreferredChannel = "SMS_RCS"
 	}
+	if len(t.CoOccupants) > 0 {
+		if t.CoOccupantName == "" {
+			t.CoOccupantName = t.CoOccupants[0].Name
+		}
+		if t.CoOccupantPhone == "" {
+			t.CoOccupantPhone = t.CoOccupants[0].Phone
+		}
+	} else if t.CoOccupantName != "" || t.CoOccupantPhone != "" {
+		t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
+	}
+	coBytes, _ := json.Marshal(t.CoOccupants)
+	coJSON := string(coBytes)
+	if coJSON == "" || coJSON == "null" {
+		coJSON = "[]"
+	}
+
 	query := `
 	UPDATE tenants
 	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, move_in_date = ?,
 	    payment_upi = ?, payment_bank_name = ?, payment_account_no = ?, payment_ifsc = ?,
 	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?,
-	    co_occupant_name = ?, co_occupant_phone = ?, is_active = ?
+	    co_occupants = ?, co_occupant_name = ?, co_occupant_phone = ?, is_active = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
-		t.CoOccupantName, t.CoOccupantPhone, activeInt, t.ID,
+		coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.ID,
 	)
 	return err
 }

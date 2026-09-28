@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -141,10 +142,15 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 		if ch == "" {
 			ch = "SMS_RCS"
 		}
+		coBytes, _ := json.Marshal(t.CoOccupants)
+		coJSON := string(coBytes)
+		if coJSON == "" || coJSON == "null" {
+			coJSON = "[]"
+		}
 		_, err := tx.Exec(`
-			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, preferred_channel, co_occupant_name, co_occupant_phone, is_active, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, ch, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.CreatedAt)
+			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, preferred_channel, co_occupants, co_occupant_name, co_occupant_phone, is_active, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, ch, coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("failed restoring tenant %s: %w", t.Name, err)
 		}

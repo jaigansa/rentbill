@@ -170,6 +170,17 @@ const App = {
       }
     });
 
+    // Co-occupant dynamic rows
+    document.getElementById('btn-add-co-occupant')?.addEventListener('click', () => {
+      const container = document.getElementById('co-occupants-list');
+      if (container) {
+        const row = this.renderCoOccupantRow('', '');
+        container.appendChild(row);
+        this.refreshIcons();
+        row.querySelector('.co-occupant-name')?.focus();
+      }
+    });
+
     // Backup & Restore file triggers
     const btnTriggerRestore = document.getElementById('btn-trigger-restore');
     const inputRestoreBackup = document.getElementById('input-restore-backup');
@@ -246,6 +257,24 @@ const App = {
   openModal(id) {
     document.getElementById(id)?.classList.add('active');
     this.refreshIcons();
+  },
+
+  renderCoOccupantRow(name = '', phone = '') {
+    const div = document.createElement('div');
+    div.className = 'co-occupant-row';
+    const safeName = (name || '').replace(/"/g, '&quot;');
+    const safePhone = (phone || '').replace(/"/g, '&quot;');
+    div.innerHTML = `
+      <input type="text" class="co-occupant-name" placeholder="Name (e.g. Spouse / Roommate)" value="${safeName}">
+      <input type="tel" class="co-occupant-phone" placeholder="Mobile number" value="${safePhone}">
+      <button type="button" class="btn-remove-co-occupant" title="Remove Co-occupant">
+        <i data-lucide="trash-2" style="width:15px; height:15px;"></i>
+      </button>
+    `;
+    div.querySelector('.btn-remove-co-occupant')?.addEventListener('click', () => {
+      div.remove();
+    });
+    return div;
   },
 
   closeModal(id) {
@@ -626,6 +655,15 @@ const App = {
       const propIdVal = document.getElementById('tenant-prop-id').value;
       const isActiveVal = document.getElementById('tenant-is-active')?.value !== '0';
 
+      const coOccupants = [];
+      document.querySelectorAll('#co-occupants-list .co-occupant-row').forEach(row => {
+        const name = row.querySelector('.co-occupant-name')?.value.trim() || '';
+        const phone = row.querySelector('.co-occupant-phone')?.value.trim() || '';
+        if (name || phone) {
+          coOccupants.push({ name, phone });
+        }
+      });
+
       const t = {
         name: document.getElementById('tenant-name').value.trim(),
         phone: document.getElementById('tenant-phone').value.trim(),
@@ -640,8 +678,9 @@ const App = {
         initial_elec_meter: parseFloat(document.getElementById('tenant-init-elec').value) || 0,
         initial_water_meter: parseFloat(document.getElementById('tenant-init-water').value) || 0,
         preferred_channel: document.getElementById('tenant-channel')?.value || 'SMS_RCS',
-        co_occupant_name: document.getElementById('tenant-co-occupant-name')?.value.trim() || '',
-        co_occupant_phone: document.getElementById('tenant-co-occupant-phone')?.value.trim() || '',
+        co_occupants: coOccupants,
+        co_occupant_name: coOccupants[0]?.name || '',
+        co_occupant_phone: coOccupants[0]?.phone || '',
         is_active: isActiveVal
       };
 
@@ -655,6 +694,8 @@ const App = {
         }
         this.closeModal('modal-tenant');
         e.target.reset();
+        const coListEl = document.getElementById('co-occupants-list');
+        if (coListEl) coListEl.innerHTML = '';
         await this.refreshAll();
       } catch (err) {
         alert('Error: ' + err.message);
@@ -1496,13 +1537,16 @@ const App = {
 
     // Filter tenants
     let filtered = this.tenants.filter(t => {
-      // 1. Text Search (name, phone, property_name)
+      // 1. Text Search (name, phone, property_name, co-occupants)
       if (this.tenantSearchQuery) {
         const q = this.tenantSearchQuery;
         const matchName = (t.name || '').toLowerCase().includes(q);
         const matchPhone = (t.phone || '').toLowerCase().includes(q);
         const matchProp = (t.property_name || '').toLowerCase().includes(q);
-        if (!matchName && !matchPhone && !matchProp) return false;
+        const matchCo = (t.co_occupants || []).some(co => (co.name || '').toLowerCase().includes(q) || (co.phone || '').toLowerCase().includes(q))
+          || (t.co_occupant_name || '').toLowerCase().includes(q)
+          || (t.co_occupant_phone || '').toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchProp && !matchCo) return false;
       }
 
       // 2. Status Filter Pill (all, active, past)
@@ -1645,7 +1689,24 @@ const App = {
               <span class="detail-val"><a href="mailto:${t.email}" class="phone-link">${t.email}</a></span>
             </div>
             ` : ''}
-            ${(t.co_occupant_name || t.co_occupant_phone) ? `
+            ${(t.co_occupants && t.co_occupants.length > 0) ? `
+            <div class="tenant-detail-item" style="grid-column: span 2;">
+              <span class="detail-label">Co-occupants / Roommates (${t.co_occupants.length})</span>
+              <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                ${t.co_occupants.map(co => `
+                  <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                    <span style="font-weight:600;">${co.name || 'Co-occupant'}</span>
+                    ${co.phone ? `
+                      <span style="color:var(--text-muted); opacity:0.6;">•</span>
+                      <a href="tel:${co.phone.replace(/[^0-9+]/g, '')}" class="phone-link" title="Tap to call ${co.phone}">
+                        <i data-lucide="phone" style="width:12px; height:12px; vertical-align:-2px;"></i> ${co.phone}
+                      </a>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            ` : (t.co_occupant_name || t.co_occupant_phone) ? `
             <div class="tenant-detail-item" style="grid-column: span 2;">
               <span class="detail-label">Co-occupant / Roommate</span>
               <span class="detail-val" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
@@ -1788,10 +1849,18 @@ const App = {
       document.getElementById('tenant-name').value = t.name;
       document.getElementById('tenant-phone').value = t.phone;
       document.getElementById('tenant-email').value = t.email || '';
-      const coNameEl = document.getElementById('tenant-co-occupant-name');
-      if (coNameEl) coNameEl.value = t.co_occupant_name || '';
-      const coPhoneEl = document.getElementById('tenant-co-occupant-phone');
-      if (coPhoneEl) coPhoneEl.value = t.co_occupant_phone || '';
+      const coListEl = document.getElementById('co-occupants-list');
+      if (coListEl) {
+        coListEl.innerHTML = '';
+        const occupants = (t.co_occupants && t.co_occupants.length > 0)
+          ? t.co_occupants
+          : (t.co_occupant_name || t.co_occupant_phone)
+            ? [{ name: t.co_occupant_name || '', phone: t.co_occupant_phone || '' }]
+            : [];
+        occupants.forEach(co => {
+          coListEl.appendChild(this.renderCoOccupantRow(co.name || '', co.phone || ''));
+        });
+      }
       document.getElementById('tenant-prop-id').value = t.property_id || '';
       document.getElementById('tenant-deposit').value = t.security_deposit || 0;
       document.getElementById('tenant-move-in').value = t.move_in_date || '';
@@ -2602,6 +2671,8 @@ const App = {
   openTenantModal() {
     document.getElementById('form-tenant').reset();
     document.getElementById('tenant-id').value = '';
+    const coListEl = document.getElementById('co-occupants-list');
+    if (coListEl) coListEl.innerHTML = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
     const chSelect = document.getElementById('tenant-channel');

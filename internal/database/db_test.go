@@ -257,4 +257,61 @@ func TestBuildEmailMIME(t *testing.T) {
 		t.Errorf("MIME missing multipart content type")
 	}
 }
+func TestMultipleCoOccupants(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
 
+	tenant := &database.Tenant{
+		Name:  "Arun Kumar",
+		Phone: "9876543210",
+		Email: "arun@example.com",
+		CoOccupants: []database.CoOccupant{
+			{Name: "Priya Sharma", Phone: "9876543211"},
+			{Name: "Rahul Sharma", Phone: "9876543212"},
+		},
+		IsActive: true,
+	}
+
+	id, err := db.CreateTenant(tenant)
+	if err != nil {
+		t.Fatalf("failed creating tenant with multiple co-occupants: %v", err)
+	}
+
+	retrieved, err := db.GetTenantByID(id)
+	if err != nil {
+		t.Fatalf("failed getting tenant: %v", err)
+	}
+
+	if len(retrieved.CoOccupants) != 2 {
+		t.Fatalf("expected 2 co-occupants, got %d", len(retrieved.CoOccupants))
+	}
+	if retrieved.CoOccupants[0].Name != "Priya Sharma" || retrieved.CoOccupants[0].Phone != "9876543211" {
+		t.Errorf("co-occupant 0 mismatch: %+v", retrieved.CoOccupants[0])
+	}
+	if retrieved.CoOccupants[1].Name != "Rahul Sharma" || retrieved.CoOccupants[1].Phone != "9876543212" {
+		t.Errorf("co-occupant 1 mismatch: %+v", retrieved.CoOccupants[1])
+	}
+	if retrieved.CoOccupantName != "Priya Sharma" || retrieved.CoOccupantPhone != "9876543211" {
+		t.Errorf("expected legacy co-occupant fields to be populated from first occupant, got %s / %s", retrieved.CoOccupantName, retrieved.CoOccupantPhone)
+	}
+
+	// Update co-occupants
+	retrieved.CoOccupants = append(retrieved.CoOccupants, database.CoOccupant{
+		Name:  "Sneha Patel",
+		Phone: "9876543213",
+	})
+	if err := db.UpdateTenant(retrieved); err != nil {
+		t.Fatalf("failed updating tenant: %v", err)
+	}
+
+	updated, err := db.GetTenantByID(id)
+	if err != nil {
+		t.Fatalf("failed retrieving updated tenant: %v", err)
+	}
+	if len(updated.CoOccupants) != 3 {
+		t.Fatalf("expected 3 co-occupants after update, got %d", len(updated.CoOccupants))
+	}
+	if updated.CoOccupants[2].Name != "Sneha Patel" || updated.CoOccupants[2].Phone != "9876543213" {
+		t.Errorf("co-occupant 2 mismatch: %+v", updated.CoOccupants[2])
+	}
+}
