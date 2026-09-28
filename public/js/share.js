@@ -92,7 +92,7 @@ const Share = {
       lines.push(`* Other Charges (${bill.other_charges_desc || 'Adjustment'}): ${currency}${bill.other_charges.toFixed(2)}`);
     }
     if (bill.discount_amount > 0) {
-      lines.push(`* Discount / Concession${bill.discount_reason ? ` (${bill.discount_reason})` : ''}: -${currency}${bill.discount_amount.toFixed(2)}`);
+      lines.push(`* Discount${bill.discount_reason ? ` (${bill.discount_reason})` : ''}: -${currency}${bill.discount_amount.toFixed(2)}`);
     }
     if (bill.previous_balance > 0) {
       lines.push(`* Previous Arrears / Unpaid Due: ${currency}${bill.previous_balance.toFixed(2)}`);

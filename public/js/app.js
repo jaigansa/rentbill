@@ -2498,7 +2498,7 @@ const App = {
             ${b.discount_amount > 0 ? `
               <tr style="background:rgba(22, 163, 74, 0.05);">
                 <td style="color:var(--success); font-weight:600;">
-                  <i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount / Concession ${b.discount_reason ? `(${b.discount_reason})` : ''}
+                  <i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount ${b.discount_reason ? `(${b.discount_reason})` : ''}
                 </td>
                 <td class="num" style="color:var(--success); font-weight:700;">-${curr}${b.discount_amount.toFixed(2)}</td>
               </tr>
