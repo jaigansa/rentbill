@@ -1055,23 +1055,12 @@ textarea:hover::-webkit-scrollbar-thumb {
 }
 
 .modal-header {
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  z-index: 25;
-  margin: -16px -20px 14px -20px;
-  padding: 14px 20px 12px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-@media (min-width: 640px) {
-  .modal-header {
-    margin: -20px -24px 16px -24px;
-    padding: 18px 24px 14px;
-  }
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .modal-header h3 {
@@ -1115,10 +1104,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   .modal-dialog {
     padding: 14px 16px 0 16px;
     scroll-padding-bottom: 68px;
-  }
-  .modal-header {
-    margin: -14px -16px 12px -16px;
-    padding: 12px 16px 10px;
   }
   .modal-footer {
     padding: 10px 14px max(12px, env(safe-area-inset-bottom, 12px));
@@ -1257,7 +1242,81 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--primary);
 }
 
-/* Invoice view */
+/* Invoice & Bill View Modals - Full Window Height */
+#modal-invoice .modal-dialog,
+#modal-ledger .modal-dialog {
+  height: calc(var(--vvh, 100dvh) - 16px);
+  max-height: calc(var(--vvh, 100dvh) - 16px);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  #modal-invoice .modal-dialog,
+  #modal-ledger .modal-dialog {
+    height: calc(var(--vvh, 100dvh) - 40px);
+    max-height: calc(var(--vvh, 100dvh) - 40px);
+    max-width: 720px;
+  }
+}
+
+#modal-invoice .modal-header,
+#modal-ledger .modal-header {
+  flex-shrink: 0;
+}
+
+#modal-invoice .invoice-container {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  font-size: 0.85rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+#modal-invoice .inv-footer-notice {
+  margin-top: auto !important;
+}
+
+#modal-invoice .modal-footer {
+  flex-shrink: 0;
+  margin-top: 14px;
+}
+
+#modal-ledger .modal-dialog {
+  padding-bottom: 20px;
+}
+
+@media (min-width: 640px) {
+  #modal-ledger .modal-dialog {
+    padding-bottom: 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  #modal-ledger .modal-dialog {
+    padding-bottom: 16px;
+  }
+}
+
+#modal-ledger .ledger-summary-grid {
+  flex-shrink: 0;
+}
+
+#modal-ledger #ledger-bills-container {
+  flex: 1;
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Invoice view base */
 .invoice-container {
   background: white;
   border: 1px solid var(--border);
