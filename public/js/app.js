@@ -227,8 +227,31 @@ const App = {
     document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
       if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
     });
-    document.getElementById('btn-invoice-download-img')?.addEventListener('click', () => {
-      if (this.currentBillForInvoice) Share.downloadReceiptImage(this.currentBillForInvoice);
+    document.getElementById('btn-invoice-download-img')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btn-invoice-download-img');
+      if (!this.currentBillForInvoice) return;
+      if (btn) {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<i data-lucide="loader" style="width:16px; height:16px; animation:spin 1s linear infinite; vertical-align:-2px;"></i> Generating...`;
+        try {
+          await Share.downloadReceiptImage(this.currentBillForInvoice);
+          btn.innerHTML = `<i data-lucide="check" style="width:16px; height:16px; vertical-align:-2px;"></i> Saved!`;
+          if (window.lucide) window.lucide.createIcons();
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (window.lucide) window.lucide.createIcons();
+          }, 1800);
+        } catch (err) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
+          if (window.lucide) window.lucide.createIcons();
+          alert('Failed generating image: ' + err.message);
+        }
+      } else {
+        Share.downloadReceiptImage(this.currentBillForInvoice);
+      }
     });
     document.getElementById('btn-invoice-print')?.addEventListener('click', () => {
       Share.printInvoice();

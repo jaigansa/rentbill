@@ -357,250 +357,493 @@ const Share = {
     window.print();
   },
 
-  // Generate and download HD receipt image (PNG) directly via Canvas (100% offline, zero external dependencies)
-  downloadReceiptImage(bill) {
+  // Generate and download studio-grade HD receipt image (PNG) via Canvas
+  async downloadReceiptImage(bill) {
     if (!bill) return;
 
     const curr = window.APP_CURRENCY || '₹';
+    const numFmt = (n) => {
+      const val = typeof n === 'number' ? n : (parseFloat(n) || 0);
+      return val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    // Lookup tenant and property details for richer metadata
+    const tenant = (window.App && Array.isArray(window.App.tenants))
+      ? window.App.tenants.find(t => t.id === bill.tenant_id)
+      : null;
+    const property = (window.App && Array.isArray(window.App.properties))
+      ? window.App.properties.find(p => p.id === bill.property_id)
+      : null;
+
+    const email = bill.tenant_email || (tenant && tenant.email) || '';
+    const address = (property && property.address) ? property.address : '';
+    let coOccupants = '';
+    if (tenant && Array.isArray(tenant.co_occupants) && tenant.co_occupants.length > 0) {
+      coOccupants = tenant.co_occupants.map(c => `${c.name}${c.phone ? ` (${c.phone})` : ''}`).join(', ');
+    } else if (tenant && tenant.co_occupant_name) {
+      coOccupants = `${tenant.co_occupant_name}${tenant.co_occupant_phone ? ` (${tenant.co_occupant_phone})` : ''}`;
+    }
+
+    const issueDate = bill.created_at ? (bill.created_at.split('T')[0] || bill.created_at.split(' ')[0]) : '';
+    const status = bill.status || 'PENDING';
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const scale = 2; // Retina 2x scale for sharp text
+    const scale = 2; // Retina 2x scale for ultra-crisp text
+    const width = 720;
 
-    const width = 640;
     // Calculate required height based on dynamic sections
-    let height = 580;
-    if (bill.electricity_amount > 0) height += 35;
-    if (bill.water_amount > 0) height += 35;
-    if (bill.maintenance_amount > 0) height += 30;
-    if (bill.other_charges > 0) height += 30;
-    if (bill.discount_amount > 0) height += 30;
-    if (bill.previous_balance > 0) height += 35;
-    if (bill.payment_upi || bill.payment_bank_name) height += 90;
-    if (bill.notes) height += 35;
+    let height = 150; // Top accent + header + divider
+    let partyH = 76;
+    if (email) partyH += 18;
+    if (coOccupants) partyH += 18;
+    if (address) partyH += 18;
+    height += partyH + 20;
+
+    // Table header + line items
+    height += 36; // Table header
+    height += 38; // Base Rent
+    if (bill.electricity_amount > 0) height += 42;
+    if (bill.water_amount > 0) height += (bill.water_billing_type === 'METER' ? 42 : 36);
+    if (bill.maintenance_amount > 0) height += 36;
+    if (bill.other_charges > 0) height += 36;
+    if (bill.discount_amount > 0) height += 36;
+    if (bill.previous_balance > 0) height += 36;
+
+    // Summary box
+    height += (bill.paid_amount > 0 ? 104 : 68) + 16;
+
+    // Amount in words
+    height += ((bill.paid_amount > 0 && bill.balance_amount > 0) ? 60 : 42) + 14;
+
+    // Payment details
+    if (bill.payment_upi || bill.payment_bank_name) height += 88;
+
+    // Notes
+    if (bill.notes) height += 38;
+
+    // Signatures
+    height += 92;
+
+    // Footer notice
+    height += 48;
 
     canvas.width = width * scale;
     canvas.height = height * scale;
     ctx.scale(scale, scale);
 
+    // Cross-browser rounded rect helper
+    function roundRect(c, x, y, w, h, r) {
+      if (typeof c.roundRect === 'function') {
+        c.beginPath();
+        c.roundRect(x, y, w, h, r);
+      } else {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.lineTo(x + w - r, y);
+        c.quadraticCurveTo(x + w, y, x + w, y + r);
+        c.lineTo(x + w, y + h - r);
+        c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        c.lineTo(x + r, y + h);
+        c.quadraticCurveTo(x, y + h, x, y + h - r);
+        c.lineTo(x, y + r);
+        c.quadraticCurveTo(x, y, x + r, y);
+        c.closePath();
+      }
+    }
+
     // 1. Background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    // 2. Top Header Accent Banner
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(0, 0, width, 6);
+    // 2. Top Header Accent Banner (Brand gradient)
+    const grad = ctx.createLinearGradient(0, 0, width, 0);
+    grad.addColorStop(0, '#2563eb');
+    grad.addColorStop(1, '#1d4ed8');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, 8);
 
-    // 3. Header Text & Invoice Number
-    let y = 38;
-    ctx.fillStyle = '#1e40af';
-    ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-    ctx.fillText('RENT INVOICE / RECEIPT', 28, y);
+    // 3. Subtle Outer Border
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 1, 1, width - 2, height - 2, 8);
+    ctx.stroke();
 
-    ctx.textAlign = 'right';
-    // Status Badge background
-    const status = bill.status || 'PENDING';
-    ctx.fillStyle = status === 'PAID' ? '#dcfce7' : (status === 'OVERDUE' ? '#fee2e2' : '#fef3c7');
-    const statusText = status;
-    ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-    const textWidth = ctx.measureText(statusText).width;
-    ctx.beginPath();
-    ctx.roundRect(width - 28 - textWidth - 16, y - 18, textWidth + 16, 24, 12);
+    // 4. Header Section
+    let y = 42;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1e3a8a';
+    ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('RENT INVOICE / RECEIPT', 32, y);
+
+    // Status Badge Pill
+    const badgeColors = {
+      PAID: { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+      OVERDUE: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
+      PENDING: { bg: '#fef3c7', text: '#b45309', border: '#fde68a' }
+    };
+    const bColor = badgeColors[status] || badgeColors.PENDING;
+    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const textWidth = ctx.measureText(status).width;
+    const badgeW = textWidth + 24;
+    const badgeX = width - 32 - badgeW;
+
+    ctx.fillStyle = bColor.bg;
+    roundRect(ctx, badgeX, y - 18, badgeW, 26, 13);
     ctx.fill();
+    ctx.strokeStyle = bColor.border;
+    ctx.lineWidth = 1;
+    roundRect(ctx, badgeX, y - 18, badgeW, 26, 13);
+    ctx.stroke();
 
-    ctx.fillStyle = status === 'PAID' ? '#15803d' : (status === 'OVERDUE' ? '#b91c1c' : '#b45309');
-    ctx.fillText(statusText, width - 36, y - 2);
+    ctx.fillStyle = bColor.text;
+    ctx.textAlign = 'center';
+    ctx.fillText(status, badgeX + badgeW / 2, y - 1);
 
+    // Invoice Sub-headers
     y += 24;
     ctx.textAlign = 'left';
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Invoice #: ${bill.bill_number}`, 32, y);
+
     ctx.fillStyle = '#64748b';
-    ctx.font = '13px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`Bill #${bill.bill_number} • Period: ${bill.billing_month}`, 28, y);
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Date: ${issueDate}`, 32, y + 18);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`Due Date: ${bill.due_date}`, width - 28, y);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Billing Month: ${bill.billing_month}`, width - 32, y);
 
-    // Divider
-    y += 18;
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Due Date: ${bill.due_date}`, width - 32, y + 18);
+
+    // Section Divider
+    y += 30;
     ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(28, y);
-    ctx.lineTo(width - 28, y);
+    ctx.moveTo(32, y);
+    ctx.lineTo(width - 32, y);
     ctx.stroke();
 
-    // 4. Tenant & Unit Info
-    y += 26;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillText(bill.tenant_name, 28, y);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`Phone: ${bill.tenant_phone}`, 28, y + 18);
-
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#0f172a';
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillText(bill.property_name, width - 28, y);
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Property Unit', width - 28, y + 18);
-
-    // 5. Line Items Table Header
-    y += 44;
+    // 5. Parties Section (Billed To & Premises Card)
+    y += 14;
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(28, y - 6, width - 56, 28);
+    roundRect(ctx, 32, y, width - 64, partyH, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 32, y, width - 64, partyH, 8);
+    ctx.stroke();
+
+    // Left Column: Tenant
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('BILLED TO (TENANT)', 48, y + 20);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(bill.tenant_name, 48, y + 38);
+
+    ctx.fillStyle = '#334155';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Mobile: ${bill.tenant_phone}`, 48, y + 55);
+
+    let curTenantY = y + 55;
+    if (email) {
+      curTenantY += 16;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Email: ${email}`, 48, curTenantY);
+    }
+    if (coOccupants) {
+      curTenantY += 16;
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Co-occupant(s): ${coOccupants}`, 48, curTenantY);
+    }
+
+    // Right Column: Property Unit
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('RENTAL PREMISES', width - 48, y + 20);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(bill.property_name, width - 48, y + 38);
+
+    if (address) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(address, width - 48, y + 55);
+    }
+
+    y += partyH + 18;
+
+    // 6. Itemized Table Header
+    ctx.fillStyle = '#f1f5f9';
+    roundRect(ctx, 32, y, width - 64, 32, 6);
+    ctx.fill();
     ctx.strokeStyle = '#cbd5e1';
-    ctx.strokeRect(28, y - 6, width - 56, 28);
+    ctx.lineWidth = 1;
+    roundRect(ctx, 32, y, width - 64, 32, 6);
+    ctx.stroke();
 
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#334155';
-    ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-    ctx.fillText('DESCRIPTION', 38, y + 12);
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('LINE ITEM / DESCRIPTION', 48, y + 20);
+    ctx.fillText('DETAILS / READINGS', 290, y + 20);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`AMOUNT (${curr})`, width - 38, y + 12);
+    ctx.fillText(`AMOUNT (${curr})`, width - 48, y + 20);
+    y += 32;
 
     // Helper for table rows
-    const drawRow = (desc, sub, amount, isRed = false, isGreen = false) => {
-      y += 30;
-      ctx.textAlign = 'left';
-      ctx.fillStyle = isRed ? '#dc2626' : (isGreen ? '#16a34a' : '#1e293b');
-      ctx.font = (isRed || isGreen) ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
-      ctx.fillText(desc, 38, y);
+    const drawItemRow = (title, detail, amountStr, isDiscount = false, isArrears = false) => {
+      const rowHeight = detail ? 40 : 34;
+      y += 4;
 
-      if (sub) {
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isDiscount ? '#16a34a' : (isArrears ? '#dc2626' : '#0f172a');
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(title, 48, y + 16);
+
+      if (detail) {
         ctx.fillStyle = '#64748b';
-        ctx.font = '11px system-ui, -apple-system, sans-serif';
-        ctx.fillText(sub, 38, y + 14);
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(detail, 290, y + 16);
       }
 
       ctx.textAlign = 'right';
-      ctx.fillStyle = isRed ? '#dc2626' : (isGreen ? '#16a34a' : '#0f172a');
-      ctx.font = (isRed || isGreen) ? 'bold 13px system-ui, -apple-system, sans-serif' : '13px system-ui, -apple-system, sans-serif';
-      const prefix = isGreen ? '-' : '';
-      ctx.fillText(`${prefix}${curr}${amount.toFixed(2)}`, width - 38, y);
+      ctx.fillStyle = isDiscount ? '#16a34a' : (isArrears ? '#dc2626' : '#0f172a');
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(amountStr, width - 48, y + 16);
 
-      if (sub) y += 6;
+      y += rowHeight;
       ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(28, y + 8);
-      ctx.lineTo(width - 28, y + 8);
+      ctx.moveTo(32, y);
+      ctx.lineTo(width - 32, y);
       ctx.stroke();
     };
 
-    // Table rows
-    drawRow('Base House Rent', '', bill.base_rent);
+    // Draw line items
+    drawItemRow('Base House Rent', `Rent for ${bill.billing_month}`, `${curr}${numFmt(bill.base_rent)}`);
 
     if (bill.electricity_amount > 0) {
-      drawRow(`Electricity (${bill.electricity_units} units @ ${curr}${bill.electricity_rate})`, `Meter: ${bill.prev_electricity_meter} -> ${bill.curr_electricity_meter}`, bill.electricity_amount);
+      drawItemRow(
+        'Electricity Charges',
+        `${bill.electricity_units} units @ ${curr}${bill.electricity_rate} (Meter: ${bill.prev_electricity_meter} ➔ ${bill.curr_electricity_meter})`,
+        `${curr}${numFmt(bill.electricity_amount)}`
+      );
     }
     if (bill.water_amount > 0) {
       if (bill.water_billing_type === 'METER') {
-        drawRow(`Water (${bill.water_units} units @ ${curr}${bill.water_rate})`, `Meter: ${bill.prev_water_meter} -> ${bill.curr_water_meter}`, bill.water_amount);
+        drawItemRow(
+          'Water Charges',
+          `${bill.water_units} units @ ${curr}${bill.water_rate} (Meter: ${bill.prev_water_meter} ➔ ${bill.curr_water_meter})`,
+          `${curr}${numFmt(bill.water_amount)}`
+        );
       } else {
-        drawRow('Water Charges (Fixed)', '', bill.water_amount);
+        drawItemRow('Water Charges', 'Fixed Monthly Charge', `${curr}${numFmt(bill.water_amount)}`);
       }
     }
     if (bill.maintenance_amount > 0) {
-      drawRow('Maintenance Charges', '', bill.maintenance_amount);
+      drawItemRow('Maintenance Charges', 'Society & Maintenance', `${curr}${numFmt(bill.maintenance_amount)}`);
     }
     if (bill.other_charges > 0) {
-      drawRow(`Other Charges: ${bill.other_charges_desc || 'Adjustment'}`, '', bill.other_charges);
+      drawItemRow('Other Charges', bill.other_charges_desc || 'Adjustment', `${curr}${numFmt(bill.other_charges)}`);
     }
     if (bill.discount_amount > 0) {
-      drawRow(`Discount: ${bill.discount_reason || 'Concession'}`, '', bill.discount_amount, false, true);
+      drawItemRow('Discount', bill.discount_reason || 'Concession', `-${curr}${numFmt(bill.discount_amount)}`, true, false);
     }
     if (bill.previous_balance > 0) {
-      drawRow('Previous Arrears / Unpaid Due', 'Carried forward from previous bill', bill.previous_balance, true);
+      drawItemRow('Previous Arrears', 'Carried forward unpaid balance', `${curr}${numFmt(bill.previous_balance)}`, false, true);
     }
 
-    // 6. Total Summary Box
-    y += 24;
+    // 7. Total Summary Card
+    y += 14;
+    const summaryCardH = bill.paid_amount > 0 ? 104 : 68;
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(28, y, width - 56, 68);
+    roundRect(ctx, 32, y, width - 64, summaryCardH, 8);
+    ctx.fill();
     ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(28, y, width - 56, 68);
+    roundRect(ctx, 32, y, width - 64, summaryCardH, 8);
+    ctx.stroke();
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 15px system-ui, -apple-system, sans-serif';
-    ctx.fillText('TOTAL AMOUNT DUE:', 40, y + 26);
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('TOTAL AMOUNT DUE:', 48, y + 26);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`${curr}${bill.total_amount.toFixed(2)}`, width - 40, y + 26);
+    ctx.font = 'bold 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`${curr}${numFmt(bill.total_amount)}`, width - 48, y + 26);
 
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#15803d';
-    ctx.font = '13px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`Paid: ${curr}${bill.paid_amount.toFixed(2)}`, 40, y + 50);
-
-    ctx.textAlign = 'right';
-    ctx.fillStyle = bill.balance_amount > 0 ? '#dc2626' : '#15803d';
-    ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`Balance: ${curr}${bill.balance_amount.toFixed(2)}`, width - 40, y + 50);
-
-    // 7. Amount in words
-    y += 84;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#475569';
-    ctx.font = '12px system-ui, -apple-system, sans-serif';
-    ctx.fillText(`Amount in Words: ${this.amountInWords(bill.total_amount)}`, 28, y);
-
-    // 8. Payment Details Box (UPI / Bank)
-    if (bill.payment_upi || bill.payment_bank_name) {
-      y += 18;
-      ctx.fillStyle = '#f1f5f9';
-      ctx.fillRect(28, y, width - 56, 60);
-      ctx.strokeStyle = '#cbd5e1';
+    if (bill.paid_amount > 0) {
+      ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
-      ctx.strokeRect(28, y, width - 56, 60);
+      ctx.beginPath();
+      ctx.moveTo(48, y + 42);
+      ctx.lineTo(width - 48, y + 42);
+      ctx.stroke();
 
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#15803d';
+      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Amount Paid: ${curr}${numFmt(bill.paid_amount)}`, 48, y + 68);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = bill.balance_amount > 0 ? '#dc2626' : '#15803d';
+      ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Balance Due: ${curr}${numFmt(bill.balance_amount)}`, width - 48, y + 68);
+    }
+
+    y += summaryCardH + 12;
+
+    // 8. Amount in Words Box
+    const wordsBoxH = (bill.paid_amount > 0 && bill.balance_amount > 0) ? 58 : 40;
+    ctx.fillStyle = '#f8fafc';
+    roundRect(ctx, 32, y, width - 64, wordsBoxH, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    roundRect(ctx, 32, y, width - 64, wordsBoxH, 4);
+    ctx.stroke();
+
+    // Accent line on left of words box
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(32, y, 4, wordsBoxH);
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Amount in Words: ${this.amountInWords(bill.total_amount)}`, 48, y + 24);
+
+    if (bill.paid_amount > 0 && bill.balance_amount > 0) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Balance in Words: ${this.amountInWords(bill.balance_amount)}`, 48, y + 44);
+    }
+
+    y += wordsBoxH + 14;
+
+    // 9. Payment Details (Pay To) Box
+    if (bill.payment_upi || bill.payment_bank_name) {
+      ctx.fillStyle = '#f8fafc';
+      roundRect(ctx, 32, y, width - 64, 76, 6);
+      ctx.fill();
+
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      roundRect(ctx, 32, y, width - 64, 76, 6);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.textAlign = 'left';
       ctx.fillStyle = '#1e40af';
-      ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
-      ctx.fillText('PAYMENT DETAILS:', 38, y + 18);
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('PAYMENT DETAILS (PAY TO):', 48, y + 22);
 
       ctx.fillStyle = '#0f172a';
-      ctx.font = '12px system-ui, -apple-system, sans-serif';
-      let payStr = '';
-      if (bill.payment_upi) payStr += `UPI: ${bill.payment_upi}  `;
-      if (bill.payment_bank_name) payStr += `• Bank: ${bill.payment_bank_name} (${bill.payment_account_no || ''})  `;
-      if (bill.payment_ifsc) payStr += `• IFSC: ${bill.payment_ifsc}`;
-      ctx.fillText(payStr, 38, y + 38);
-      y += 60;
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      if (bill.payment_upi) ctx.fillText(`UPI ID: ${bill.payment_upi}`, 48, y + 42);
+      if (bill.payment_bank_name) ctx.fillText(`Bank: ${bill.payment_bank_name}`, 48, y + 60);
+      if (bill.payment_account_no) ctx.fillText(`A/C: ${bill.payment_account_no}`, 360, y + 42);
+      if (bill.payment_ifsc) ctx.fillText(`IFSC: ${bill.payment_ifsc}`, 360, y + 60);
+
+      y += 88;
     }
 
+    // 10. Notes
     if (bill.notes) {
-      y += 18;
-      ctx.fillStyle = '#64748b';
-      ctx.font = 'italic 12px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`Note: ${bill.notes}`, 28, y);
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#475569';
+      ctx.font = 'italic 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(`Note: ${bill.notes}`, 32, y + 16);
+      y += 32;
     }
 
-    // 9. Watermark footer
-    y += 24;
+    // 11. Signatures Block
+    y += 18;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+
+    // Left Signature
+    ctx.beginPath();
+    ctx.moveTo(48, y + 36);
+    ctx.lineTo(240, y + 36);
+    ctx.stroke();
+
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '11px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Generated by RentBill • Smart Rental Management', width / 2, y);
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('TENANT SIGNATURE', 144, y + 54);
 
-    // 10. Trigger Download
-    try {
-      const link = document.createElement('a');
-      link.download = `Receipt-${bill.bill_number}-${bill.billing_month}.png`;
-      link.href = canvas.toDataURL('image/png');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      if (window.App && typeof window.App.toast === 'function') {
-        window.App.toast('Receipt image saved to your device!');
-      }
-    } catch (e) {
-      alert('Failed saving receipt image: ' + e.message);
-    }
+    // Right Signature
+    ctx.beginPath();
+    ctx.moveTo(width - 240, y + 36);
+    ctx.lineTo(width - 48, y + 36);
+    ctx.stroke();
+
+    ctx.fillText('AUTHORIZED SIGNATORY', width - 144, y + 54);
+    y += 72;
+
+    // 12. Footer
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(32, y);
+    ctx.lineTo(width - 32, y);
+    ctx.stroke();
+
+    y += 18;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('This is a computer-generated invoice/receipt. Valid without physical signature.', 32, y);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText('Generated via RentBill', width - 32, y);
+
+    // 13. Download as PNG
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed creating image blob'));
+          return;
+        }
+        try {
+          const fileName = `Receipt-${bill.bill_number}-${bill.billing_month}.png`;
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = fileName;
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+          if (window.App && typeof window.App.toast === 'function') {
+            window.App.toast('Receipt image saved to your device!');
+          }
+          resolve(true);
+        } catch (e) {
+          reject(e);
+        }
+      }, 'image/png');
+    });
   },
 
   // Universal Multi-Channel Reminder Message Builders (SMS/RCS, WhatsApp, Email)
