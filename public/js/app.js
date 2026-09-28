@@ -1610,11 +1610,6 @@ const App = {
             </div>
             <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
               <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
-              <span style="color:var(--text-muted); opacity:0.6;">•</span>
-              <a href="tel:${cleanPhone}" class="phone-link" title="Tap to call ${t.phone}">
-                <i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone}
-              </a>
-              ${t.email ? `<span style="color:var(--text-muted); opacity:0.6;">•</span> <a href="mailto:${t.email}" class="phone-link" title="Tap to email ${t.email}">${t.email}</a>` : ''}
               ${isWa ? `
               <span class="channel-badge badge-wa">
                 <i data-lucide="message-circle" style="width:10px; height:10px;"></i> WhatsApp
@@ -1668,6 +1663,20 @@ const App = {
         <div class="tenant-card-details" id="tenant-details-${t.id}" style="display:none;">
           <div class="tenant-details-grid">
             <div class="tenant-detail-item">
+              <span class="detail-label">Phone Number</span>
+              <span class="detail-val">
+                <a href="tel:${cleanPhone}" class="phone-link" title="Tap to call ${t.phone}">
+                  <i data-lucide="phone" style="width:12px; height:12px; vertical-align:-2px;"></i> ${t.phone}
+                </a>
+              </span>
+            </div>
+            ${t.email ? `
+            <div class="tenant-detail-item">
+              <span class="detail-label">Email Address</span>
+              <span class="detail-val"><a href="mailto:${t.email}" class="phone-link">${t.email}</a></span>
+            </div>
+            ` : ''}
+            <div class="tenant-detail-item">
               <span class="detail-label">Security Deposit</span>
               <span class="detail-val">${curr}${t.security_deposit ? t.security_deposit.toFixed(2) : '0.00'}</span>
             </div>
@@ -1683,12 +1692,6 @@ const App = {
               <span class="detail-label">Initial Water Reading</span>
               <span class="detail-val">${t.initial_water_meter || 0} Units</span>
             </div>
-            ${t.email ? `
-            <div class="tenant-detail-item" style="grid-column: span 2;">
-              <span class="detail-label">Email Address</span>
-              <span class="detail-val"><a href="mailto:${t.email}" class="phone-link">${t.email}</a></span>
-            </div>
-            ` : ''}
             ${(t.co_occupants && t.co_occupants.length > 0) ? `
             <div class="tenant-detail-item" style="grid-column: span 2;">
               <span class="detail-label">Co-occupants / Roommates (${t.co_occupants.length})</span>
