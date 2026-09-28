@@ -1584,12 +1584,6 @@ const App = {
     }
 
     container.innerHTML = filtered.map(t => {
-      const ch = t.preferred_channel || 'SMS_RCS';
-      const isWa = ch === 'WHATSAPP';
-      const isBoth = ch === 'BOTH';
-      const chIcon = isWa ? 'message-circle' : 'message-square';
-      const chLabel = isWa ? 'WhatsApp' : (isBoth ? 'SMS/WA' : 'SMS/RCS');
-
       const tenantBills = (this.bills || []).filter(b => b.tenant_id === t.id);
       const totalPaid = (t.total_paid !== undefined && t.total_paid !== null)
         ? Number(t.total_paid)
@@ -2294,7 +2288,7 @@ const App = {
               </button>
               <div class="card-dropdown-menu">
                 <button type="button" class="dropdown-item btn-action-remind" data-bill-id="${b.id}">
-                  <i data-lucide="send" style="color:var(--primary);"></i> Send Reminder (SMS / WA)
+                  <i data-lucide="send" style="color:var(--primary);"></i> Send Reminder
                 </button>
                 <button type="button" class="dropdown-item btn-action-share" data-bill-id="${b.id}">
                   <i data-lucide="share-2"></i> Share Bill
