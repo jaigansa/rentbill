@@ -1136,7 +1136,7 @@ const App = {
                     <span class="badge badge-date" style="font-size:0.68rem; padding:1px 6px;">Not Billed</span>
                   </div>
                   <div class="action-card-sub">
-                    Unit: ${t.property_name || 'No Unit'} • Phone: ${t.phone}
+                    Unit: ${t.property_name || 'No Unit'} • Phone: <a href="tel:${(t.phone || '').replace(/[^0-9+]/g, '')}" class="phone-link" title="Tap to call ${t.phone}">${t.phone}</a>
                   </div>
                 </div>
                 <div class="action-card-right">
@@ -1558,7 +1558,10 @@ const App = {
             <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
               <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
               <span style="color:var(--text-muted); opacity:0.6;">•</span>
-              <span><i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone} ${t.email ? '• ' + t.email : ''}</span>
+              <a href="tel:${(t.phone || '').replace(/[^0-9+]/g, '')}" class="phone-link" title="Tap to call ${t.phone}">
+                <i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone}
+              </a>
+              ${t.email ? `<span style="color:var(--text-muted); opacity:0.6;">•</span> <a href="mailto:${t.email}" class="phone-link" title="Tap to email ${t.email}">${t.email}</a>` : ''}
               ${isWa ? `
               <span class="channel-badge badge-wa">
                 <i data-lucide="message-circle" style="width:10px; height:10px;"></i> WhatsApp

@@ -2134,6 +2134,27 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: #15803d;
 }
 
+/* Phone & Email direct tap links */
+.phone-link {
+  color: var(--text-main);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  padding: 1px 4px;
+  margin: -1px -4px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.phone-link:hover,
+.phone-link:active {
+  color: var(--primary);
+  background: var(--surface-alt, rgba(37, 99, 235, 0.08));
+  text-decoration: underline;
+}
+
 /* Reminder Templates Grid */
 .reminder-templates-grid {
   display: grid;
