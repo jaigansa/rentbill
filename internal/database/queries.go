@@ -121,9 +121,18 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
-	       t.is_active, t.created_at
+	       t.is_active, t.created_at,
+	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
+	       COALESCE(b_stats.total_due, 0.0) AS total_due
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
+	LEFT JOIN (
+		SELECT tenant_id,
+		       SUM(paid_amount) AS total_paid,
+		       SUM(total_amount - paid_amount) AS total_due
+		FROM bills
+		GROUP BY tenant_id
+	) b_stats ON t.id = b_stats.tenant_id
 	ORDER BY t.is_active DESC, t.name ASC
 	`
 	rows, err := db.Query(query)
@@ -143,6 +152,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 			&t.InitialElecMeter, &t.InitialWaterMeter,
 			&t.PreferredChannel,
 			&isActiveInt, &t.CreatedAt,
+			&t.TotalPaid, &t.TotalDue,
 		)
 		if err != nil {
 			return nil, err
@@ -161,20 +171,31 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
-	       t.is_active, t.created_at
+	       t.is_active, t.created_at,
+	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
+	       COALESCE(b_stats.total_due, 0.0) AS total_due
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
+	LEFT JOIN (
+		SELECT tenant_id,
+		       SUM(paid_amount) AS total_paid,
+		       SUM(total_amount - paid_amount) AS total_due
+		FROM bills
+		WHERE tenant_id = ?
+		GROUP BY tenant_id
+	) b_stats ON t.id = b_stats.tenant_id
 	WHERE t.id = ?
 	`
 	var t Tenant
 	var isActiveInt int
-	err := db.QueryRow(query, id).Scan(
+	err := db.QueryRow(query, id, id).Scan(
 		&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
 		&t.SecurityDeposit, &t.MoveInDate,
 		&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 		&t.InitialElecMeter, &t.InitialWaterMeter,
 		&t.PreferredChannel,
 		&isActiveInt, &t.CreatedAt,
+		&t.TotalPaid, &t.TotalDue,
 	)
 	if err != nil {
 		return nil, err

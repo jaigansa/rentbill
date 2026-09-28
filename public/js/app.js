@@ -1542,12 +1542,22 @@ const App = {
       const chIcon = isWa ? 'message-circle' : 'message-square';
       const chLabel = isWa ? 'WhatsApp' : (isBoth ? 'SMS/WA' : 'SMS/RCS');
 
+      const tenantBills = (this.bills || []).filter(b => b.tenant_id === t.id);
+      const totalPaid = (t.total_paid !== undefined && t.total_paid !== null)
+        ? Number(t.total_paid)
+        : tenantBills.reduce((sum, b) => sum + (Number(b.paid_amount) || 0), 0);
+      const totalDue = (t.total_due !== undefined && t.total_due !== null)
+        ? Number(t.total_due)
+        : tenantBills.reduce((sum, b) => sum + (Number(b.balance_amount) || (Number(b.total_amount) - Number(b.paid_amount)) || 0), 0);
+
       return `
       <div class="app-card">
         <div class="card-top">
           <div>
             <div class="card-title">${t.name}</div>
             <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
+              <span style="color:var(--text-muted); opacity:0.6;">•</span>
               <span><i data-lucide="phone" style="width:13px; height:13px; vertical-align:-2px;"></i> ${t.phone} ${t.email ? '• ' + t.email : ''}</span>
               ${isWa ? `
               <span class="channel-badge badge-wa">
@@ -1587,20 +1597,16 @@ const App = {
             </div>
           </div>
         </div>
-        <div class="card-middle">
-          <span class="card-amount-label">Unit: <strong>${t.property_name || 'Unassigned'}</strong></span>
-          <span class="card-amount-val">${curr}${t.security_deposit.toFixed(2)} <span style="font-size:0.75rem; font-weight:normal;">Deposit</span></span>
-        </div>
-        ${(t.payment_upi || t.payment_bank_name) ? `
-          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm);">
-            <i data-lucide="credit-card" style="width:13px; height:13px; color:var(--primary); flex-shrink:0;"></i>
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-              ${t.payment_upi ? `UPI: <strong style="color:var(--text-main);">${t.payment_upi}</strong>` : ''}
-              ${t.payment_upi && t.payment_bank_name ? ' • ' : ''}
-              ${t.payment_bank_name ? `${t.payment_bank_name} (${t.payment_account_no ? 'A/C: ' + t.payment_account_no : ''})` : ''}
-            </span>
+        <div class="card-middle" style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="card-amount-label">Total Paid</div>
+            <div class="card-amount-val" style="color:var(--success, #16a34a);" title="${this.formatFullMoney(totalPaid)}">${this.formatMoney(totalPaid, true)}</div>
           </div>
-        ` : ''}
+          <div style="text-align:right;">
+            <div class="card-amount-label">Total Due</div>
+            <div class="card-amount-val" style="color:${totalDue > 0 ? 'var(--danger, #dc2626)' : 'var(--text-muted)'};" title="${this.formatFullMoney(totalDue)}">${this.formatMoney(totalDue, true)}</div>
+          </div>
+        </div>
       </div>
     `;
     }).join('');

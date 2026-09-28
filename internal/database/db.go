@@ -218,6 +218,8 @@ type Tenant struct {
 	InitialWaterMeter float64 `json:"initial_water_meter"`
 	PreferredChannel  string  `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
 	IsActive          bool    `json:"is_active"`
+	TotalPaid         float64 `json:"total_paid"`
+	TotalDue          float64 `json:"total_due"`
 	CreatedAt         string  `json:"created_at"`
 }
 
