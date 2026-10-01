@@ -58,6 +58,43 @@ const App = {
     }
   },
 
+  showToast(message, type = 'info', duration = 3000) {
+    if (!message) return;
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-msg toast-${type}`;
+
+    let iconName = 'info';
+    if (type === 'success') iconName = 'check-circle-2';
+    else if (type === 'warning') iconName = 'alert-triangle';
+    else if (type === 'error' || type === 'danger') iconName = 'alert-circle';
+
+    toast.innerHTML = `
+      <i data-lucide="${iconName}" style="width:16px; height:16px; flex-shrink:0;"></i>
+      <span>${message}</span>
+    `;
+    container.appendChild(toast);
+    this.refreshIcons();
+
+    setTimeout(() => {
+      toast.classList.add('toast-out');
+      setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+      }, 220);
+    }, duration);
+  },
+
+  toast(message, type = 'info') {
+    return this.showToast(message, type);
+  },
+
   // Smart currency formatter: cleanly formats large numbers (Crores, Lakhs, Thousands)
   formatMoney(amount, compact = false) {
     const curr = window.APP_CURRENCY || '₹';

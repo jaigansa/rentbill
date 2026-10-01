@@ -9,6 +9,9 @@
   
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/print.css" media="print">
   <link rel="manifest" href="/manifest.json">
@@ -735,12 +738,7 @@
           <h3 id="modal-ledger-tenant-name" style="margin-bottom:2px;">Tenant Bills</h3>
           <span id="modal-ledger-unit-info" style="font-size:0.8rem; color:var(--text-muted);"></span>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <button type="button" class="btn btn-sm btn-outline-danger" id="btn-ledger-vacant-calc" style="display:none;" onclick="App.openVacantCalculation(App.currentLedgerTenantId)">
-            <i data-lucide="calculator" style="width:13px; height:13px;"></i> Move Out / Vacant Form
-          </button>
-          <button class="modal-close" data-close="modal-ledger">&times;</button>
-        </div>
+        <button class="modal-close" data-close="modal-ledger">&times;</button>
       </div>
 
       <!-- Ledger Summary Cards -->
@@ -762,6 +760,14 @@
       <!-- Ledger Bills List -->
       <div id="ledger-bills-container" class="bills-list">
         <div class="empty-state">Loading tenant bills...</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
+        <button type="button" class="btn btn-danger btn-sm" id="btn-ledger-vacant-calc" style="display:none;" onclick="App.openVacantCalculation(App.currentLedgerTenantId)">
+          <i data-lucide="calculator" style="width:13px; height:13px;"></i> Move Out / Vacant Form
+        </button>
       </div>
     </div>
   </div>
@@ -1627,7 +1633,13 @@
         <button type="button" class="pin-key" data-key="9">9</button>
         <button type="button" class="pin-key pin-key-fn" data-key="clear" title="Clear">C</button>
         <button type="button" class="pin-key" data-key="0">0</button>
-        <button type="button" class="pin-key pin-key-fn" data-key="backspace" title="Delete">⌫</button>
+        <button type="button" class="pin-key pin-key-fn pin-key-backspace" data-key="backspace" title="Delete" aria-label="Backspace">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="pin-fn-icon">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+            <line x1="18" y1="9" x2="12" y2="15"/>
+            <line x1="12" y1="9" x2="18" y2="15"/>
+          </svg>
+        </button>
       </div>
 
       <div class="lock-screen-footer-hint">
