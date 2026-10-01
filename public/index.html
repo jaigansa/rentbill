@@ -7,6 +7,8 @@
   <meta name="description" content="RentBill - Smart Property & Rent Management Mobile Web App">
   <title>RentBill - Property & Rent Manager</title>
   
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/print.css" media="print">
   <link rel="manifest" href="/manifest.json">
@@ -147,24 +149,17 @@
           <span class="badge badge-paid" id="dash-occupancy-badge">0/0 Units (0%)</span>
         </div>
         <div class="dash-occupancy-card">
-          <!-- Unit Status Container -->
-          <div class="seat-deck-wrapper">
-            <div class="seat-deck-subhead">
-              <span class="seat-deck-title">
-                <i data-lucide="door-closed" style="width:14px; height:14px; vertical-align:-2px; color:var(--primary);"></i>
-                Unit Status Matrix
-              </span>
-              <div class="seat-filter-pills" id="seat-filter-pills">
-                <button type="button" class="seat-filter-btn active" data-seat-filter="all">All (<span id="seat-filter-cnt-all">0</span>)</button>
-                <button type="button" class="seat-filter-btn" data-seat-filter="occupied">Occupied (<span id="seat-filter-cnt-occ">0</span>)</button>
-                <button type="button" class="seat-filter-btn" data-seat-filter="vacant">Vacant (<span id="seat-filter-cnt-vac">0</span>)</button>
-              </div>
+          <div class="dash-month-bar">
+            <div class="unit-filter-pills" id="unit-filter-pills">
+              <button type="button" class="unit-filter-btn active" data-unit-filter="all">All (<span id="unit-filter-cnt-all">0</span>)</button>
+              <button type="button" class="unit-filter-btn" data-unit-filter="occupied">Occupied (<span id="unit-filter-cnt-occ">0</span>)</button>
+              <button type="button" class="unit-filter-btn" data-unit-filter="vacant">Vacant (<span id="unit-filter-cnt-vac">0</span>)</button>
             </div>
+          </div>
 
-            <!-- Dynamic Unit Grid -->
-            <div class="seat-grid" id="dash-seat-grid">
-              <div class="empty-state" style="padding:16px;">Loading unit status map...</div>
-            </div>
+          <!-- Dynamic Unit Grid -->
+          <div class="unit-grid" id="dash-unit-grid">
+            <div class="empty-state" style="padding:16px;">Loading unit status map...</div>
           </div>
         </div>
       </div>
@@ -217,10 +212,12 @@
           <input type="text" id="tenant-search-input" placeholder="Search by name, unit, phone..." autocomplete="off">
           <button type="button" id="tenant-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
         </div>
-        <div class="filter-pills" id="tenant-filter-pills">
-          <button type="button" class="filter-pill active" data-filter="all">All</button>
-          <button type="button" class="filter-pill" data-filter="active">Active</button>
-          <button type="button" class="filter-pill" data-filter="past">Past</button>
+        <div class="dash-month-bar">
+          <div class="filter-pills" id="tenant-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="active">Active</button>
+            <button type="button" class="filter-pill" data-filter="past">Past</button>
+          </div>
         </div>
       </div>
 
@@ -248,10 +245,12 @@
           <input type="text" id="property-search-input" placeholder="Search by property name, address, type..." autocomplete="off">
           <button type="button" id="property-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
         </div>
-        <div class="filter-pills" id="property-filter-pills">
-          <button type="button" class="filter-pill active" data-filter="all">All</button>
-          <button type="button" class="filter-pill" data-filter="occupied">Occupied</button>
-          <button type="button" class="filter-pill" data-filter="vacant">Vacant</button>
+        <div class="dash-month-bar">
+          <div class="filter-pills" id="property-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="occupied">Occupied</button>
+            <button type="button" class="filter-pill" data-filter="vacant">Vacant</button>
+          </div>
         </div>
       </div>
 
@@ -707,9 +706,6 @@
               <button type="button" class="btn btn-secondary btn-sm" id="btn-vacant-copy">
                 <i data-lucide="copy" style="width:14px; height:14px;"></i> Copy
               </button>
-              <button type="button" class="btn btn-whatsapp btn-sm" id="btn-vacant-whatsapp">
-                <i data-lucide="send" style="width:14px; height:14px;"></i> WhatsApp
-              </button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-vacant-print">
                 <i data-lucide="printer" style="width:14px; height:14px;"></i> Print
               </button>
@@ -801,7 +797,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:8px;">
         <h4 style="font-size:0.95rem; font-weight:700;">Expense History</h4>
         <button type="button" class="btn btn-primary btn-sm" id="btn-prop-add-expense">
-          <i data-lucide="plus"></i> Log Expense
+          <i data-lucide="plus"></i> Add Expense
         </button>
       </div>
 
@@ -816,11 +812,42 @@
     </div>
   </div>
 
-  <!-- Modal: Log / Edit Expense Form -->
+  <!-- Modal: Detailed Unit Overview Window -->
+  <div class="modal" id="modal-unit-detail">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header" style="align-items:flex-start;">
+        <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+          <div id="unit-detail-icon-wrap" class="unit-type-icon" style="width:42px; height:42px; border-radius:12px; flex-shrink:0;">
+          </div>
+          <div style="min-width:0; flex:1;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <h3 id="unit-detail-title" style="margin:0; font-size:1.15rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Unit Details</h3>
+              <span id="unit-detail-status-badge" class="badge">Status</span>
+            </div>
+            <div id="unit-detail-subtitle" style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px; margin-top:2px;">
+              <i data-lucide="map-pin" style="width:12px; height:12px; flex-shrink:0;"></i>
+              <span id="unit-detail-address" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Address</span>
+            </div>
+          </div>
+        </div>
+        <button class="modal-close" data-close="modal-unit-detail">&times;</button>
+      </div>
+
+      <div class="modal-body" id="unit-detail-body" style="padding:16px 20px; display:flex; flex-direction:column; gap:16px; max-height:72vh; overflow-y:auto;">
+        <!-- Dynamically populated via App.showUnitDetail() -->
+      </div>
+
+      <div class="modal-footer" id="unit-detail-footer" style="padding:12px 20px; border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-secondary" data-close="modal-unit-detail">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Expense Form -->
   <div class="modal" id="modal-expense">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 id="modal-expense-title">Log Property Expense</h3>
+        <h3 id="modal-expense-title">Add Property Expense</h3>
         <button class="modal-close" data-close="modal-expense">&times;</button>
       </div>
       <form id="form-expense">
@@ -1447,12 +1474,7 @@
           <h4><i data-lucide="mail" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Automatic Email Cloud Backup</h4>
           <p class="settings-desc">Keep your data backed up safely to your inbox on a regular schedule (Gmail, Outlook, or custom SMTP).</p>
           <form id="form-settings">
-            <div class="form-group" style="margin-bottom:12px;">
-              <label for="set-currency">Currency Symbol</label>
-              <input type="text" id="set-currency" value="₹" maxlength="5" style="max-width:100px;">
-            </div>
-
-            <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
+            <div>
               <!-- Auto Backup Toggle -->
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; background:var(--surface-alt, #f8fafc); padding:10px 12px; border-radius:var(--radius-md, 8px); border:1px solid var(--border);">
                 <div>

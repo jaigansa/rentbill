@@ -960,7 +960,7 @@ const App = {
     document.getElementById('form-settings')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const payload = {
-        currency_symbol: document.getElementById('set-currency')?.value.trim() || '₹',
+        currency_symbol: '₹',
         auto_backup_enabled: document.getElementById('set-auto-backup-enabled')?.checked ? 'true' : 'false',
         auto_backup_interval: document.getElementById('set-backup-interval')?.value || 'daily',
         smtp_host: document.getElementById('set-smtp-host')?.value.trim() || '',
@@ -971,7 +971,7 @@ const App = {
       };
       try {
         await API.updateSettings(payload);
-        window.APP_CURRENCY = payload.currency_symbol;
+        window.APP_CURRENCY = '₹';
         this.closeModal('modal-settings');
         this.toast('Settings & Email Backup updated');
         await this.refreshAll();
@@ -984,10 +984,7 @@ const App = {
   async loadSettings() {
     try {
       const s = await API.getSettings();
-      if (s.currency_symbol) window.APP_CURRENCY = s.currency_symbol;
-
-      const elCur = document.getElementById('set-currency');
-      if (elCur) elCur.value = s.currency_symbol || '₹';
+      window.APP_CURRENCY = '₹';
 
       // Auto backup settings
       const elAuto = document.getElementById('set-auto-backup-enabled');
@@ -1075,14 +1072,14 @@ const App = {
       });
     }
 
-    // Bus Seat Filter Buttons (All / Occupied / Vacant)
-    document.querySelectorAll('.seat-filter-btn').forEach(btn => {
+    // Unit Status Filter Buttons (All / Occupied / Vacant)
+    document.querySelectorAll('.unit-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const filter = btn.getAttribute('data-seat-filter') || 'all';
-        this.currentSeatFilter = filter;
-        document.querySelectorAll('.seat-filter-btn').forEach(b => b.classList.remove('active'));
+        const filter = btn.getAttribute('data-unit-filter') || 'all';
+        this.currentUnitFilter = filter;
+        document.querySelectorAll('.unit-filter-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        this.renderOccupancySeatGrid();
+        this.renderOccupancyUnitGrid();
       });
     });
   },
@@ -1239,7 +1236,7 @@ const App = {
         }
       }
 
-      // 5. Occupancy Widget (Bus Seat Booking Style)
+      // 5. Occupancy & Unit Status Matrix Widget
       if (!this.properties || this.properties.length === 0) {
         this.properties = await API.getProperties().catch(() => []);
       }
@@ -1256,7 +1253,7 @@ const App = {
       const occBadge = document.getElementById('dash-occupancy-badge');
       if (occBadge) occBadge.textContent = `${occupiedUnits}/${totalUnits} Units (${occPct}%)`;
 
-      this.renderOccupancySeatGrid();
+      this.renderOccupancyUnitGrid();
 
       // 6. Utility Pulse
       const elecUnitsEl = document.getElementById('dash-total-elec-units');
@@ -1331,8 +1328,8 @@ const App = {
     </svg>`;
   },
 
-  renderOccupancySeatGrid() {
-    const grid = document.getElementById('dash-seat-grid');
+  renderOccupancyUnitGrid() {
+    const grid = document.getElementById('dash-unit-grid');
     if (!grid) return;
 
     const properties = this.properties || [];
@@ -1354,7 +1351,7 @@ const App = {
     const sortedProps = [...properties].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     // Map each property to its occupancy status & active tenant
-    const seatsData = sortedProps.map((p, idx) => {
+    const unitsData = sortedProps.map((p, idx) => {
       const activeTenants = tenants.filter(t => t.property_id == p.id && t.is_active);
       const isOccupied = activeTenants.length > 0;
       const primaryTenant = isOccupied ? activeTenants[0] : null;
@@ -1363,31 +1360,31 @@ const App = {
         isOccupied: isOccupied,
         tenants: activeTenants,
         primaryTenant: primaryTenant,
-        seatIndex: idx + 1
+        unitIndex: idx + 1
       };
     });
 
-    const occupiedCount = seatsData.filter(s => s.isOccupied).length;
-    const vacantCount = seatsData.length - occupiedCount;
+    const occupiedCount = unitsData.filter(s => s.isOccupied).length;
+    const vacantCount = unitsData.length - occupiedCount;
 
     // Update filter counts
-    const cntAll = document.getElementById('seat-filter-cnt-all');
-    const cntOcc = document.getElementById('seat-filter-cnt-occ');
-    const cntVac = document.getElementById('seat-filter-cnt-vac');
+    const cntAll = document.getElementById('unit-filter-cnt-all');
+    const cntOcc = document.getElementById('unit-filter-cnt-occ');
+    const cntVac = document.getElementById('unit-filter-cnt-vac');
 
-    if (cntAll) cntAll.textContent = seatsData.length;
+    if (cntAll) cntAll.textContent = unitsData.length;
     if (cntOcc) cntOcc.textContent = occupiedCount;
     if (cntVac) cntVac.textContent = vacantCount;
 
     // Filter by selected filter (all, occupied, vacant)
-    const activeFilter = this.currentSeatFilter || 'all';
-    const filteredSeats = seatsData.filter(s => {
+    const activeFilter = this.currentUnitFilter || 'all';
+    const filteredUnits = unitsData.filter(s => {
       if (activeFilter === 'occupied') return s.isOccupied;
       if (activeFilter === 'vacant') return !s.isOccupied;
       return true;
     });
 
-    if (filteredSeats.length === 0) {
+    if (filteredUnits.length === 0) {
       grid.innerHTML = `
         <div class="empty-state" style="padding:20px; grid-column: 1 / -1;">
           <div>No ${activeFilter} units found.</div>
@@ -1397,34 +1394,173 @@ const App = {
       return;
     }
 
-    grid.innerHTML = filteredSeats.map(s => {
+    grid.innerHTML = filteredUnits.map(s => {
       const p = s.property;
       const isOccupied = s.isOccupied;
       const tenantCount = s.tenants ? s.tenants.length : 0;
       const typeSvg = this.getUnitTypeSvg(p.unit_type);
+      const addr = (p.address || '').trim();
+      const unitTypeLabel = p.unit_type ? (p.unit_type.charAt(0).toUpperCase() + p.unit_type.slice(1)) : 'Apartment';
+      const displaySubtitle = addr || unitTypeLabel;
+      const subtitleIcon = addr ? 'map-pin' : 'building-2';
 
       const tooltip = isOccupied
-        ? `${p.name} • ${tenantCount} tenant${tenantCount === 1 ? '' : 's'} linked (${s.tenants.map(tn => tn.name).join(', ')})`
-        : `${p.name} • Vacant`;
+        ? `${p.name}${addr ? ` • ${addr}` : ''} • ${tenantCount} tenant${tenantCount === 1 ? '' : 's'} linked (${s.tenants.map(tn => tn.name).join(', ')})`
+        : `${p.name}${addr ? ` • ${addr}` : ''} • Vacant`;
+
+      const badgeTooltip = isOccupied
+        ? `${tenantCount} tenant${tenantCount === 1 ? '' : 's'} linked`
+        : 'Vacant (0 tenants)';
 
       return `
-        <div class="unit-card ${isOccupied ? 'seat-occupied' : 'seat-vacant'}" 
-             title="${tooltip}">
-          <div class="unit-card-top">
-            <div class="unit-type-icon" title="${p.unit_type || 'Unit'}">
-              ${typeSvg}
-            </div>
-            <span class="unit-badge" title="${tenantCount} tenant${tenantCount === 1 ? '' : 's'} linked">
-              <i data-lucide="user" style="width:11px; height:11px;"></i>
-              <span>${tenantCount}</span>
-            </span>
+        <div class="unit-card ${isOccupied ? 'unit-occupied' : 'unit-vacant'}" 
+             title="${tooltip}"
+             onclick="App.showUnitDetail(${p.id})">
+          <!-- Left Side: Icon with Number Badge on Top -->
+          <div class="unit-type-icon" title="${unitTypeLabel}">
+            ${typeSvg}
+            <span class="unit-badge" title="${badgeTooltip}">${tenantCount}</span>
           </div>
 
-          <div class="unit-name" title="${p.name}">${p.name}</div>
+          <!-- Right Side: Details -->
+          <div class="unit-card-right">
+            <div class="unit-name" title="${p.name}">${p.name}</div>
+            <div class="unit-address" title="${displaySubtitle}">
+              <i data-lucide="${subtitleIcon}" class="unit-address-pin"></i>
+              <span>${displaySubtitle}</span>
+            </div>
+          </div>
         </div>
       `;
     }).join('');
 
+    this.refreshIcons();
+  },
+
+  openAddTenantForProperty(propertyId) {
+    this.closeModal('modal-unit-detail');
+    this.openTenantModal();
+    const propSelect = document.getElementById('tenant-prop-id');
+    if (propSelect) {
+      propSelect.value = propertyId;
+    }
+  },
+
+  showUnitDetail(propertyId) {
+    const p = (this.properties || []).find(prop => prop.id == propertyId);
+    if (!p) return;
+
+    const activeTenants = (this.tenants || []).filter(t => t.property_id == p.id && t.is_active);
+    const isOccupied = activeTenants.length > 0;
+    const curr = window.APP_CURRENCY || '₹';
+    const typeSvg = this.getUnitTypeSvg(p.unit_type);
+    const unitTypeLabel = p.unit_type ? (p.unit_type.charAt(0).toUpperCase() + p.unit_type.slice(1)) : 'Apartment';
+    const addr = (p.address || '').trim();
+
+    // Set Header
+    const iconWrap = document.getElementById('unit-detail-icon-wrap');
+    if (iconWrap) {
+      iconWrap.innerHTML = typeSvg;
+      if (isOccupied) {
+        iconWrap.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
+        iconWrap.style.color = '#059669';
+        iconWrap.style.border = '1px solid #a7f3d0';
+      } else {
+        iconWrap.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
+        iconWrap.style.color = '#64748b';
+        iconWrap.style.border = '1px solid var(--border)';
+      }
+    }
+
+    const titleEl = document.getElementById('unit-detail-title');
+    if (titleEl) titleEl.textContent = p.name;
+
+    const badgeEl = document.getElementById('unit-detail-status-badge');
+    if (badgeEl) {
+      if (isOccupied) {
+        badgeEl.className = 'badge badge-paid';
+        badgeEl.style.fontSize = '0.75rem';
+        badgeEl.innerHTML = `<i data-lucide="check-circle" style="width:11px; height:11px; vertical-align:-1px;"></i> Occupied (${activeTenants.length} Tenant${activeTenants.length === 1 ? '' : 's'})`;
+      } else {
+        badgeEl.className = 'badge';
+        badgeEl.style.background = 'var(--surface-alt)';
+        badgeEl.style.color = 'var(--text-muted)';
+        badgeEl.style.border = '1px solid var(--border)';
+        badgeEl.style.fontSize = '0.75rem';
+        badgeEl.innerHTML = `<i data-lucide="door-open" style="width:11px; height:11px; vertical-align:-1px;"></i> Vacant`;
+      }
+    }
+
+    const addrEl = document.getElementById('unit-detail-address');
+    if (addrEl) {
+      addrEl.textContent = addr ? `${addr} • ${unitTypeLabel}` : unitTypeLabel;
+    }
+
+    // Build Body Content
+    const bodyEl = document.getElementById('unit-detail-body');
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        <!-- Section 1: Rate & Utility Structure -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px;">
+          <div style="font-size:0.8rem; font-weight:750; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:10px;">
+            <i data-lucide="sliders" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> Rental Rates &amp; Utility Settings
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Base Rent</span>
+              <span style="font-size:1rem; font-weight:800; color:var(--text-main);">${curr}${Number(p.default_rent || 0).toLocaleString()} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">/ mo</small></span>
+            </div>
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Electricity</span>
+              <span style="font-size:1rem; font-weight:800; color:#d97706;">${curr}${p.electricity_rate || 0} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">/ unit</small></span>
+            </div>
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Water Billing</span>
+              <span style="font-size:1rem; font-weight:800; color:var(--primary);">${p.water_billing_type === 'METER' ? `${curr}${p.water_rate || 0} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">/ unit</small>` : `${curr}${p.water_charge || 0} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">Fixed</small>`}</span>
+            </div>
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Maintenance</span>
+              <span style="font-size:1rem; font-weight:800; color:var(--text-main);">${curr}${p.maintenance_charge || 0} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">/ mo</small></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Expense & Financials -->
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="font-size:0.78rem; color:var(--text-muted);">
+              Total Incurred Expenses: <strong style="color:var(--danger);">${curr}${(p.total_expenses || 0).toFixed(2)}</strong> (${p.expense_count || 0})
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+              Net Financial Yield: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</strong>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openAddExpenseModal(${p.id});">
+              <i data-lucide="plus" style="width:13px; height:13px;"></i> Log Expense
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openPropertyExpenses(${p.id});">
+              <i data-lucide="wrench" style="width:13px; height:13px;"></i> View Ledger
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Set Footer
+    const footerEl = document.getElementById('unit-detail-footer');
+    if (footerEl) {
+      footerEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
+          <button type="button" class="btn btn-secondary" data-close="modal-unit-detail">Close</button>
+          <button type="button" class="btn btn-primary" onclick="App.closeModal('modal-unit-detail'); App.editProperty(${p.id});">
+            <i data-lucide="edit-3" style="width:14px; height:14px;"></i> Edit Property
+          </button>
+        </div>
+      `;
+    }
+
+    this.openModal('modal-unit-detail');
     this.refreshIcons();
   },
 
@@ -1578,7 +1714,7 @@ const App = {
               </button>
               <div class="card-dropdown-menu">
                 <button type="button" class="dropdown-item" onclick="App.openAddExpenseModal(${p.id})">
-                  <i data-lucide="plus"></i> Log Expense
+                  <i data-lucide="plus"></i> Add Expense
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.openPropertyExpenses(${p.id})">
                   <i data-lucide="wrench"></i> View Expenses ${p.expense_count ? `(${p.expense_count})` : ''}
@@ -2067,6 +2203,10 @@ const App = {
     await this.openVacantCalculation(id);
   },
 
+  async openVacantCalculationModal(tenantId) {
+    return this.openVacantCalculation(tenantId);
+  },
+
   async openVacantCalculation(tenantId) {
     if (!tenantId) return;
 
@@ -2301,6 +2441,7 @@ const App = {
     if (waterSubEl) waterSubEl.textContent = `${curr}${waterAmount.toFixed(2)}`;
 
     // Rent
+    const baseRent = parseFloat(document.getElementById('vacant-base-rent')?.value) || Number(prop.default_rent) || 0;
     const rentAmount = parseFloat(document.getElementById('vacant-rent-amount')?.value) || 0;
 
     // Deductions
@@ -2972,7 +3113,7 @@ const App = {
           container.innerHTML = `
             <div class="empty-state">
               No expenses recorded for this property yet.<br>
-              Tap "+ Log Expense" above to record maintenance or repair costs.
+              Tap "+ Add Expense" above to record maintenance or repair costs.
             </div>
           `;
         } else {
@@ -3029,7 +3170,7 @@ const App = {
     document.getElementById('expense-id').value = '';
     document.getElementById('expense-property-id').value = propertyId;
     document.getElementById('expense-property-name').value = prop ? prop.name : `Property #${propertyId}`;
-    document.getElementById('modal-expense-title').textContent = 'Log Property Expense';
+    document.getElementById('modal-expense-title').textContent = 'Add Property Expense';
 
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('expense-date');
