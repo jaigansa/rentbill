@@ -1322,8 +1322,6 @@ const App = {
     document.getElementById('modal-tenant-title').textContent = 'Add New Tenant';
     const propSelect = document.getElementById('tenant-prop-id');
     if (propSelect) propSelect.value = propertyId;
-    const btnMoveOutCalc = document.getElementById('btn-tenant-move-out-calc');
-    if (btnMoveOutCalc) btnMoveOutCalc.style.display = 'none';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
   },
@@ -1572,12 +1570,12 @@ const App = {
               Net Financial Yield: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</strong>
             </div>
           </div>
-          <div style="display:flex; gap:6px;">
-            <button type="button" class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openAddExpenseModal(${p.id});">
-              <i data-lucide="plus" style="width:13px; height:13px;"></i> Log Expense
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openAddExpenseModal(${p.id});">
+              <i data-lucide="plus" style="width:14px; height:14px;"></i> Add Expense
             </button>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openPropertyExpenses(${p.id});">
-              <i data-lucide="wrench" style="width:13px; height:13px;"></i> View Ledger
+            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openPropertyExpenses(${p.id});">
+              <i data-lucide="wrench" style="width:14px; height:14px;"></i> View Expenses
             </button>
           </div>
         </div>
@@ -2199,10 +2197,6 @@ const App = {
       const statusSelect = document.getElementById('tenant-is-active');
       if (statusSelect) {
         statusSelect.value = t.is_active ? '1' : '0';
-      }
-      const btnMoveOutCalc = document.getElementById('btn-tenant-move-out-calc');
-      if (btnMoveOutCalc) {
-        btnMoveOutCalc.style.display = t.is_active ? 'inline-flex' : 'none';
       }
 
       this.openModal('modal-tenant');
@@ -2931,14 +2925,6 @@ const App = {
     }, 30);
   },
 
-  openVacantCalculationFromEdit() {
-    const tenantId = document.getElementById('tenant-id')?.value;
-    if (tenantId) {
-      this.closeModal('modal-tenant');
-      this.openVacantCalculation(tenantId);
-    }
-  },
-
   bindVacantCalculationEvents() {
     const calcInputs = [
       'vacant-curr-elec', 'vacant-curr-water', 'vacant-water-fixed-charge',
@@ -3076,11 +3062,6 @@ const App = {
         if (tDetails.payment_bank_name) paymentInfoText += ` • Bank: ${tDetails.payment_bank_name} (${tDetails.payment_account_no || ''})`;
         document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Bills`;
         document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tDetails.property_name || 'Unassigned'} • Phone: ${tDetails.phone}${paymentInfoText}`;
-        const btnLedgerVacant = document.getElementById('btn-ledger-vacant-calc');
-        if (btnLedgerVacant) {
-          btnLedgerVacant.style.display = 'inline-flex';
-          btnLedgerVacant.innerHTML = `<i data-lucide="calculator" style="width:13px; height:13px;"></i> ${tDetails.is_active ? 'Move Out / Vacant Form' : 'Vacant Form'}`;
-        }
       }
 
       const curr = window.APP_CURRENCY || '₹';
@@ -3820,8 +3801,6 @@ const App = {
     if (coListEl) coListEl.innerHTML = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
-    const btnMoveOutCalc = document.getElementById('btn-tenant-move-out-calc');
-    if (btnMoveOutCalc) btnMoveOutCalc.style.display = 'none';
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
   },

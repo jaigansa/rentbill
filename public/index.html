@@ -400,15 +400,10 @@
 
         <div class="form-group" id="group-tenant-status">
           <label for="tenant-is-active">Tenant Residency Status</label>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <select id="tenant-is-active" style="flex:1;">
-              <option value="1">Active</option>
-              <option value="0">Deactivated</option>
-            </select>
-            <button type="button" class="btn btn-sm btn-outline-warning" id="btn-tenant-move-out-calc" style="white-space:nowrap; display:none;" onclick="App.openVacantCalculationFromEdit()">
-              <i data-lucide="calculator" style="width:14px; height:14px; vertical-align:-2px;"></i> Move Out / Vacant Form
-            </button>
-          </div>
+          <select id="tenant-is-active">
+            <option value="1">Active</option>
+            <option value="0">Deactivated</option>
+          </select>
           <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
             Deactivating marks the tenant as moved-out and frees up the assigned property unit as Vacant, while keeping all past bills and payment ledger history safe.
           </small>
@@ -763,11 +758,8 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-footer" style="display:flex; justify-content:flex-end;">
         <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
-        <button type="button" class="btn btn-danger btn-sm" id="btn-ledger-vacant-calc" style="display:none;" onclick="App.openVacantCalculation(App.currentLedgerTenantId)">
-          <i data-lucide="calculator" style="width:13px; height:13px;"></i> Move Out / Vacant Form
-        </button>
       </div>
     </div>
   </div>
