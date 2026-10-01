@@ -354,7 +354,9 @@ const Share = {
 
   // Print invoice using browser print engine
   printInvoice() {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 30);
   },
 
   // Generate and download studio-grade HD receipt image (PNG) via Canvas

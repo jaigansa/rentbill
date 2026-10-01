@@ -2926,7 +2926,9 @@ const App = {
 
   printVacantSettlement() {
     this.renderVacantPrintableSheet();
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 30);
   },
 
   openVacantCalculationFromEdit() {
