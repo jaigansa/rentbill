@@ -1934,80 +1934,248 @@ textarea:hover::-webkit-scrollbar-thumb {
   gap: 8px;
 }
 
-/* Occupancy Widget */
+/* ===================================================
+   Bus Seat Booking Style Occupancy & Unit Status Widget
+   =================================================== */
 .dash-occupancy-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 14px;
+  padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 
 .occupancy-bar-bg {
   width: 100%;
-  height: 10px;
-  background: #f1f5f9;
-  border-radius: 999px;
+  height: 8px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-full);
   overflow: hidden;
 }
 
 .occupancy-bar-fill {
   height: 100%;
-  background: var(--primary);
-  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: var(--radius-full);
   transition: width 0.5s ease;
 }
 
-.occupancy-legend {
+/* Unit Status Container */
+.seat-deck-wrapper {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-top: 0;
+}
+
+.seat-deck-subhead {
   display: flex;
-  justify-content: space-around;
-  margin-top: 10px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 4px;
-  vertical-align: 1px;
-}
-
-.dot-occupied {
-  background: var(--primary);
-}
-
-.dot-vacant {
-  background: #94a3b8;
-}
-
-.vacant-chips-wrapper {
-  display: flex;
+  justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
 }
 
-.vacant-chip {
+.seat-deck-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Filter Pills (Styled like dash-month-bar & dash-month-selector) */
+.seat-filter-pills {
+  display: inline-flex;
+  align-items: center;
   background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  color: var(--text-main);
+  padding: 3px 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  gap: 4px;
+}
+
+.seat-filter-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  line-height: 1.2;
 }
 
-.vacant-chip:hover {
+.seat-filter-btn:hover {
+  background: var(--border);
+  color: var(--text-main);
+}
+
+.seat-filter-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.28);
+}
+
+/* Unit Grid */
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 520px) {
+  .seat-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .seat-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .seat-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+}
+
+/* ========================================================
+   Minimal Unit Status Card (Real Estate Unit Matrix)
+   ======================================================== */
+.unit-card,
+.bus-seat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: default;
+  user-select: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  min-height: 70px;
+}
+
+/* Top Row: unit-type-icon + unit-badge */
+.unit-card-top,
+.seat-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+.unit-type-icon,
+.seat-type-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.unit-type-icon svg,
+.seat-type-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Unit Badge: tenant count */
+.unit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Unit Name */
+.unit-name,
+.seat-unit-name {
+  font-size: 0.92rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+/* OCCUPIED UNIT STYLE (GREEN THEME) */
+.unit-card.seat-occupied,
+.bus-seat.seat-occupied {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.24);
+  border: 1px solid #047857;
+}
+
+.unit-card.seat-occupied .unit-type-icon,
+.unit-card.seat-occupied .seat-type-icon,
+.bus-seat.seat-occupied .seat-type-icon {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.unit-card.seat-occupied .unit-badge {
+  background: rgba(0, 0, 0, 0.22);
+  color: #ffffff;
+}
+
+.unit-card.seat-occupied .unit-name,
+.unit-card.seat-occupied .seat-unit-name,
+.bus-seat.seat-occupied .seat-unit-name {
+  color: #ffffff;
+}
+
+/* VACANT UNIT STYLE */
+.unit-card.seat-vacant,
+.bus-seat.seat-vacant {
+  background: var(--surface);
+  color: var(--text-main);
+  border: 1.5px dashed #94a3b8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.unit-card.seat-vacant .unit-type-icon,
+.unit-card.seat-vacant .seat-type-icon,
+.bus-seat.seat-vacant .seat-type-icon {
   background: var(--primary-light);
-  border-color: var(--primary);
   color: var(--primary);
+}
+
+.unit-card.seat-vacant .unit-badge {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.unit-card.seat-vacant .unit-name,
+.unit-card.seat-vacant .seat-unit-name,
+.bus-seat.seat-vacant .seat-unit-name {
+  color: var(--text-main);
 }
 
 /* Utility Consumption Pulse Grid */
@@ -2748,3 +2916,293 @@ input:checked + .slider:before {
   color: var(--danger, #ef4444);
   background: rgba(239, 68, 68, 0.08);
 }
+
+/* ===================================================
+   Vacant Form Calculation / Move-Out Settlement Modal
+   =================================================== */
+.vacant-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 640px) {
+  .vacant-summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+}
+
+.vacant-stat-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vacant-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.vacant-stat-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vacant-section {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+
+.vacant-section:focus-within {
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.vacant-section-header {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.vacant-meter-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.vacant-pill-btn {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vacant-pill-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.vacant-pill-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+.vacant-settlement-card {
+  background: var(--surface-alt);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-top: 14px;
+  margin-bottom: 8px;
+}
+
+.vacant-settlement-breakdown {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .vacant-settlement-breakdown {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+.breakdown-col {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.breakdown-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.breakdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.breakdown-item strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.breakdown-total {
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.vacant-net-banner {
+  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.vacant-net-banner.refund {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1.5px solid var(--success);
+}
+
+.vacant-net-banner.refund .net-banner-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vacant-net-banner.refund .net-banner-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--success);
+}
+
+.vacant-net-banner.refund .net-banner-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--success);
+  line-height: 1.2;
+}
+
+.vacant-net-banner.refund .net-banner-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.vacant-net-banner.due {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1.5px solid var(--danger);
+}
+
+.vacant-net-banner.due .net-banner-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vacant-net-banner.due .net-banner-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--danger);
+}
+
+.vacant-net-banner.due .net-banner-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--danger);
+  line-height: 1.2;
+}
+
+.vacant-net-banner.due .net-banner-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.vacant-net-banner.zero {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+}
+
+.vacant-net-banner.zero .net-banner-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--text-subtle);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vacant-net-banner.zero .net-banner-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.vacant-net-banner.zero .net-banner-val {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.vacant-net-banner.zero .net-banner-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Printable Settlement Container (Hidden on Screen, Shown in print.css) */
+#vacant-printable {
+  display: none;
+}
+

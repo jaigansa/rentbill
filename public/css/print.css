@@ -20,7 +20,7 @@
   }
 
   /* Pure Print Isolation: Hide all non-printable elements */
-  body > *:not(#modal-invoice),
+  body > *:not(#modal-invoice):not(#modal-vacant-calculation),
   .top-nav,
   .bottom-nav,
   .app-content,
@@ -33,17 +33,318 @@
   .toast,
   #toast,
   #app-lock-screen,
-  .modal:not(#modal-invoice) {
+  .modal:not(#modal-invoice):not(#modal-vacant-calculation) {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
     overflow: hidden !important;
   }
 
-  /* When printing, hide modal-invoice if not active */
-  #modal-invoice:not(.active) {
+  /* When printing, hide modal if not active */
+  #modal-invoice:not(.active),
+  #modal-vacant-calculation:not(.active) {
     display: none !important;
     visibility: hidden !important;
+  }
+
+  #modal-vacant-calculation.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-vacant-calculation.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-vacant-calculation .modal-header,
+  #modal-vacant-calculation .modal-footer,
+  #modal-vacant-calculation .modal-close,
+  #modal-vacant-calculation .vacant-calc-body,
+  #modal-vacant-calculation form {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* =========================================================
+     PRO-STYLE PRINT SETTLEMENT STATEMENT FOR VACANT FORM
+     Minimalist, Borderless Canvas & Clean Accounting Format
+     ========================================================= */
+  #vacant-printable {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .vacant-print-brand {
+    flex: 1 !important;
+  }
+
+  .vacant-print-title {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    color: #111827 !important;
+    line-height: 1.2 !important;
+  }
+
+  .vacant-print-subtitle {
+    font-size: 0.8rem !important;
+    color: #4b5563 !important;
+    margin-top: 3px !important;
+    font-weight: 600 !important;
+  }
+
+  .vacant-print-meta {
+    font-size: 0.82rem !important;
+    color: #111827 !important;
+    margin-top: 4px !important;
+  }
+
+  .vacant-print-status {
+    text-align: right !important;
+  }
+
+  .vacant-print-badge {
+    display: inline-block !important;
+    border: 1.5px solid #111827 !important;
+    padding: 2px 8px !important;
+    border-radius: 3px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .vacant-print-net-amount {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    margin-top: 3px !important;
+  }
+
+  .vacant-print-parties {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    margin-bottom: 12px !important;
+    font-size: 0.85rem !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    background: #f9fafb !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-party-col {
+    flex: 1 !important;
+  }
+
+  .vacant-print-party-right {
+    text-align: right !important;
+  }
+
+  .vacant-print-party-lbl {
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .vacant-print-party-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+  }
+
+  .vacant-print-party-sub {
+    color: #374151 !important;
+    font-size: 0.82rem !important;
+    margin-top: 2px !important;
+  }
+
+  .vacant-print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 10px 0 !important;
+    font-size: 0.85rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding: 6px 8px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.5px !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 5px 8px !important;
+    color: #111827 !important;
+    text-align: left !important;
+  }
+
+  .vacant-print-table td.num, .vacant-print-table th.num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .vacant-table-section-row td {
+    background: #f9fafb !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    color: #1f2937 !important;
+    text-transform: uppercase !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    border-top: 1px solid #d1d5db !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-subtotal-row td {
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1px solid #111827 !important;
+    font-weight: 700 !important;
+    background: #fafafa !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-final-row td {
+    border-top: 2px solid #111827 !important;
+    border-bottom: 2px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+    background: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-words {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 3px solid #111827 !important;
+    border-radius: 2px !important;
+    padding: 5px 10px !important;
+    margin-top: 8px !important;
+    color: #1f2937 !important;
+    font-size: 0.8rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-notes {
+    font-size: 0.78rem !important;
+    color: #4b5563 !important;
+    margin-top: 6px !important;
+    font-style: italic !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-signatures {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 40px !important;
+    margin-top: 32px !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-sign-box {
+    flex: 1 !important;
+  }
+
+  .vacant-sign-line {
+    border-bottom: 1.5px solid #111827 !important;
+    margin-bottom: 5px !important;
+    height: 30px !important;
+  }
+
+  .vacant-sign-label {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    color: #111827 !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .vacant-sign-sub {
+    font-size: 0.72rem !important;
+    color: #6b7280 !important;
+    margin-top: 2px !important;
+  }
+
+  .vacant-print-footer {
+    border-top: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+    font-size: 0.72rem !important;
+    margin-top: 16px !important;
+    padding-top: 6px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
   }
 
   /* Make sure modal-invoice is cleanly displayed as the main document */
