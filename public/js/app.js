@@ -294,12 +294,13 @@ const App = {
       Share.printInvoice();
     });
 
-    // Close buttons
-    document.querySelectorAll('[data-close]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const modalId = btn.getAttribute('data-close');
-        this.closeModal(modalId);
-      });
+    // Close buttons (delegated so dynamically inserted buttons with data-close also work)
+    document.addEventListener('click', (e) => {
+      const closeBtn = e.target.closest('[data-close]');
+      if (closeBtn) {
+        const modalId = closeBtn.getAttribute('data-close');
+        if (modalId) this.closeModal(modalId);
+      }
     });
 
     // Close on backdrop click
@@ -1292,22 +1293,6 @@ const App = {
 
       this.renderOccupancyUnitGrid();
 
-      // 6. Utility Pulse
-      const elecUnitsEl = document.getElementById('dash-total-elec-units');
-      const elecAmountEl = document.getElementById('dash-total-elec-amount');
-      const waterUnitsEl = document.getElementById('dash-total-water-units');
-      const waterAmountEl = document.getElementById('dash-total-water-amount');
-
-      if (elecUnitsEl) elecUnitsEl.textContent = `${(data.total_elec_units || 0).toLocaleString()} Units`;
-      if (elecAmountEl) {
-        elecAmountEl.textContent = `${this.formatMoney(data.total_elec_amount || 0, true)} billed`;
-        elecAmountEl.title = this.formatFullMoney(data.total_elec_amount || 0);
-      }
-      if (waterUnitsEl) waterUnitsEl.textContent = `${(data.total_water_units || 0).toLocaleString()} Units`;
-      if (waterAmountEl) {
-        waterAmountEl.textContent = `${this.formatMoney(data.total_water_amount || 0, true)} billed`;
-        waterAmountEl.title = this.formatFullMoney(data.total_water_amount || 0);
-      }
 
       this.refreshIcons();
     } catch (err) {
@@ -1484,6 +1469,7 @@ const App = {
   showUnitDetail(propertyId) {
     const p = (this.properties || []).find(prop => prop.id == propertyId);
     if (!p) return;
+    this.currentUnitDetailPropertyId = p.id;
 
     const activeTenants = (this.tenants || []).filter(t => t.property_id == p.id && t.is_active);
     const isOccupied = activeTenants.length > 0;
@@ -1561,22 +1547,19 @@ const App = {
         </div>
 
         <!-- Section 2: Expense & Financials -->
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div>
-            <div style="font-size:0.78rem; color:var(--text-muted);">
-              Total Incurred Expenses: <strong style="color:var(--danger);">${curr}${(p.total_expenses || 0).toFixed(2)}</strong> (${p.expense_count || 0})
-            </div>
-            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-              Net Financial Yield: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</strong>
-            </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:14px;">
+          <div style="font-size:0.8rem; font-weight:750; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:10px;">
+            <i data-lucide="wallet" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> Expense &amp; Financial Summary
           </div>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openAddExpenseModal(${p.id});">
-              <i data-lucide="plus" style="width:14px; height:14px;"></i> Add Expense
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="App.closeModal('modal-unit-detail'); App.openPropertyExpenses(${p.id});">
-              <i data-lucide="wrench" style="width:14px; height:14px;"></i> View Expenses
-            </button>
+          <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Total Expenses</span>
+              <span style="font-size:1rem; font-weight:800; color:var(--danger);">${curr}${(p.total_expenses || 0).toFixed(2)} <small style="font-size:0.7rem; font-weight:500; color:var(--text-muted);">(${p.expense_count || 0})</small></span>
+            </div>
+            <div style="background:var(--surface-alt); border-radius:var(--radius-sm); padding:9px 12px; border:1px solid var(--border);">
+              <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; display:block;">Net Financial Yield</span>
+              <span style="font-size:1rem; font-weight:800; color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};">${curr}${(p.net_profit || 0).toFixed(2)}</span>
+            </div>
           </div>
         </div>
       `;
@@ -1586,12 +1569,7 @@ const App = {
     const footerEl = document.getElementById('unit-detail-footer');
     if (footerEl) {
       footerEl.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;">
-          <button type="button" class="btn btn-secondary" data-close="modal-unit-detail">Close</button>
-          <button type="button" class="btn btn-primary" onclick="App.closeModal('modal-unit-detail'); App.editProperty(${p.id});">
-            <i data-lucide="edit-3" style="width:14px; height:14px;"></i> Edit Property
-          </button>
-        </div>
+        <button type="button" class="btn btn-secondary" data-close="modal-unit-detail" onclick="App.closeModal('modal-unit-detail')">Close</button>
       `;
     }
 

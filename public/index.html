@@ -167,33 +167,7 @@
         </div>
       </div>
 
-      <!-- Module 5: Utility Consumption Pulse (Electricity & Water) -->
-      <div class="dash-section">
-        <div class="dash-section-header">
-          <div class="dash-section-title">
-            <i data-lucide="activity" style="color:var(--accent); width:18px; height:18px;"></i>
-            <span>Utility Consumption Pulse</span>
-          </div>
-        </div>
-        <div class="dash-utility-grid">
-          <div class="utility-pulse-card elec-pulse">
-            <div class="pulse-icon-box"><i data-lucide="zap"></i></div>
-            <div class="pulse-details">
-              <span class="pulse-label">Electricity Usage</span>
-              <strong class="pulse-val" id="dash-total-elec-units">0 Units</strong>
-              <span class="pulse-sub" id="dash-total-elec-amount">₹0.00 billed</span>
-            </div>
-          </div>
-          <div class="utility-pulse-card water-pulse">
-            <div class="pulse-icon-box"><i data-lucide="droplet"></i></div>
-            <div class="pulse-details">
-              <span class="pulse-label">Water Usage</span>
-              <strong class="pulse-val" id="dash-total-water-units">0 Units</strong>
-              <span class="pulse-sub" id="dash-total-water-amount">₹0.00 billed</span>
-            </div>
-          </div>
-        </div>
-      </div>
+
     </section>
 
     <!-- Tab 2: Tenants View -->
@@ -836,7 +810,7 @@
       </div>
 
       <div class="modal-footer" id="unit-detail-footer" style="padding:12px 20px; border-top:1px solid var(--border);">
-        <button type="button" class="btn btn-secondary" data-close="modal-unit-detail">Close</button>
+        <button type="button" class="btn btn-secondary" data-close="modal-unit-detail" onclick="App.closeModal('modal-unit-detail')">Close</button>
       </div>
     </div>
   </div>
