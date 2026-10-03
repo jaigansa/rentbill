@@ -89,11 +89,6 @@
   height: 1.3rem;
 }
 
-.stat-billed .stat-icon { color: var(--primary); }
-.stat-collected .stat-icon { color: var(--success); }
-.stat-pending .stat-icon { color: var(--warning); }
-.stat-overdue .stat-icon { color: var(--danger); }
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -305,18 +300,6 @@ textarea:hover::-webkit-scrollbar-thumb {
 .section-header h2 {
   font-size: 1.35rem;
   font-weight: 700;
-}
-
-.section-sub-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.section-sub-header h3 {
-  font-size: 1.05rem;
-  font-weight: 600;
 }
 
 /* Badges */
@@ -648,33 +631,6 @@ textarea:hover::-webkit-scrollbar-thumb {
 
 .btn-block {
   width: 100%;
-}
-
-/* Filter Bar */
-.filter-bar {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 16px;
-  padding-bottom: 4px;
-}
-
-.filter-chip {
-  padding: 6px 14px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.filter-chip.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
 }
 
 /* Card Lists */
@@ -1017,14 +973,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-main);
-}
-
-.card-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  align-items: center;
-  margin-top: 4px;
 }
 
 /* Tenant Ledger Summary */
@@ -1876,30 +1824,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--primary);
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: calc(var(--bottom-nav-height) + 16px);
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #0f172a;
-  color: white;
-  padding: 10px 18px;
-  border-radius: var(--radius-full);
-  font-size: 0.85rem;
-  font-weight: 500;
-  box-shadow: var(--shadow-lg);
-  opacity: 0;
-  transition: all 0.25s ease;
-  z-index: 200;
-  pointer-events: none;
-}
-
-.toast.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-}
-
 /* Protective Hold to Delete */
 .delete-warning-box {
   background: var(--danger-light);
@@ -2383,8 +2307,7 @@ textarea:hover::-webkit-scrollbar-thumb {
 }
 
 /* Right Side: Details Container */
-.unit-card-right,
-.unit-card-body {
+.unit-card-right {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2519,83 +2442,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: #94a3b8;
 }
 
-/* Utility Consumption Pulse Grid */
-.dash-utility-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.utility-pulse-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: var(--shadow-sm);
-  min-width: 0;
-  overflow: hidden;
-}
-
-.pulse-icon-box {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.elec-pulse .pulse-icon-box {
-  background: rgba(245, 158, 11, 0.12);
-  color: var(--warning);
-}
-
-.water-pulse .pulse-icon-box {
-  background: rgba(14, 165, 233, 0.12);
-  color: var(--accent);
-}
-
-.pulse-details {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
-.pulse-label {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pulse-val {
-  font-size: clamp(0.92rem, 3vw, 1.1rem);
-  font-weight: 800;
-  color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
-  line-height: 1.25;
-}
-
-.pulse-sub {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* =========================================================
    SEARCH & FILTER BAR STYLING
    ========================================================= */
@@ -2722,70 +2568,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.28);
 }
 
-/* Modal XL */
-.modal-dialog.modal-xl {
-  max-width: 900px;
-  width: 95%;
-}
-
-/* Tenant Passbook / Ledger Styles */
-.ledger-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 24px;
-  margin-bottom: 16px;
-}
-
-.ledger-card {
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  text-align: center;
-}
-
-.ledger-label {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-
-.ledger-val {
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.ledger-table th {
-  background: var(--surface-alt);
-  padding: 8px 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-}
-
-.ledger-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.ledger-table tr:hover td {
-  background: var(--surface-alt);
-}
-
 /* Channel Selector Grid in Reminder Modal */
 .reminder-channels-grid {
   display: grid;
@@ -2833,25 +2615,6 @@ textarea:hover::-webkit-scrollbar-thumb {
 
 .channel-pill.active strong {
   color: var(--primary);
-}
-
-.channel-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-}
-
-.channel-badge.badge-wa {
-  background: rgba(37, 211, 102, 0.1);
-  border-color: rgba(37, 211, 102, 0.3);
-  color: #15803d;
 }
 
 /* Phone & Email direct tap links */

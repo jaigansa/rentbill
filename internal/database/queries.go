@@ -642,31 +642,6 @@ func (db *DB) RecordPayment(p *Payment) (int64, error) {
 	return paymentID, tx.Commit()
 }
 
-func (db *DB) GetPaymentsForBill(billID int64) ([]Payment, error) {
-	query := `
-	SELECT id, bill_id, amount, payment_date, payment_method, COALESCE(reference_no, ''), COALESCE(notes, ''), created_at
-	FROM payments
-	WHERE bill_id = ?
-	ORDER BY payment_date DESC
-	`
-	rows, err := db.Query(query, billID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var payments []Payment
-	for rows.Next() {
-		var p Payment
-		err := rows.Scan(&p.ID, &p.BillID, &p.Amount, &p.PaymentDate, &p.PaymentMethod, &p.ReferenceNo, &p.Notes, &p.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-		payments = append(payments, p)
-	}
-	return payments, nil
-}
-
 func (db *DB) GetAllPayments() ([]Payment, error) {
 	query := `
 	SELECT p.id, p.bill_id, b.bill_number, t.name, p.amount, p.payment_date, p.payment_method, COALESCE(p.reference_no, ''), COALESCE(p.notes, ''), p.created_at
