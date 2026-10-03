@@ -783,59 +783,215 @@ const Share = {
   // Universal Multi-Channel Reminder Message Builders (SMS/RCS, WhatsApp, Email)
   buildReminderMessage(type, bill, tenant, channel = 'sms_rcs') {
     const curr = window.APP_CURRENCY || '₹';
+    const appName = window.APP_NAME || 'RentBill';
+    const numFmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })));
     const tenantName = (tenant && tenant.name) || (bill && bill.tenant_name) || 'Tenant';
     const propName = (tenant && tenant.property_name) || (bill && bill.property_name) || 'Rental Unit';
     const billNum = bill ? bill.bill_number : '';
     const month = bill ? bill.billing_month : '';
     const due = bill ? bill.due_date : '';
-    const total = bill ? `${curr}${bill.total_amount.toFixed(2)}` : '';
-    const balance = bill ? `${curr}${(bill.balance_amount || bill.total_amount).toFixed(2)}` : '';
+    const totalNum = bill ? Number(bill.total_amount || 0) : 0;
+    const paidNum = bill ? Number(bill.paid_amount || 0) : 0;
+    const balanceNum = bill
+      ? ((bill.balance_amount !== undefined && bill.balance_amount !== null) ? Number(bill.balance_amount) : Math.max(0, totalNum - paidNum))
+      : 0;
+
+    const totalStr = `${curr}${numFmt(totalNum)}`;
+    const balanceStr = `${curr}${numFmt(balanceNum)}`;
+    const paidStr = `${curr}${numFmt(paidNum)}`;
+
     const upi = (bill && bill.payment_upi) || (tenant && tenant.payment_upi) || '';
     const bank = (bill && bill.payment_bank_name) || (tenant && tenant.payment_bank_name) || '';
+    const acc = (bill && bill.payment_account_no) || (tenant && tenant.payment_account_no) || '';
+    const ifsc = (bill && bill.payment_ifsc) || (tenant && tenant.payment_ifsc) || '';
 
-    let payDetailsWa = '';
-    if (upi) payDetailsWa += `\n*UPI ID:* ${upi}`;
-    if (bank) payDetailsWa += `\n*Bank:* ${bank} (A/C: ${bill ? bill.payment_account_no : tenant.payment_account_no || ''}, IFSC: ${bill ? bill.payment_ifsc : tenant.payment_ifsc || ''})`;
+    // Direct UPI intent payment link
+    let upiPayLink = '';
+    if (upi) {
+      const payAmt = balanceNum > 0 ? balanceNum.toFixed(2) : totalNum.toFixed(2);
+      const note = encodeURIComponent(`Rent ${month} ${propName}`.trim());
+      const payee = encodeURIComponent(propName || 'RentBill');
+      upiPayLink = `upi://pay?pa=${encodeURIComponent(upi)}&pn=${payee}&am=${payAmt}&cu=INR&tn=${note}`;
+    }
 
-    let payDetailsSms = '';
-    if (upi) payDetailsSms = `Pay via UPI: ${upi}`;
-    else if (bank) payDetailsSms = `Pay to Bank: ${bank} (${bill ? bill.payment_account_no : tenant.payment_account_no || ''}, IFSC: ${bill ? bill.payment_ifsc : tenant.payment_ifsc || ''})`;
-
-    if (channel === 'sms_rcs') {
-      switch (type) {
-        case 'gentle':
-          return `RentBill: Hi ${tenantName}, friendly reminder that your rent for ${propName} (${month}) of ${balance} is due on ${due}. ${payDetailsSms}. Thank you!`;
-        case 'due_today':
-          return `RentBill: Hi ${tenantName}, your rent for ${propName} (${month}) of ${balance} is DUE TODAY (${due}). Please pay using: ${payDetailsSms}. Kindly share confirmation once paid. Thank you!`;
-        case 'overdue':
-          return `URGENT NOTICE: Hi ${tenantName}, rent of ${balance} for ${propName} (${month}) was due on ${due} and is now OVERDUE. Please clear dues immediately: ${payDetailsSms}. Thank you - RentBill`;
-        case 'receipt':
-          return `RentBill: Hi ${tenantName}, payment received for ${propName} (${month}). Bill #${billNum}. Total: ${total}. Balance: ${balance}. Thank you!`;
-        default:
-          return `RentBill: Hi ${tenantName}, rent for ${propName} (${month}) is ${balance}. Due: ${due}. ${payDetailsSms}. Thank you!`;
+    // --- Build itemized charge lines ---
+    const charges = [];
+    if (bill) {
+      if (bill.base_rent > 0) {
+        charges.push({ name: 'Base Rent', amount: bill.base_rent, detail: '' });
+      }
+      if (bill.electricity_amount > 0 || bill.electricity_units > 0) {
+        let elecDetail = `${bill.electricity_units || 0} units @ ${curr}${bill.electricity_rate || 0}`;
+        if (bill.prev_electricity_meter !== undefined && bill.curr_electricity_meter !== undefined && bill.prev_electricity_meter !== null && bill.curr_electricity_meter !== null) {
+          elecDetail += ` (Meter: ${bill.prev_electricity_meter}➔${bill.curr_electricity_meter})`;
+        }
+        charges.push({ name: 'Electricity', amount: bill.electricity_amount || 0, detail: elecDetail });
+      }
+      if (bill.water_amount > 0) {
+        let waterDetail = '';
+        if (bill.water_billing_type === 'METER' && bill.water_units > 0) {
+          waterDetail = `${bill.water_units} units @ ${curr}${bill.water_rate || 0}`;
+          if (bill.prev_water_meter !== undefined && bill.curr_water_meter !== undefined && bill.prev_water_meter !== null && bill.curr_water_meter !== null) {
+            waterDetail += ` (Meter: ${bill.prev_water_meter}➔${bill.curr_water_meter})`;
+          }
+        } else {
+          waterDetail = 'Fixed';
+        }
+        charges.push({ name: 'Water', amount: bill.water_amount, detail: waterDetail });
+      }
+      if (bill.maintenance_amount > 0) {
+        charges.push({ name: 'Maintenance', amount: bill.maintenance_amount, detail: '' });
+      }
+      if (bill.other_charges > 0) {
+        charges.push({ name: bill.other_charges_desc || 'Other Charges', amount: bill.other_charges, detail: '' });
+      }
+      if (bill.previous_balance > 0) {
+        charges.push({ name: 'Previous Arrears', amount: bill.previous_balance, detail: '' });
+      }
+      if (bill.discount_amount > 0) {
+        charges.push({ name: `Discount (${bill.discount_reason || 'Concession'})`, amount: -bill.discount_amount, detail: '', isDiscount: true });
       }
     }
 
-    if (channel === 'email') {
-      return `Dear ${tenantName},\n\nThis is a notification regarding your rental unit ${propName} for the period ${month}.\n\nBill Details:\n• Bill Number: ${billNum}\n• Billing Month: ${month}\n• Due Date: ${due}\n• Total Amount: ${total}\n• Balance Outstanding: ${balance}\n\nPayment Information:${payDetailsWa.replace(/\*/g, '')}\n\nIf you have already processed this payment, kindly disregard this notice or reply with the transaction reference.\n\nWarm regards,\nProperty Management - RentBill`;
+    // Helper: WhatsApp formatted breakdown & payment
+    const getWaBreakdown = () => {
+      if (!bill || charges.length === 0) return '';
+      let text = `\n📋 *CHARGES BREAKDOWN:*\n`;
+      charges.forEach(c => {
+        const sign = c.isDiscount ? '-' : '';
+        text += `▫️ *${c.name}:* ${sign}${curr}${numFmt(Math.abs(c.amount))}${c.detail ? ` _(${c.detail})_` : ''}\n`;
+      });
+      text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+      text += `💰 *Total Billed:* ${totalStr}\n`;
+      if (paidNum > 0) {
+        text += `✅ *Paid so far:* ${paidStr}\n`;
+        text += `⚠️ *Balance Due:* ${balanceStr}\n`;
+      }
+      return text;
+    };
+
+    const getWaPaymentInfo = () => {
+      if (!upi && !bank) return '';
+      let text = `\n💳 *PAYMENT OPTIONS:*\n`;
+      if (upi) {
+        text += `▫️ *UPI ID:* \`${upi}\`\n`;
+        if (upiPayLink) {
+          text += `📲 *Instant UPI Pay Link:*\n${upiPayLink}\n`;
+        }
+      }
+      if (bank) {
+        text += `▫️ *Bank:* ${bank}\n`;
+        if (acc) text += `▫️ *Account No:* \`${acc}\`\n`;
+        if (ifsc) text += `▫️ *IFSC Code:* \`${ifsc}\`\n`;
+      }
+      return text;
+    };
+
+    // Helper: SMS formatted breakdown & payment
+    const getSmsBreakdown = () => {
+      if (!bill || charges.length === 0) return '';
+      const parts = charges.map(c => `${c.name}: ${curr}${Math.round(c.amount)}`);
+      return ` [Breakdown: ${parts.join(', ')} | Total: ${totalStr}${paidNum > 0 ? `, Paid: ${paidStr}` : ''}, Bal: ${balanceStr}]`;
+    };
+
+    const getSmsPaymentInfo = () => {
+      const parts = [];
+      if (upi) {
+        parts.push(`UPI: ${upi}`);
+        if (upiPayLink) parts.push(`Pay Link: ${upiPayLink}`);
+      } else if (bank) {
+        parts.push(`Bank: ${bank} A/C ${acc} IFSC ${ifsc}`);
+      }
+      return parts.length ? ` Pay via: ${parts.join(' | ')}` : '';
+    };
+
+    // Helper: Email formatted breakdown & payment
+    const getEmailBreakdown = () => {
+      if (!bill || charges.length === 0) return '';
+      let text = `\nItemized Bill Breakdown:\n`;
+      charges.forEach(c => {
+        const sign = c.isDiscount ? '-' : '';
+        text += `• ${c.name}: ${sign}${curr}${numFmt(Math.abs(c.amount))}${c.detail ? ` (${c.detail})` : ''}\n`;
+      });
+      text += `--------------------------------------\n`;
+      text += `Total Due: ${totalStr}\n`;
+      if (paidNum > 0) {
+        text += `Paid Amount: ${paidStr}\n`;
+        text += `Balance Outstanding: ${balanceStr}\n`;
+      }
+      return text;
+    };
+
+    const getEmailPaymentInfo = () => {
+      if (!upi && !bank) return '';
+      let text = `\nPayment Information:\n`;
+      if (upi) {
+        text += `• UPI ID: ${upi}\n`;
+        if (upiPayLink) text += `• Instant UPI Pay Link: ${upiPayLink}\n`;
+      }
+      if (bank) {
+        text += `• Bank Transfer:\n  - Bank: ${bank}\n`;
+        if (acc) text += `  - Account Number: ${acc}\n`;
+        if (ifsc) text += `  - IFSC Code: ${ifsc}\n`;
+      }
+      return text;
+    };
+
+    // 1. SMS / RCS Channel
+    if (channel === 'sms_rcs') {
+      const bdown = getSmsBreakdown();
+      const pay = getSmsPaymentInfo();
+      switch (type) {
+        case 'gentle':
+          return `${appName}: Hi ${tenantName}, friendly reminder that rent for ${propName} (${month}) of ${balanceStr} is due on ${due}.${bdown}${pay}. Kindly share confirmation once paid. Thank you!`;
+        case 'due_today':
+          return `${appName}: Hi ${tenantName}, rent for ${propName} (${month}) of ${balanceStr} is DUE TODAY (${due}).${bdown}${pay}. Kindly transfer today and share screenshot. Thank you!`;
+        case 'overdue':
+          return `URGENT NOTICE: Hi ${tenantName}, rent of ${balanceStr} for ${propName} (${month}) was due on ${due} and is now OVERDUE.${bdown}${pay}. Please clear dues immediately. Thank you - ${appName}`;
+        case 'receipt':
+          return `${appName}: Hi ${tenantName}, payment received for ${propName} (${month}). Bill #${billNum}. Total: ${totalStr}, Paid: ${paidStr}, Bal: ${balanceStr}.${balanceNum > 0 ? pay : ''} Thank you!`;
+        default:
+          return `${appName}: Hi ${tenantName}, rent for ${propName} (${month}) is ${balanceStr}. Due: ${due}.${bdown}${pay}. Thank you!`;
+      }
     }
 
-    // Default: WhatsApp format (with rich formatting & emojis)
+    // 2. Email Channel
+    if (channel === 'email') {
+      const bdown = getEmailBreakdown();
+      const pay = getEmailPaymentInfo();
+      let intro = '';
+      if (type === 'receipt') {
+        intro = `We acknowledge with thanks the receipt of your payment for ${propName} (${month}).`;
+      } else if (type === 'overdue') {
+        intro = `This is an urgent formal notice that your rent payment for ${propName} (${month}) is OVERDUE (Original due date: ${due}).`;
+      } else if (type === 'due_today') {
+        intro = `This is a reminder that your rent payment for ${propName} (${month}) is DUE TODAY (${due}).`;
+      } else {
+        intro = `This is a friendly payment notice regarding your rental premises at ${propName} for the period ${month}.`;
+      }
+
+      return `Dear ${tenantName},\n\n${intro}\n\nInvoice Overview:\n• Bill Number: #${billNum}\n• Premises: ${propName}\n• Period: ${month}\n• Due Date: ${due}\n• Outstanding Balance: ${balanceStr}\n${bdown}${pay}\nIf you have already processed this transaction, kindly reply with the payment confirmation or reference number.\n\nWarm regards,\n${appName} Management`;
+    }
+
+    // 3. Default: WhatsApp Channel (Rich Formatting, Emojis, Direct UPI Link)
+    const bdown = getWaBreakdown();
+    const pay = getWaPaymentInfo();
+
     switch (type) {
       case 'gentle':
-        return `Hello ${tenantName},\n\nThis is a friendly reminder that your rent bill for *${propName}* (${month}) of *${balance}* is due on *${due}*.\n\nKindly complete the payment at your convenience:${payDetailsWa}\n\nThank you!\n- RentBill Management`;
+        return `👋 *Hello ${tenantName},*\n\nThis is a friendly payment reminder that your rent notice for *${propName}* (${month}) is due on *${due}*.\n${bdown}${pay}\nKindly complete the payment at your earliest convenience and share the transaction screenshot once done. Thank you! 🙏\n- *${appName} Management*`;
 
       case 'due_today':
-        return `Dear ${tenantName},\n\nYour rent bill for *${propName}* (${month}) amounting to *${balance}* is *DUE TODAY* (${due}).\n\nPlease transfer the amount today using:${payDetailsWa}\n\nKindly share the transaction screenshot once paid.\nThank you!`;
+        return `🔔 *RENT PAYMENT DUE TODAY*\n\nDear *${tenantName}*,\n\nYour rent for *${propName}* (${month}) amounting to *${balanceStr}* is *DUE TODAY* (${due}).\n${bdown}${pay}\nPlease transfer the amount today and share the payment confirmation screenshot. Thank you! 👍\n- *${appName} Management*`;
 
       case 'overdue':
-        return `⚠️ *PAYMENT OVERDUE NOTICE*\n\nDear ${tenantName},\n\nThis is an urgent reminder that your rent payment of *${balance}* for *${propName}* (${month}) was due on *${due}* and is currently *OVERDUE*.\n\nPlease clear the outstanding dues immediately:${payDetailsWa}\n\nIf you have already paid, please share the transaction reference.\nThank you.`;
+        return `🚨 *URGENT: OVERDUE PAYMENT NOTICE*\n\nDear *${tenantName}*,\n\nThis is an urgent notice that your rent payment of *${balanceStr}* for *${propName}* (${month}) was due on *${due}* and is now *OVERDUE*.\n${bdown}${pay}\n⚠️ *Action Required:* Please clear the outstanding dues immediately using the UPI link or bank details above to avoid late charges. If already paid, kindly reply with the transaction reference.\nThank you.\n- *${appName} Management*`;
 
       case 'receipt':
-        return `✅ *PAYMENT RECEIVED - THANK YOU!*\n\nDear ${tenantName},\n\nWe have received your payment for *${propName}* (${month}).\n*Bill No:* ${billNum}\n*Total Bill:* ${total}\n*Outstanding Balance:* ${balance}\n\nThank you for your prompt payment!\n- RentBill Management`;
+        return `🎉 *PAYMENT ACKNOWLEDGMENT - THANK YOU!*\n\nDear *${tenantName}*,\n\nWe have received payment for *${propName}* (${month}).\n\n📄 *Bill No:* #${billNum}\n💰 *Total Billed:* ${totalStr}\n✅ *Amount Paid:* ${paidStr}\n${balanceNum > 0 ? `⚠️ *Remaining Balance:* ${balanceStr}\n${bdown}${pay}\nKindly clear the remaining balance at your convenience.\n` : `🏆 *Payment Status:* FULLY SETTLED (Balance: ₹0.00)\n\nThank you for your prompt payment! Have a wonderful day! ✨\n`}- *${appName} Management*`;
 
       default:
-        return `Hello ${tenantName},\nYour rent bill for ${propName} (${month}) is ${balance}. Due date: ${due}. Thank you!`;
+        return `👋 *Hello ${tenantName},*\n\nPayment notice for *${propName}* (${month}): Outstanding Balance is *${balanceStr}* (Due: ${due}).\n${bdown}${pay}\nThank you!\n- *${appName} Management*`;
     }
   },
 

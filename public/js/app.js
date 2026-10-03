@@ -1,4 +1,5 @@
 // RentBill Frontend Application Logic
+window.APP_NAME = 'RentBill';
 window.APP_CURRENCY = '₹';
 
 const App = {
