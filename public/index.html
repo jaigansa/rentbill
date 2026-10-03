@@ -8,10 +8,7 @@
   <title>RentBill - Property & Rent Manager</title>
   
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/print.css" media="print">
   <link rel="manifest" href="/manifest.json">
@@ -1184,6 +1181,20 @@
           </button>
         </div>
 
+        <!-- Dynamic UPI QR Code Preview -->
+        <div id="share-upi-card" class="share-upi-card" style="display:none;">
+          <div id="share-upi-qrcode" class="share-upi-qrcode-wrap"></div>
+          <div class="share-upi-info">
+            <div class="share-upi-badge"><i data-lucide="qr-code"></i> Instant UPI Payment</div>
+            <div id="share-upi-id-text" class="share-upi-vpa"></div>
+            <div id="share-upi-amount-text" class="share-upi-amount"></div>
+            <div class="share-upi-apps">GPay • PhonePe • Paytm • BHIM</div>
+          </div>
+          <a href="#" id="share-btn-upi-pay" class="btn btn-sm btn-primary share-upi-btn" target="_blank">
+            <i data-lucide="smartphone"></i> Pay
+          </a>
+        </div>
+
         <!-- Format switch pills: Full breakdown vs Concise SMS/RCS -->
         <div style="margin-top: 14px; display: flex; gap: 8px;">
           <button type="button" class="filter-pill active" id="btn-share-fmt-full" style="flex:1; justify-content:center;">
@@ -1619,8 +1630,9 @@
 
   <!-- Scripts (Local, No CDN) -->
   <script src="/js/lucide.min.js"></script>
+  <script src="/js/qrcode.min.js"></script>
   <script src="/js/api.js"></script>
   <script src="/js/share.js"></script>
-  <script src="/js/app.js"></script>
+  <script type="module" src="/js/app.js"></script>
 </body>
 </html>

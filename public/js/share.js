@@ -53,6 +53,64 @@ const Share = {
     return words;
   },
 
+  // Build standard NPCI UPI payment deep link (upi://pay?...)
+  buildUpiUri(bill, tenant = null) {
+    if (!bill && !tenant) return '';
+    const upi = (bill && bill.payment_upi) || (tenant && tenant.payment_upi) || '';
+    if (!upi) return '';
+
+    let balanceNum = 0;
+    let totalNum = 0;
+    if (bill) {
+      totalNum = bill.total_amount || 0;
+      balanceNum = (bill.balance_amount !== undefined && bill.balance_amount !== null)
+        ? bill.balance_amount
+        : (totalNum - (bill.paid_amount || 0));
+    }
+    const payAmt = balanceNum > 0 ? balanceNum.toFixed(2) : totalNum.toFixed(2);
+    const propName = (bill && bill.property_name) || (tenant && tenant.property_name) || 'RentBill';
+    const month = (bill && bill.billing_month) || '';
+    const payee = encodeURIComponent(propName);
+    const note = encodeURIComponent(`Rent ${month} ${propName}`.trim());
+
+    return `upi://pay?pa=${encodeURIComponent(upi)}&pn=${payee}&am=${payAmt}&cu=INR&tn=${note}`;
+  },
+
+  // Render QR code into an HTML container element or ID
+  renderUpiQrCode(containerOrId, upiUri, size = 130) {
+    if (!upiUri) return null;
+    const elem = typeof containerOrId === 'string' ? document.getElementById(containerOrId) : containerOrId;
+    if (!elem) return null;
+    elem.innerHTML = '';
+    if (typeof QRCode === 'undefined') {
+      console.warn('QRCode library is not loaded');
+      return null;
+    }
+    return new QRCode(elem, {
+      text: upiUri,
+      width: size,
+      height: size,
+      colorDark: '#0f172a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  },
+
+  // Generate an offscreen canvas containing the UPI QR code for direct drawing into receipt images
+  getUpiQrCanvas(upiUri, size = 110) {
+    if (!upiUri || typeof QRCode === 'undefined') return null;
+    const div = document.createElement('div');
+    new QRCode(div, {
+      text: upiUri,
+      width: size,
+      height: size,
+      colorDark: '#0f172a',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    return div.querySelector('canvas');
+  },
+
   // Format the full bill breakdown text (Rich WhatsApp / detailed format)
   buildBillText(bill) {
     const currency = window.APP_CURRENCY || '₹';
@@ -344,12 +402,37 @@ const Share = {
       };
     }
 
+    // Populate Dynamic UPI QR Preview Card if UPI is available
+    const upiCard = document.getElementById('share-upi-card');
+    const upiUri = this.buildUpiUri(bill);
+    if (upiCard) {
+      if (bill.payment_upi && upiUri) {
+        upiCard.style.display = 'flex';
+        const vpaEl = document.getElementById('share-upi-id-text');
+        const amtEl = document.getElementById('share-upi-amount-text');
+        const payBtn = document.getElementById('share-btn-upi-pay');
+        const curr = window.APP_CURRENCY || '₹';
+        const dueAmt = (bill.balance_amount !== undefined && bill.balance_amount !== null && bill.balance_amount > 0)
+          ? bill.balance_amount
+          : (bill.total_amount || 0);
+
+        if (vpaEl) vpaEl.textContent = `UPI: ${bill.payment_upi}`;
+        if (amtEl) amtEl.textContent = `Due: ${curr}${dueAmt.toFixed(2)}`;
+        if (payBtn) payBtn.href = upiUri;
+
+        this.renderUpiQrCode('share-upi-qrcode', upiUri, 64);
+      } else {
+        upiCard.style.display = 'none';
+      }
+    }
+
     // Display modal
     if (window.App && typeof window.App.openModal === 'function') {
       window.App.openModal('modal-share');
     } else {
       document.getElementById('modal-share')?.classList.add('active');
     }
+    if (window.lucide) window.lucide.createIcons();
   },
 
   // Print invoice using browser print engine
@@ -696,32 +779,63 @@ const Share = {
 
     y += wordsBoxH + 16;
 
-    // 7. Payment Details (Pay To) Box
+    // 7. Payment Details (Pay To) Box with Dynamic UPI QR Code
     if (bill.payment_upi || bill.payment_bank_name) {
+      const upiUri = this.buildUpiUri(bill, tenant);
+      const qrCanvas = (bill.payment_upi && upiUri) ? this.getUpiQrCanvas(upiUri, 92) : null;
+      const payBoxH = qrCanvas ? 116 : 76;
+
       ctx.fillStyle = '#f8fafc';
-      roundRect(ctx, 32, y, width - 64, 76, 6);
+      roundRect(ctx, 32, y, width - 64, payBoxH, 6);
       ctx.fill();
 
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
-      roundRect(ctx, 32, y, width - 64, 76, 6);
+      roundRect(ctx, 32, y, width - 64, payBoxH, 6);
       ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.textAlign = 'left';
       ctx.fillStyle = '#1e40af';
       ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('PAYMENT DETAILS (PAY TO):', 48, y + 22);
+      ctx.fillText('PAYMENT DETAILS (PAY TO):', 48, y + 20);
 
       ctx.fillStyle = '#0f172a';
-      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      if (bill.payment_upi) ctx.fillText(`UPI ID: ${bill.payment_upi}`, 48, y + 42);
-      if (bill.payment_bank_name) ctx.fillText(`Bank: ${bill.payment_bank_name}`, 48, y + 60);
-      if (bill.payment_account_no) ctx.fillText(`A/C: ${bill.payment_account_no}`, 360, y + 42);
-      if (bill.payment_ifsc) ctx.fillText(`IFSC: ${bill.payment_ifsc}`, 360, y + 60);
+      if (bill.payment_upi) {
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`UPI ID: ${bill.payment_upi}`, 48, y + 40);
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('Accepted: GPay • PhonePe • Paytm • BHIM', 48, y + 58);
+      }
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      if (bill.payment_bank_name) ctx.fillText(`Bank: ${bill.payment_bank_name}`, 48, y + (qrCanvas ? 76 : 60));
+      if (bill.payment_account_no) ctx.fillText(`A/C: ${bill.payment_account_no}`, qrCanvas ? 48 : 360, y + (qrCanvas ? 94 : 42));
+      if (bill.payment_ifsc) ctx.fillText(`IFSC: ${bill.payment_ifsc}`, qrCanvas ? 260 : 360, y + (qrCanvas ? 94 : 60));
 
-      y += 92;
+      // Draw scannable UPI QR Code Card on the right
+      if (qrCanvas) {
+        const qrCardX = width - 32 - 110;
+        const qrCardY = y + 10;
+        ctx.fillStyle = '#ffffff';
+        roundRect(ctx, qrCardX, qrCardY, 96, 96, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        roundRect(ctx, qrCardX, qrCardY, 96, 96, 6);
+        ctx.stroke();
+
+        ctx.drawImage(qrCanvas, qrCardX + 8, qrCardY + 6, 80, 80);
+
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 8px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText('SCAN TO PAY', qrCardX + 48, qrCardY + 91);
+      }
+
+      y += payBoxH + 16;
     }
 
     // 8. Notes

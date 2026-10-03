@@ -2,7 +2,23 @@
    RentBill - Mobile First Modern CSS
    =================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+/* Local Plus Jakarta Sans (Variable Font: 400-800) */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/plus-jakarta-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
   --primary: #2563eb;
@@ -1656,6 +1672,139 @@ textarea:hover::-webkit-scrollbar-thumb {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 4px 16px;
+}
+
+.payment-details-box.has-upi-qr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.payment-details-info {
+  flex: 1;
+}
+
+.payment-upi-highlight {
+  grid-column: 1 / -1;
+  margin-bottom: 4px;
+}
+
+.payment-upi-apps {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.invoice-qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.invoice-qr-code canvas,
+.invoice-qr-code img {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.invoice-qr-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  color: #0f172a;
+}
+
+/* Share Modal UPI Preview Card */
+.share-upi-card {
+  margin-top: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.share-upi-qrcode-wrap {
+  width: 64px;
+  height: 64px;
+  background: #ffffff;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.share-upi-qrcode-wrap canvas,
+.share-upi-qrcode-wrap img {
+  display: block;
+  width: 56px;
+  height: 56px;
+}
+
+.share-upi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.share-upi-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+}
+
+.share-upi-badge [data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+.share-upi-vpa {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.share-upi-amount {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--success);
+  margin-top: 1px;
+}
+
+.share-upi-apps {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.share-upi-btn {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
 }
 
 .mono-val {

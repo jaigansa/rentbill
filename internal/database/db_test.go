@@ -384,3 +384,75 @@ func TestBillDiscount(t *testing.T) {
 	}
 }
 
+func TestSessionLifecycleAndPIN(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// 1. Initial state: PIN disabled
+	if db.IsPINEnabled() {
+		t.Errorf("expected PIN to be disabled initially")
+	}
+
+	// 2. Set PIN
+	if err := db.SetPIN("4321"); err != nil {
+		t.Fatalf("failed setting PIN: %v", err)
+	}
+	if !db.IsPINEnabled() {
+		t.Errorf("expected PIN to be enabled")
+	}
+	if !db.VerifyPIN("4321") {
+		t.Errorf("expected PIN 4321 to be verified")
+	}
+	if db.VerifyPIN("0000") {
+		t.Errorf("expected wrong PIN 0000 to fail verification")
+	}
+
+	// 3. Create Session
+	token, err := db.CreateSession()
+	if err != nil {
+		t.Fatalf("failed creating session: %v", err)
+	}
+	if len(token) != 64 {
+		t.Errorf("expected 64 character hex session token, got len %d", len(token))
+	}
+
+	// 4. Validate Session
+	if !db.ValidateSession(token) {
+		t.Errorf("expected valid session token to pass validation")
+	}
+	if db.ValidateSession("invalid-token-12345") {
+		t.Errorf("expected invalid session token to fail validation")
+	}
+
+	// 5. Revoke Single Session (Logout)
+	if err := db.RevokeSession(token); err != nil {
+		t.Fatalf("failed revoking session: %v", err)
+	}
+	if db.ValidateSession(token) {
+		t.Errorf("expected revoked session to fail validation")
+	}
+
+	// 6. Multiple sessions and RevokeAllSessions
+	t1, _ := db.CreateSession()
+	t2, _ := db.CreateSession()
+	if !db.ValidateSession(t1) || !db.ValidateSession(t2) {
+		t.Errorf("expected both sessions to be valid")
+	}
+
+	// Setting new PIN revokes all existing sessions
+	if err := db.SetPIN("9999"); err != nil {
+		t.Fatalf("failed setting new PIN: %v", err)
+	}
+	if db.ValidateSession(t1) || db.ValidateSession(t2) {
+		t.Errorf("expected previous sessions to be revoked on PIN change")
+	}
+
+	// Disabling PIN clears sessions and enables free access
+	if err := db.DisablePIN(); err != nil {
+		t.Fatalf("failed disabling PIN: %v", err)
+	}
+	if db.IsPINEnabled() {
+		t.Errorf("expected PIN to be disabled")
+	}
+}
+
