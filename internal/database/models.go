@@ -64,6 +64,7 @@ type Tenant struct {
 	CoOccupantName    string       `json:"co_occupant_name"`
 	CoOccupantPhone   string       `json:"co_occupant_phone"`
 	IsActive          bool         `json:"is_active"`
+	Photo             string       `json:"photo"`
 	TotalPaid         float64      `json:"total_paid"`
 	TotalDue          float64      `json:"total_due"`
 	CreatedAt         string       `json:"created_at"`

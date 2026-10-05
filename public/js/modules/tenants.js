@@ -1,6 +1,214 @@
 // Tenants Controller: Tenant CRUD, Co-occupants, Long Press Expand, Ledger
 
 export const Tenants = {
+  getAvatarColor(name) {
+    const colors = [
+      { bg: '#e8f0fe', text: '#1967d2', border: '#c2e7ff' }, // Blue
+      { bg: '#fce8e6', text: '#c5221f', border: '#fad2cf' }, // Red
+      { bg: '#fef7e0', text: '#b06000', border: '#feefc3' }, // Yellow/Amber
+      { bg: '#e6f4ea', text: '#137333', border: '#ceead6' }, // Green
+      { bg: '#f3e8fd', text: '#8430ce', border: '#e9d2fd' }, // Purple
+      { bg: '#e4f7fb', text: '#007b83', border: '#cbf0f8' }, // Teal
+      { bg: '#feefe3', text: '#af3a03', border: '#fedfc8' }, // Orange
+      { bg: '#fce4ec', text: '#b80672', border: '#f8bbd0' }, // Pink
+    ];
+    if (!name) return colors[0];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  },
+
+  getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  },
+
+  getTenantAvatarHtml(t, size = 48) {
+    if (t.photo && t.photo.trim() !== '') {
+      return `
+        <div class="tenant-avatar" onclick="App.openAvatarZoom(${t.id}, event)" title="Tap to view photo" style="width:${size}px; height:${size}px; min-width:${size}px;">
+          <img src="${t.photo}" class="tenant-avatar-img" alt="${t.name || 'Tenant'}">
+        </div>
+      `;
+    }
+    const color = this.getAvatarColor(t.name || '');
+    const initials = this.getInitials(t.name || '');
+    const fontSize = Math.round(size * 0.38);
+    return `
+      <div class="tenant-avatar tenant-avatar-initials" onclick="App.openAvatarZoom(${t.id}, event)" title="Tap to view photo" style="width:${size}px; height:${size}px; min-width:${size}px; background:${color.bg}; color:${color.text}; border:1.5px solid ${color.border}; font-size:${fontSize}px;">
+        ${initials}
+      </div>
+    `;
+  },
+
+  openAvatarZoom(tenantId, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const t = (this.tenants || []).find(item => item.id == tenantId);
+    if (!t) return;
+
+    const zoomImg = document.getElementById('avatar-zoom-img');
+    const zoomInitials = document.getElementById('avatar-zoom-initials');
+    const zoomName = document.getElementById('avatar-zoom-name');
+    const zoomUnit = document.getElementById('avatar-zoom-unit');
+    const zoomCall = document.getElementById('avatar-zoom-call');
+    const zoomSms = document.getElementById('avatar-zoom-sms');
+    const zoomEmail = document.getElementById('avatar-zoom-email');
+    const zoomEdit = document.getElementById('avatar-zoom-edit');
+
+    if (zoomName) zoomName.textContent = t.name || 'Tenant Profile';
+    if (zoomUnit) {
+      const unitText = t.property_name ? t.property_name : 'Unassigned';
+      const phoneText = t.phone ? ` • ${t.phone}` : '';
+      zoomUnit.textContent = `${unitText}${phoneText}`;
+    }
+
+    if (t.photo && t.photo.trim() !== '') {
+      if (zoomImg) {
+        zoomImg.src = t.photo;
+        zoomImg.style.display = 'block';
+      }
+      if (zoomInitials) zoomInitials.style.display = 'none';
+    } else {
+      if (zoomImg) {
+        zoomImg.src = '';
+        zoomImg.style.display = 'none';
+      }
+      if (zoomInitials) {
+        const color = this.getAvatarColor(t.name || '');
+        const initials = this.getInitials(t.name || '');
+        zoomInitials.style.display = 'flex';
+        zoomInitials.style.background = color.bg;
+        zoomInitials.style.color = color.text;
+        zoomInitials.style.border = `4px solid ${color.border}`;
+        zoomInitials.textContent = initials;
+      }
+    }
+
+    const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
+    const email = (t.email || '').trim();
+
+    if (zoomCall) {
+      zoomCall.href = cleanPhone ? `tel:${cleanPhone}` : 'javascript:void(0)';
+      zoomCall.classList.toggle('disabled', !cleanPhone);
+      zoomCall.title = cleanPhone ? `Call ${t.name}` : 'No phone number';
+    }
+    if (zoomSms) {
+      zoomSms.href = cleanPhone ? `sms:${cleanPhone}` : 'javascript:void(0)';
+      zoomSms.classList.toggle('disabled', !cleanPhone);
+      zoomSms.title = cleanPhone ? `SMS / Text ${t.name}` : 'No phone number';
+    }
+    if (zoomEmail) {
+      zoomEmail.href = email ? `mailto:${email}` : 'javascript:void(0)';
+      zoomEmail.classList.toggle('disabled', !email);
+      zoomEmail.title = email ? `Email ${t.name} (${email})` : 'No email added';
+    }
+    if (zoomEdit) {
+      zoomEdit.onclick = () => {
+        this.closeModal('modal-avatar-zoom');
+        this.editTenant(t.id);
+      };
+    }
+
+    this.openModal('modal-avatar-zoom');
+  },
+
+  bindTenantPhotoUpload() {
+    const fileInput = document.getElementById('tenant-photo-file-input');
+    const triggerBtn = document.getElementById('btn-trigger-tenant-photo');
+    const uploadBtn = document.getElementById('btn-upload-tenant-photo');
+    const previewWrap = document.getElementById('tenant-photo-preview-wrap');
+    const removeBtn = document.getElementById('btn-remove-tenant-photo');
+    const previewImg = document.getElementById('tenant-photo-preview-img');
+    const placeholder = document.getElementById('tenant-photo-avatar-placeholder');
+    const hiddenPhotoInput = document.getElementById('tenant-photo');
+
+    const openFileDialog = () => {
+      if (fileInput) fileInput.click();
+    };
+
+    triggerBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFileDialog();
+    });
+    uploadBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openFileDialog();
+    });
+    previewWrap?.addEventListener('click', (e) => {
+      if (e.target !== removeBtn && !removeBtn?.contains(e.target)) {
+        openFileDialog();
+      }
+    });
+
+    fileInput?.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert('Please choose an image file (JPEG, PNG, WebP).');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 300;
+          const width = img.width;
+          const height = img.height;
+
+          const minDim = Math.min(width, height);
+          const startX = (width - minDim) / 2;
+          const startY = (height - minDim) / 2;
+
+          canvas.width = maxDim;
+          canvas.height = maxDim;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, maxDim, maxDim);
+
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+          if (hiddenPhotoInput) hiddenPhotoInput.value = compressedBase64;
+          if (previewImg) {
+            previewImg.src = compressedBase64;
+            previewImg.style.display = 'block';
+          }
+          if (placeholder) placeholder.style.display = 'none';
+          if (removeBtn) removeBtn.style.display = 'inline-block';
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    removeBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (hiddenPhotoInput) hiddenPhotoInput.value = '';
+      if (fileInput) fileInput.value = '';
+      if (previewImg) {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+      }
+      if (placeholder) {
+        placeholder.style.display = 'flex';
+        placeholder.style.background = 'var(--surface-alt)';
+        placeholder.style.color = 'var(--text-muted)';
+        placeholder.innerHTML = `<i data-lucide="user" style="width:28px; height:28px; color:var(--text-muted);"></i>`;
+        this.refreshIcons();
+      }
+      removeBtn.style.display = 'none';
+    });
+  },
   renderCoOccupantRow(name = '', phone = '') {
     const div = document.createElement('div');
     div.className = 'co-occupant-row';
@@ -104,22 +312,27 @@ export const Tenants = {
             : (Number(t.opening_arrear) || 0));
 
       const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
+      const waPhone = cleanPhone.replace(/^\+/, '');
+      const waUrl = waPhone ? `https://wa.me/${waPhone}` : '#';
+      const email = (t.email || '').trim();
 
       return `
       <div class="app-card tenant-card" id="tenant-card-${t.id}" data-tenant-id="${t.id}">
-        <div class="card-top">
-          <div>
-            <div class="card-title">
-              <a href="tel:${cleanPhone}" class="tenant-name-call" title="Tap to call ${t.name}">
-                <span>${t.name}</span>
-                <i data-lucide="phone-call" style="width:13px; height:13px; margin-left:4px; opacity:0.65; vertical-align:-1px;"></i>
-              </a>
+        <!-- Google Contacts Header: Avatar + Name/Unit + 3-Dot Actions -->
+        <div class="tenant-contact-header">
+          ${this.getTenantAvatarHtml(t, 48)}
+          <div class="tenant-contact-info">
+            <div class="tenant-contact-name-row">
+              <span class="tenant-contact-name" title="${t.name}">${t.name}</span>
             </div>
-            <div class="card-subtitle" style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-              <span><i data-lucide="home" style="width:13px; height:13px; vertical-align:-2px; color:var(--primary);"></i> ${t.property_name || 'Unassigned'}</span>
+            <div class="tenant-contact-sub">
+              <span class="tenant-contact-unit">
+                <i data-lucide="home" style="width:12px; height:12px;"></i>
+                ${t.property_name || 'Unassigned'}
+              </span>
             </div>
           </div>
-          <div class="card-top-right">
+          <div class="tenant-contact-header-right">
             <span class="badge ${t.is_active ? 'badge-paid' : 'badge-date'}">${t.is_active ? 'Active' : 'Past'}</span>
             <div class="card-dropdown">
               <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="More options">
@@ -154,18 +367,36 @@ export const Tenants = {
             </div>
           </div>
         </div>
-        <div class="card-middle" style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="card-amount-label">Total Paid</div>
-            <div class="card-amount-val" style="color:var(--success, #16a34a);" title="${this.formatFullMoney(totalPaid)}">${this.formatMoney(totalPaid, true)}</div>
+
+        <!-- Google Contacts Quick Action Buttons (3 Columns: Call, SMS, Email) -->
+        <div class="tenant-quick-actions">
+          <a href="${cleanPhone ? `tel:${cleanPhone}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-call ${cleanPhone ? '' : 'disabled'}" title="${cleanPhone ? `Call ${t.name}` : 'No phone number'}">
+            <i data-lucide="phone"></i>
+            <span>Call</span>
+          </a>
+          <a href="${cleanPhone ? `sms:${cleanPhone}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-sms ${cleanPhone ? '' : 'disabled'}" title="${cleanPhone ? `SMS / Text ${t.name}` : 'No phone number'}">
+            <i data-lucide="message-square"></i>
+            <span>SMS</span>
+          </a>
+          <a href="${email ? `mailto:${email}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-email ${email ? '' : 'disabled'}" title="${email ? `Email ${t.name} (${email})` : 'No email added'}">
+            <i data-lucide="mail"></i>
+            <span>Email</span>
+          </a>
+        </div>
+
+        <!-- Financial Status Bar (Tap to view bills ledger) -->
+        <div class="tenant-financial-bar" onclick="App.openTenantLedger(${t.id})" title="Tap to view bills & ledger">
+          <div class="financial-chip chip-paid">
+            <span class="chip-label">Total Paid</span>
+            <span class="chip-val" title="${this.formatFullMoney(totalPaid)}">${this.formatMoney(totalPaid, true)}</span>
           </div>
-          <div style="text-align:right;">
-            <div class="card-amount-label">Total Due</div>
-            <div class="card-amount-val" style="color:${totalDue > 0 ? 'var(--danger, #dc2626)' : 'var(--text-muted)'};" title="${this.formatFullMoney(totalDue)}">${this.formatMoney(totalDue, true)}</div>
+          <div class="financial-chip ${totalDue > 0 ? 'chip-due' : 'chip-cleared'}">
+            <span class="chip-label">Total Due</span>
+            <span class="chip-val" title="${this.formatFullMoney(totalDue)}">${this.formatMoney(totalDue, true)}</span>
           </div>
         </div>
 
-        <!-- Expandable Details on Long Press -->
+        <!-- Expandable Details on Long Press / Tap -->
         <div class="tenant-card-details" id="tenant-details-${t.id}" style="display:none;">
           <div class="tenant-details-grid">
             <div class="tenant-detail-item">
@@ -249,7 +480,7 @@ export const Tenants = {
         </div>
 
         <div class="tenant-card-footer-hint" onclick="App.toggleTenantCardExpand(${t.id})">
-          <span>Long-press card to toggle details</span>
+          <span>Tap or long-press to toggle details</span>
           <i data-lucide="chevron-down" style="width:12px; height:12px;"></i>
         </div>
       </div>
@@ -278,8 +509,8 @@ export const Tenants = {
       };
 
       const startPress = (e) => {
-        // Ignore if clicking interactive children (links, buttons, dropdowns)
-        if (e.target.closest('a, button, .card-dropdown, .card-dropdown-menu')) {
+        // Ignore if clicking interactive children (links, buttons, dropdowns, quick actions, avatar zoom, financial bar)
+        if (e.target.closest('a, button, .card-dropdown, .card-dropdown-menu, .tenant-quick-actions, .tenant-avatar, .tenant-financial-bar')) {
           return;
         }
         isLongPress = false;
@@ -365,8 +596,31 @@ export const Tenants = {
     if (openArrear) openArrear.value = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
+
+    // Reset photo preview to placeholder
+    const photoInput = document.getElementById('tenant-photo');
+    const photoFileInput = document.getElementById('tenant-photo-file-input');
+    const previewImg = document.getElementById('tenant-photo-preview-img');
+    const placeholder = document.getElementById('tenant-photo-avatar-placeholder');
+    const btnRemove = document.getElementById('btn-remove-tenant-photo');
+    if (photoInput) photoInput.value = '';
+    if (photoFileInput) photoFileInput.value = '';
+    if (previewImg) {
+      previewImg.src = '';
+      previewImg.style.display = 'none';
+    }
+    if (placeholder) {
+      placeholder.style.display = 'flex';
+      placeholder.style.background = 'var(--surface-alt)';
+      placeholder.style.color = 'var(--text-muted)';
+      placeholder.style.border = '1px solid var(--border)';
+      placeholder.innerHTML = `<i data-lucide="user" style="width:28px; height:28px; color:var(--text-muted);"></i>`;
+    }
+    if (btnRemove) btnRemove.style.display = 'none';
+
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
+    this.refreshIcons();
   },
 
   async editTenant(id) {
@@ -377,6 +631,41 @@ export const Tenants = {
       document.getElementById('tenant-name').value = t.name;
       document.getElementById('tenant-phone').value = t.phone;
       document.getElementById('tenant-email').value = t.email || '';
+
+      // Populate photo preview
+      const photoInput = document.getElementById('tenant-photo');
+      const photoFileInput = document.getElementById('tenant-photo-file-input');
+      const previewImg = document.getElementById('tenant-photo-preview-img');
+      const placeholder = document.getElementById('tenant-photo-avatar-placeholder');
+      const btnRemove = document.getElementById('btn-remove-tenant-photo');
+      if (photoFileInput) photoFileInput.value = '';
+
+      if (t.photo && t.photo.trim() !== '') {
+        if (photoInput) photoInput.value = t.photo;
+        if (previewImg) {
+          previewImg.src = t.photo;
+          previewImg.style.display = 'block';
+        }
+        if (placeholder) placeholder.style.display = 'none';
+        if (btnRemove) btnRemove.style.display = 'inline-block';
+      } else {
+        if (photoInput) photoInput.value = '';
+        if (previewImg) {
+          previewImg.src = '';
+          previewImg.style.display = 'none';
+        }
+        if (placeholder) {
+          const color = this.getAvatarColor(t.name);
+          const initials = this.getInitials(t.name);
+          placeholder.style.display = 'flex';
+          placeholder.style.background = color.bg;
+          placeholder.style.color = color.text;
+          placeholder.style.border = `1.5px solid ${color.border}`;
+          placeholder.innerHTML = `<span style="font-weight:700; font-size:1.35rem;">${initials}</span>`;
+        }
+        if (btnRemove) btnRemove.style.display = 'none';
+      }
+
       const coListEl = document.getElementById('co-occupants-list');
       if (coListEl) {
         coListEl.innerHTML = '';
@@ -406,6 +695,7 @@ export const Tenants = {
       }
 
       this.openModal('modal-tenant');
+      this.refreshIcons();
     } catch (err) {
       alert('Error: ' + err.message);
     }

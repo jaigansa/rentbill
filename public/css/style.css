@@ -2670,12 +2670,16 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--primary);
 }
 
-/* Tenant Card Press Effect & Expand Drawer */
+/* Google Contacts Inspired Tenant Card */
 .tenant-card {
   user-select: none;
   -webkit-user-select: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
 }
 
 .tenant-card.pressing {
@@ -2689,11 +2693,308 @@ textarea:hover::-webkit-scrollbar-thumb {
   box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
 }
 
+.tenant-contact-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tenant-avatar {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+  user-select: none;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+}
+
+.tenant-avatar:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.tenant-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.tenant-contact-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tenant-contact-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tenant-contact-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+
+.tenant-contact-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  line-height: 1.2;
+}
+
+.tenant-contact-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.tenant-contact-phone {
+  color: var(--text-muted);
+}
+
+.tenant-contact-dot {
+  opacity: 0.5;
+  font-size: 0.75rem;
+}
+
+.tenant-contact-header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Quick Action Buttons (Google Contacts style - 3 Columns) */
+.tenant-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.tenant-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tenant-action-btn i,
+.tenant-action-btn [data-lucide] {
+  width: 17px;
+  height: 17px;
+  color: var(--primary);
+  transition: transform 0.15s ease;
+}
+
+.tenant-action-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--border-focus);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.tenant-action-btn:active {
+  transform: scale(0.96);
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.tenant-action-btn.btn-action-call:hover i,
+.tenant-action-btn.btn-action-sms:hover i {
+  color: #2563eb;
+}
+
+.tenant-action-btn.btn-action-wa:hover i {
+  color: var(--whatsapp);
+}
+
+.tenant-action-btn.btn-action-email:hover i {
+  color: #ea4335;
+}
+
+.tenant-action-btn.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Financial Bar (Paid & Due status chips - Tap to view bills) */
+.tenant-financial-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.tenant-financial-bar:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.tenant-financial-bar:active {
+  transform: scale(0.99);
+}
+
+.financial-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.financial-chip + .financial-chip {
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+}
+
+.financial-chip .chip-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.financial-chip .chip-val {
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.financial-chip.chip-paid .chip-val {
+  color: var(--success);
+}
+
+.financial-chip.chip-due .chip-val {
+  color: var(--danger);
+}
+
+.financial-chip.chip-cleared .chip-val {
+  color: var(--text-muted);
+}
+
+/* Tenant Photo Upload inside Modal */
+.tenant-photo-upload-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--surface-alt);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 14px;
+}
+
+.tenant-photo-preview-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  cursor: pointer;
+}
+
+.tenant-photo-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+#tenant-photo-preview-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.btn-avatar-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #ffffff;
+  border: 2px solid var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-avatar-badge:hover {
+  background: var(--primary-hover);
+  transform: scale(1.08);
+}
+
+.tenant-photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.tenant-photo-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .tenant-card-details {
   overflow: hidden;
   transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   border-top: 1px dashed var(--border);
-  margin-top: 10px;
+  margin-top: 2px;
   padding-top: 10px;
 }
 
@@ -2732,8 +3033,8 @@ textarea:hover::-webkit-scrollbar-thumb {
   font-size: 0.68rem;
   color: var(--text-muted);
   opacity: 0.65;
-  margin-top: 8px;
-  padding-top: 4px;
+  margin-top: 2px;
+  padding-top: 2px;
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
@@ -2744,6 +3045,157 @@ textarea:hover::-webkit-scrollbar-thumb {
 
 .tenant-card.expanded .tenant-card-footer-hint i {
   transform: rotate(180deg);
+}
+
+/* Avatar Zoom Lightbox Modal (Google Contacts / WhatsApp Style) */
+#modal-avatar-zoom {
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px;
+}
+
+#modal-avatar-zoom .avatar-zoom-dialog {
+  margin: auto;
+  width: min(340px, calc(100vw - 32px));
+  max-width: 340px;
+  border-radius: var(--radius-xl) !important;
+  padding: 24px 20px 20px;
+  text-align: center;
+  position: relative;
+  background: var(--surface);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  animation: zoomPopupIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes zoomPopupIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.avatar-zoom-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.15s ease;
+}
+
+.avatar-zoom-close:hover {
+  background: var(--border);
+  color: var(--text-main);
+}
+
+.avatar-zoom-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 8px auto 16px;
+  width: 200px;
+  height: 200px;
+}
+
+.avatar-zoom-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  border: 4px solid var(--surface);
+  outline: 1px solid var(--border);
+}
+
+.avatar-zoom-initials {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.8rem;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border: 4px solid var(--surface);
+  user-select: none;
+}
+
+.avatar-zoom-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.avatar-zoom-unit {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.avatar-zoom-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.avatar-zoom-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avatar-zoom-action-btn i,
+.avatar-zoom-action-btn [data-lucide] {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
+
+.avatar-zoom-action-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--border-focus);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.avatar-zoom-action-btn:active {
+  transform: scale(0.96);
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.avatar-zoom-action-btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* Reminder Templates Grid */

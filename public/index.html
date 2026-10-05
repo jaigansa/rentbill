@@ -329,6 +329,30 @@
       </div>
       <form id="form-tenant">
         <input type="hidden" id="tenant-id">
+        <!-- Profile Picture / Avatar Upload Section -->
+        <div class="tenant-photo-upload-container">
+          <div class="tenant-photo-preview-wrap" id="tenant-photo-preview-wrap">
+            <div class="tenant-photo-avatar-placeholder" id="tenant-photo-avatar-placeholder">
+              <i data-lucide="user" style="width:28px; height:28px; color:var(--text-muted);"></i>
+            </div>
+            <img id="tenant-photo-preview-img" src="" alt="Tenant Photo" style="display:none;">
+            <button type="button" class="btn-avatar-badge" id="btn-trigger-tenant-photo" title="Upload Photo">
+              <i data-lucide="camera" style="width:14px; height:14px;"></i>
+            </button>
+          </div>
+          <div class="tenant-photo-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="btn-upload-tenant-photo">
+              <i data-lucide="upload" style="width:13px; height:13px; vertical-align:-1px;"></i> Choose Photo
+            </button>
+            <button type="button" class="btn-text btn-text-danger" id="btn-remove-tenant-photo" style="display:none; font-size:0.75rem; padding:2px 6px;">
+              Remove
+            </button>
+            <input type="file" id="tenant-photo-file-input" accept="image/*" style="display:none;">
+            <input type="hidden" id="tenant-photo">
+            <span class="tenant-photo-hint">Optional profile picture / photo</span>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="tenant-name">Tenant Full Name *</label>
           <input type="text" id="tenant-name" placeholder="e.g. Rahul Sharma" required>
@@ -444,6 +468,41 @@
           <button type="submit" class="btn btn-primary">Save Tenant</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Avatar Zoom Lightbox (Google Contacts / WhatsApp Style) -->
+  <div class="modal" id="modal-avatar-zoom">
+    <div class="modal-dialog avatar-zoom-dialog">
+      <button type="button" class="modal-close avatar-zoom-close" data-close="modal-avatar-zoom" aria-label="Close">&times;</button>
+      <div class="avatar-zoom-content">
+        <div class="avatar-zoom-image-container">
+          <img id="avatar-zoom-img" src="" alt="Profile Photo" class="avatar-zoom-img" style="display:none;">
+          <div id="avatar-zoom-initials" class="avatar-zoom-initials" style="display:none;"></div>
+        </div>
+        <div class="avatar-zoom-info">
+          <h3 id="avatar-zoom-name" class="avatar-zoom-name"></h3>
+          <p id="avatar-zoom-unit" class="avatar-zoom-unit"></p>
+        </div>
+        <div class="avatar-zoom-actions">
+          <a id="avatar-zoom-call" href="#" class="avatar-zoom-action-btn" title="Call">
+            <i data-lucide="phone"></i>
+            <span>Call</span>
+          </a>
+          <a id="avatar-zoom-sms" href="#" class="avatar-zoom-action-btn" title="SMS">
+            <i data-lucide="message-square"></i>
+            <span>SMS</span>
+          </a>
+          <a id="avatar-zoom-email" href="#" class="avatar-zoom-action-btn" title="Email">
+            <i data-lucide="mail"></i>
+            <span>Email</span>
+          </a>
+          <button type="button" id="avatar-zoom-edit" class="avatar-zoom-action-btn" title="Edit Profile">
+            <i data-lucide="edit-3"></i>
+            <span>Edit</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

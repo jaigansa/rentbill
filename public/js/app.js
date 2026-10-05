@@ -64,6 +64,8 @@ const App = {
   },
 
   bindForms() {
+    this.bindTenantPhotoUpload?.();
+
     // Property Form (Create / Edit)
     document.getElementById('form-property')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -114,6 +116,7 @@ const App = {
 
       const t = {
         name: document.getElementById('tenant-name').value.trim(),
+        photo: document.getElementById('tenant-photo')?.value || '',
         phone: document.getElementById('tenant-phone').value.trim(),
         email: document.getElementById('tenant-email').value.trim(),
         property_id: propIdVal ? parseInt(propIdVal, 10) : null,

@@ -72,6 +72,7 @@ func createTables(db *sql.DB) error {
 		co_occupants TEXT DEFAULT '[]',
 		co_occupant_name TEXT DEFAULT '',
 		co_occupant_phone TEXT DEFAULT '',
+		photo TEXT DEFAULT '',
 		is_active INTEGER DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (property_id) REFERENCES properties (id) ON DELETE SET NULL
@@ -178,6 +179,7 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE tenants ADD COLUMN co_occupant_name TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN co_occupant_phone TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN opening_arrear REAL DEFAULT 0.0",
+		"ALTER TABLE tenants ADD COLUMN photo TEXT DEFAULT ''",
 	}
 	for _, m := range migrations {
 		_, _ = db.Exec(m) // Ignore if column already exists
