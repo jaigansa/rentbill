@@ -51,6 +51,7 @@ type Tenant struct {
 	PropertyID        *int64       `json:"property_id"`
 	PropertyName      string       `json:"property_name,omitempty"`
 	SecurityDeposit   float64      `json:"security_deposit"`
+	OpeningArrear     float64      `json:"opening_arrear"`
 	MoveInDate        string       `json:"move_in_date"`
 	PaymentUPI        string       `json:"payment_upi"`
 	PaymentBankName   string       `json:"payment_bank_name"`

@@ -28,15 +28,15 @@ func (db *DB) CreateTenant(t *Tenant) (int64, error) {
 
 	query := `
 	INSERT INTO tenants (
-		name, phone, email, property_id, security_deposit, move_in_date,
+		name, phone, email, property_id, security_deposit, opening_arrear, move_in_date,
 		payment_upi, payment_bank_name, payment_account_no, payment_ifsc,
 		initial_elec_meter, initial_water_meter, preferred_channel,
 		co_occupants, co_occupant_name, co_occupant_phone, is_active
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
-		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
+		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
 		coJSON, t.CoOccupantName, t.CoOccupantPhone, 1,
@@ -50,7 +50,7 @@ func (db *DB) CreateTenant(t *Tenant) (int64, error) {
 func (db *DB) GetAllTenants() ([]Tenant, error) {
 	query := `
 	SELECT t.id, t.name, t.phone, COALESCE(t.email, ''), t.property_id, COALESCE(p.name, ''),
-	       t.security_deposit, COALESCE(t.move_in_date, ''),
+	       t.security_deposit, COALESCE(t.opening_arrear, 0.0), COALESCE(t.move_in_date, ''),
 	       COALESCE(t.payment_upi, ''), COALESCE(t.payment_bank_name, ''),
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
@@ -58,7 +58,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
-	       COALESCE(b_stats.total_due, 0.0) AS total_due
+	       COALESCE(b_stats.total_due, t.opening_arrear, 0.0) AS total_due
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
 	LEFT JOIN (
@@ -83,7 +83,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 		var coJSON string
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
-			&t.SecurityDeposit, &t.MoveInDate,
+			&t.SecurityDeposit, &t.OpeningArrear, &t.MoveInDate,
 			&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 			&t.InitialElecMeter, &t.InitialWaterMeter,
 			&t.PreferredChannel,
@@ -110,7 +110,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	query := `
 	SELECT t.id, t.name, t.phone, COALESCE(t.email, ''), t.property_id, COALESCE(p.name, ''),
-	       t.security_deposit, COALESCE(t.move_in_date, ''),
+	       t.security_deposit, COALESCE(t.opening_arrear, 0.0), COALESCE(t.move_in_date, ''),
 	       COALESCE(t.payment_upi, ''), COALESCE(t.payment_bank_name, ''),
 	       COALESCE(t.payment_account_no, ''), COALESCE(t.payment_ifsc, ''),
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
@@ -118,7 +118,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
 	       t.is_active, t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
-	       COALESCE(b_stats.total_due, 0.0) AS total_due
+	       COALESCE(b_stats.total_due, t.opening_arrear, 0.0) AS total_due
 	FROM tenants t
 	LEFT JOIN properties p ON t.property_id = p.id
 	LEFT JOIN (
@@ -136,7 +136,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	var coJSON string
 	err := db.QueryRow(query, id, id).Scan(
 		&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
-		&t.SecurityDeposit, &t.MoveInDate,
+		&t.SecurityDeposit, &t.OpeningArrear, &t.MoveInDate,
 		&t.PaymentUPI, &t.PaymentBankName, &t.PaymentAccountNo, &t.PaymentIFSC,
 		&t.InitialElecMeter, &t.InitialWaterMeter,
 		&t.PreferredChannel,
@@ -184,14 +184,14 @@ func (db *DB) UpdateTenant(t *Tenant) error {
 
 	query := `
 	UPDATE tenants
-	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, move_in_date = ?,
+	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, opening_arrear = ?, move_in_date = ?,
 	    payment_upi = ?, payment_bank_name = ?, payment_account_no = ?, payment_ifsc = ?,
 	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?,
 	    co_occupants = ?, co_occupant_name = ?, co_occupant_phone = ?, is_active = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
-		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.MoveInDate,
+		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
 		coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.ID,
@@ -370,6 +370,24 @@ func (db *DB) GetTenantLedger(tenantID int64) (*TenantLedger, error) {
 				ReferenceNo:    p.ReferenceNo,
 			})
 		}
+	}
+
+	if len(bills) == 0 && tenant.OpeningArrear > 0 {
+		ledger.Entries = append(ledger.Entries, LedgerEntry{
+			ID:             0,
+			Type:           "BILL",
+			Date:           tenant.MoveInDate,
+			BillID:         0,
+			BillNumber:     "OPENING",
+			BillingMonth:   "-",
+			Description:    "Opening Arrear / Starting Due",
+			Debit:          tenant.OpeningArrear,
+			Credit:         0,
+			RunningBalance: tenant.OpeningArrear,
+			Status:         "PENDING",
+		})
+		totalBilled = tenant.OpeningArrear
+		runningBalance = tenant.OpeningArrear
 	}
 
 	ledger.TotalBilled = math.Round(totalBilled*100) / 100

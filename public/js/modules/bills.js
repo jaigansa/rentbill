@@ -165,7 +165,11 @@ export const Bills = {
         const hintBalance = document.getElementById('hint-prev-balance');
         if (pendingArrear > 0) {
           if (badgeBalance) badgeBalance.style.display = 'inline-block';
-          if (hintBalance) hintBalance.textContent = `Carried forward from ${lastBill.billing_month || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`;
+          if (hintBalance) {
+            hintBalance.textContent = lastBill.has_prior_bill
+              ? `Carried forward from ${lastBill.billing_month || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`
+              : `Carried forward from opening arrears: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`;
+          }
         } else {
           if (badgeBalance) badgeBalance.style.display = 'none';
           if (hintBalance) hintBalance.textContent = 'No past unpaid dues';

@@ -60,6 +60,7 @@ func createTables(db *sql.DB) error {
 		email TEXT,
 		property_id INTEGER,
 		security_deposit REAL DEFAULT 0.0,
+		opening_arrear REAL DEFAULT 0.0,
 		move_in_date TEXT,
 		payment_upi TEXT DEFAULT '',
 		payment_bank_name TEXT DEFAULT '',
@@ -176,6 +177,7 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE tenants ADD COLUMN co_occupants TEXT DEFAULT '[]'",
 		"ALTER TABLE tenants ADD COLUMN co_occupant_name TEXT DEFAULT ''",
 		"ALTER TABLE tenants ADD COLUMN co_occupant_phone TEXT DEFAULT ''",
+		"ALTER TABLE tenants ADD COLUMN opening_arrear REAL DEFAULT 0.0",
 	}
 	for _, m := range migrations {
 		_, _ = db.Exec(m) // Ignore if column already exists

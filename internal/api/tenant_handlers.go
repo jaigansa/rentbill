@@ -107,15 +107,17 @@ func (s *Server) HandleTenantLastBill(w http.ResponseWriter, r *http.Request) {
 	if bill == nil {
 		initElec := 0.0
 		initWater := 0.0
+		openingArrear := 0.0
 		if tenant != nil {
 			initElec = tenant.InitialElecMeter
 			initWater = tenant.InitialWaterMeter
+			openingArrear = tenant.OpeningArrear
 		}
 		sendJSON(w, http.StatusOK, map[string]interface{}{
 			"curr_electricity_meter": initElec,
 			"curr_water_meter":       initWater,
 			"has_prior_bill":         false,
-			"pending_balance":        0.0,
+			"pending_balance":        openingArrear,
 			"source":                 "tenant_initial",
 		})
 		return

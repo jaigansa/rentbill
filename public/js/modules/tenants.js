@@ -99,7 +99,9 @@ export const Tenants = {
         : tenantBills.reduce((sum, b) => sum + (Number(b.paid_amount) || 0), 0);
       const totalDue = (t.total_due !== undefined && t.total_due !== null)
         ? Number(t.total_due)
-        : tenantBills.reduce((sum, b) => sum + (Number(b.balance_amount) || (Number(b.total_amount) - Number(b.paid_amount)) || 0), 0);
+        : (tenantBills.length > 0
+            ? tenantBills.reduce((sum, b) => sum + (Number(b.balance_amount) || (Number(b.total_amount) - Number(b.paid_amount)) || 0), 0)
+            : (Number(t.opening_arrear) || 0));
 
       const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
 
@@ -184,6 +186,12 @@ export const Tenants = {
               <span class="detail-label">Security Deposit</span>
               <span class="detail-val">${curr}${t.security_deposit ? t.security_deposit.toFixed(2) : '0.00'}</span>
             </div>
+            ${t.opening_arrear > 0 ? `
+            <div class="tenant-detail-item">
+              <span class="detail-label">Opening Arrear</span>
+              <span class="detail-val" style="color:var(--danger, #dc2626); font-weight:600;">${curr}${Number(t.opening_arrear).toFixed(2)}</span>
+            </div>
+            ` : ''}
             <div class="tenant-detail-item">
               <span class="detail-label">Move-in Date</span>
               <span class="detail-val">${t.move_in_date || 'Not set'}</span>
@@ -353,6 +361,8 @@ export const Tenants = {
     document.getElementById('tenant-id').value = '';
     const coListEl = document.getElementById('co-occupants-list');
     if (coListEl) coListEl.innerHTML = '';
+    const openArrear = document.getElementById('tenant-opening-arrear');
+    if (openArrear) openArrear.value = '';
     const statusSelect = document.getElementById('tenant-is-active');
     if (statusSelect) statusSelect.value = '1';
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
@@ -381,6 +391,8 @@ export const Tenants = {
       }
       document.getElementById('tenant-prop-id').value = t.property_id || '';
       document.getElementById('tenant-deposit').value = t.security_deposit || 0;
+      const openArrear = document.getElementById('tenant-opening-arrear');
+      if (openArrear) openArrear.value = t.opening_arrear || 0;
       document.getElementById('tenant-move-in').value = t.move_in_date || '';
       document.getElementById('tenant-payment-upi').value = t.payment_upi || '';
       document.getElementById('tenant-payment-bank-name').value = t.payment_bank_name || '';

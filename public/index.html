@@ -364,20 +364,29 @@
             <input type="number" id="tenant-deposit" step="any" min="0" placeholder="20000">
           </div>
           <div class="form-group">
-            <label for="tenant-move-in">Move-in Date</label>
-            <input type="date" id="tenant-move-in">
+            <label for="tenant-opening-arrear">Opening Arrear Amount (₹)</label>
+            <input type="number" id="tenant-opening-arrear" step="any" min="0" placeholder="0.00">
+            <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
+              Initial past unpaid dues carried forward into the tenant's first bill.
+            </small>
           </div>
         </div>
 
-        <div class="form-group" id="group-tenant-status">
-          <label for="tenant-is-active">Tenant Residency Status</label>
-          <select id="tenant-is-active">
-            <option value="1">Active</option>
-            <option value="0">Deactivated</option>
-          </select>
-          <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
-            Deactivating marks the tenant as moved-out and frees up the assigned property unit as Vacant, while keeping all past bills and payment ledger history safe.
-          </small>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tenant-move-in">Move-in Date</label>
+            <input type="date" id="tenant-move-in">
+          </div>
+          <div class="form-group" id="group-tenant-status">
+            <label for="tenant-is-active">Tenant Residency Status</label>
+            <select id="tenant-is-active">
+              <option value="1">Active</option>
+              <option value="0">Deactivated</option>
+            </select>
+            <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
+              Deactivating marks the tenant as moved-out.
+            </small>
+          </div>
         </div>
 
         <!-- Initial Move-in Meter Readings -->

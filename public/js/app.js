@@ -118,6 +118,7 @@ const App = {
         email: document.getElementById('tenant-email').value.trim(),
         property_id: propIdVal ? parseInt(propIdVal, 10) : null,
         security_deposit: parseFloat(document.getElementById('tenant-deposit').value) || 0,
+        opening_arrear: parseFloat(document.getElementById('tenant-opening-arrear')?.value) || 0,
         move_in_date: document.getElementById('tenant-move-in').value,
         payment_upi: document.getElementById('tenant-payment-upi').value.trim(),
         payment_bank_name: document.getElementById('tenant-payment-bank-name').value.trim(),

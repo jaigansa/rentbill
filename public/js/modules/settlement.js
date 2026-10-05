@@ -32,9 +32,12 @@ export const Settlement = {
 
       const deposit = Number(tenant.security_deposit) || 0;
       const tenantBills = (bills || []).filter(b => b.tenant_id === tenant.id);
-      const pendingArrears = tenantBills.reduce((sum, b) => {
+      let pendingArrears = tenantBills.reduce((sum, b) => {
         return sum + (Number(b.balance_amount) || (Number(b.total_amount) - Number(b.paid_amount)) || 0);
       }, 0);
+      if (tenantBills.length === 0 && tenant.opening_arrear > 0) {
+        pendingArrears = Number(tenant.opening_arrear) || 0;
+      }
 
       // Populate Display Overview
       const curr = window.APP_CURRENCY || '₹';

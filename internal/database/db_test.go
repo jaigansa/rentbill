@@ -47,13 +47,14 @@ func TestTenantPreferredChannelAndQueries(t *testing.T) {
 		t.Fatalf("failed creating property: %v", err)
 	}
 
-	// 2. Create Tenant with SMS_RCS preferred channel
+	// 2. Create Tenant with SMS_RCS preferred channel and opening arrear
 	tenantID, err := db.CreateTenant(&database.Tenant{
 		Name:             "Vikram Kumar",
 		Phone:            "9876543210",
 		Email:            "vikram@example.com",
 		PropertyID:       &propID,
 		SecurityDeposit:  30000,
+		OpeningArrear:    2500.50,
 		MoveInDate:       "2026-01-01",
 		PreferredChannel: "SMS_RCS",
 		IsActive:         true,
@@ -62,7 +63,7 @@ func TestTenantPreferredChannelAndQueries(t *testing.T) {
 		t.Fatalf("failed creating tenant: %v", err)
 	}
 
-	// 3. Retrieve Tenant and verify PreferredChannel
+	// 3. Retrieve Tenant and verify PreferredChannel and OpeningArrear
 	retrieved, err := db.GetTenantByID(tenantID)
 	if err != nil {
 		t.Fatalf("failed retrieving tenant: %v", err)
@@ -70,12 +71,31 @@ func TestTenantPreferredChannelAndQueries(t *testing.T) {
 	if retrieved.PreferredChannel != "SMS_RCS" {
 		t.Errorf("expected preferred_channel to be 'SMS_RCS', got '%s'", retrieved.PreferredChannel)
 	}
+	if retrieved.OpeningArrear != 2500.50 {
+		t.Errorf("expected opening_arrear to be 2500.50, got '%f'", retrieved.OpeningArrear)
+	}
+	if retrieved.TotalDue != 2500.50 {
+		t.Errorf("expected total_due to be 2500.50 before bills, got '%f'", retrieved.TotalDue)
+	}
 	if retrieved.Name != "Vikram Kumar" {
 		t.Errorf("expected name 'Vikram Kumar', got '%s'", retrieved.Name)
 	}
 
-	// 4. Update Tenant to WHATSAPP preferred channel
+	// 3b. Verify Tenant Ledger reflects opening arrear before any bills exist
+	preBillLedger, err := db.GetTenantLedger(tenantID)
+	if err != nil {
+		t.Fatalf("failed getting tenant ledger: %v", err)
+	}
+	if preBillLedger.CurrentBalance != 2500.50 {
+		t.Errorf("expected ledger current balance to be 2500.50, got %f", preBillLedger.CurrentBalance)
+	}
+	if len(preBillLedger.Entries) != 1 || preBillLedger.Entries[0].Debit != 2500.50 {
+		t.Errorf("expected 1 opening arrear entry in ledger, got %v", preBillLedger.Entries)
+	}
+
+	// 4. Update Tenant to WHATSAPP preferred channel and update opening arrear
 	retrieved.PreferredChannel = "WHATSAPP"
+	retrieved.OpeningArrear = 3000.00
 	if err := db.UpdateTenant(retrieved); err != nil {
 		t.Fatalf("failed updating tenant: %v", err)
 	}
@@ -86,6 +106,9 @@ func TestTenantPreferredChannelAndQueries(t *testing.T) {
 	}
 	if updated.PreferredChannel != "WHATSAPP" {
 		t.Errorf("expected preferred_channel to be 'WHATSAPP', got '%s'", updated.PreferredChannel)
+	}
+	if updated.OpeningArrear != 3000.00 {
+		t.Errorf("expected opening_arrear to be 3000.00, got '%f'", updated.OpeningArrear)
 	}
 
 	// 5. Create a Bill
