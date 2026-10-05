@@ -1,6 +1,20 @@
 // Share and Invoice formatting utilities with robust Mobile Share & in-app fallback
 
 const Share = {
+  // Format month string into readable text (e.g. '2026-09' -> 'September 2026')
+  formatMonth(monthStr) {
+    if (!monthStr) return '';
+    const str = String(monthStr).trim();
+    const match = str.match(/^(\d{4})-(\d{2})$/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const d = new Date(year, month, 1);
+      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    return str;
+  },
+
   // Convert number to Indian currency words format
   amountInWords(amount) {
     if (!amount || isNaN(amount) || amount <= 0) return 'Zero Rupees Only';
@@ -69,7 +83,7 @@ const Share = {
     }
     const payAmt = balanceNum > 0 ? balanceNum.toFixed(2) : totalNum.toFixed(2);
     const propName = (bill && bill.property_name) || (tenant && tenant.property_name) || 'RentBill';
-    const month = (bill && bill.billing_month) || '';
+    const month = this.formatMonth((bill && bill.billing_month) || '');
     const payee = encodeURIComponent(propName);
     const note = encodeURIComponent(`Rent ${month} ${propName}`.trim());
 
@@ -122,7 +136,7 @@ const Share = {
       `📄 *Bill No:* #${bill.bill_number}`,
       `👤 *Tenant:* ${bill.tenant_name}`,
       `🏢 *Unit:* ${bill.property_name}`,
-      `📅 *Month:* ${bill.billing_month}`,
+      `📅 *Month:* ${this.formatMonth(bill.billing_month)}`,
       `⏰ *Due Date:* ${bill.due_date}`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `📋 *CHARGES BREAKDOWN:*`,
@@ -217,7 +231,7 @@ const Share = {
     }
 
     if (isCompact) {
-      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${bill.billing_month}) is ${currency}${numFmt(bill.total_amount)}. Due: ${due}.`;
+      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${this.formatMonth(bill.billing_month)}) is ${currency}${numFmt(bill.total_amount)}. Due: ${due}.`;
       if (balance > 0 && balance !== bill.total_amount) {
         msg += ` Due Bal: ${currency}${numFmt(balance)}.`;
       }
@@ -227,7 +241,7 @@ const Share = {
     }
 
     const lines = [
-      `RENT NOTICE (${bill.billing_month})`,
+      `RENT NOTICE (${this.formatMonth(bill.billing_month)})`,
       `Tenant: ${bill.tenant_name}`,
       `Unit: ${bill.property_name}`,
       `Bill #: ${bill.bill_number}`,
@@ -271,7 +285,7 @@ const Share = {
   shareBill(bill) {
     if (!bill) return;
 
-    const title = `Rent Bill - ${bill.property_name} (${bill.billing_month})`;
+    const title = `Rent Bill - ${bill.property_name} (${this.formatMonth(bill.billing_month)})`;
     // Default to rich formatted bill text for mobile share sheet & WhatsApp
     const defaultText = this.buildBillText(bill);
     const shareData = { title: title, text: defaultText };
@@ -367,7 +381,7 @@ const Share = {
     if (btnEmail) {
       btnEmail.onclick = () => {
         const text = previewEl ? previewEl.value : fullText;
-        const subject = `Rent Bill for ${bill.property_name} - ${bill.billing_month}`;
+        const subject = `Rent Bill for ${bill.property_name} - ${this.formatMonth(bill.billing_month)}`;
         let email = bill.tenant_email || '';
         if (!email && window.App && Array.isArray(window.App.tenants)) {
           const t = window.App.tenants.find(item => item.id === bill.tenant_id);
@@ -552,7 +566,7 @@ const Share = {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Billing Month: ${bill.billing_month}`, width - 32, y);
+    ctx.fillText(`Billing Month: ${this.formatMonth(bill.billing_month)}`, width - 32, y);
 
     ctx.fillStyle = '#64748b';
     ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -678,7 +692,7 @@ const Share = {
     };
 
     // Draw line items
-    drawItemRow('Base House Rent', `Rent for ${bill.billing_month}`, `${curr}${numFmt(bill.base_rent)}`);
+    drawItemRow('Base House Rent', `Rent for ${this.formatMonth(bill.billing_month)}`, `${curr}${numFmt(bill.base_rent)}`);
 
     if (bill.electricity_amount > 0) {
       drawItemRow(
@@ -902,7 +916,7 @@ const Share = {
     const tenantName = (tenant && tenant.name) || (bill && bill.tenant_name) || 'Tenant';
     const propName = (tenant && tenant.property_name) || (bill && bill.property_name) || 'Rental Unit';
     const billNum = bill ? bill.bill_number : '';
-    const month = bill ? bill.billing_month : '';
+    const month = this.formatMonth(bill ? bill.billing_month : '');
     const due = bill ? bill.due_date : '';
     const totalNum = bill ? Number(bill.total_amount || 0) : 0;
     const paidNum = bill ? Number(bill.paid_amount || 0) : 0;

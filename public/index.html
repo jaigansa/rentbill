@@ -738,7 +738,10 @@
       </div>
 
       <!-- Modal Footer -->
-      <div class="modal-footer" style="display:flex; justify-content:flex-end;">
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <button type="button" class="btn btn-outline" id="btn-ledger-share-statement" title="Share full financial statement with tenant">
+          <i data-lucide="share-2" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Share Statement
+        </button>
         <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
       </div>
     </div>
@@ -922,6 +925,7 @@
           <div class="form-group">
             <label for="bill-month">Billing Month *</label>
             <input type="month" id="bill-month" required>
+            <div id="bill-month-text" style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-top:3px; min-height:1rem;"></div>
           </div>
           <div class="form-group">
             <label for="bill-due-date">Due Date *</label>

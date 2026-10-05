@@ -96,21 +96,43 @@ export const Utils = {
     })}`;
   },
 
+  formatMonth(monthStr) {
+    if (typeof Share !== 'undefined' && Share.formatMonth) {
+      return Share.formatMonth(monthStr);
+    }
+    if (!monthStr) return '';
+    const str = String(monthStr).trim();
+    const match = str.match(/^(\d{4})-(\d{2})$/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10) - 1;
+      const d = new Date(year, month, 1);
+      return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    return str;
+  },
+
   setupDateBadge() {
     const today = new Date();
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     const badge = document.getElementById('current-date-badge');
     if (badge) badge.textContent = today.toLocaleDateString(undefined, options);
 
-    // Set default month & due date in form
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    // Billing Month default: previous month (YYYY-MM)
+    const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevYyyy = prevMonthDate.getFullYear();
+    const prevMm = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
     const billMonth = document.getElementById('bill-month');
-    if (billMonth) billMonth.value = `${yyyy}-${mm}`;
+    if (billMonth) {
+      billMonth.value = `${prevYyyy}-${prevMm}`;
+      const monthText = document.getElementById('bill-month-text');
+      if (monthText) monthText.textContent = this.formatMonth(billMonth.value);
+    }
 
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    const dueDateStr = nextWeek.toISOString().split('T')[0];
+    // Due Date default: 5th day of current month (YYYY-MM-05)
+    const currYyyy = today.getFullYear();
+    const currMm = String(today.getMonth() + 1).padStart(2, '0');
+    const dueDateStr = `${currYyyy}-${currMm}-05`;
     const dueDateInput = document.getElementById('bill-due-date');
     if (dueDateInput) dueDateInput.value = dueDateStr;
 

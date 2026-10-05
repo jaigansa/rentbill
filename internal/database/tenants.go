@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"time"
 )
 
 func (db *DB) CreateTenant(t *Tenant) (int64, error) {
@@ -341,7 +342,7 @@ func (db *DB) GetTenantLedger(tenantID int64) (*TenantLedger, error) {
 				BillID:         b.ID,
 				BillNumber:     b.BillNumber,
 				BillingMonth:   b.BillingMonth,
-				Description:    fmt.Sprintf("Rent Bill - %s (%s)", b.BillingMonth, b.BillNumber),
+				Description:    fmt.Sprintf("Rent Bill - %s (%s)", formatBillingMonth(b.BillingMonth), b.BillNumber),
 				Debit:          b.TotalAmount,
 				Credit:         0,
 				RunningBalance: runningBalance,
@@ -395,4 +396,13 @@ func (db *DB) GetTenantLedger(tenantID int64) (*TenantLedger, error) {
 	ledger.CurrentBalance = math.Round(runningBalance*100) / 100
 
 	return ledger, nil
+}
+
+func formatBillingMonth(month string) string {
+	if len(month) == 7 && month[4] == '-' {
+		if t, err := time.Parse("2006-01", month); err == nil {
+			return t.Format("January 2006")
+		}
+	}
+	return month
 }

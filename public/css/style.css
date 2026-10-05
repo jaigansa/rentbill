@@ -651,6 +651,16 @@ textarea:hover::-webkit-scrollbar-thumb {
   gap: 10px;
 }
 
+.bills-list .app-card {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.bills-list .app-card:hover {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: var(--shadow-md);
+}
+
 .app-card:active {
   border-color: var(--primary);
 }

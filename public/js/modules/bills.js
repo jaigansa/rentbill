@@ -116,6 +116,16 @@ export const Bills = {
       if (inp) inp.addEventListener('input', updateCalc);
     });
 
+    const billMonthInput = document.getElementById('bill-month');
+    if (billMonthInput) {
+      const updateMonthText = () => {
+        const monthText = document.getElementById('bill-month-text');
+        if (monthText) monthText.textContent = this.formatMonth(billMonthInput.value);
+      };
+      billMonthInput.addEventListener('input', updateMonthText);
+      billMonthInput.addEventListener('change', updateMonthText);
+    }
+
     // When tenant selection changes in bill modal, auto populate unit, base rent, rate, and last meter readings
     document.getElementById('bill-tenant-select')?.addEventListener('change', async (e) => {
       const tenantId = e.target.value;
@@ -167,7 +177,7 @@ export const Bills = {
           if (badgeBalance) badgeBalance.style.display = 'inline-block';
           if (hintBalance) {
             hintBalance.textContent = lastBill.has_prior_bill
-              ? `Carried forward from ${lastBill.billing_month || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`
+              ? `Carried forward from ${this.formatMonth(lastBill.billing_month) || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`
               : `Carried forward from opening arrears: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`;
           }
         } else {
@@ -200,17 +210,21 @@ export const Bills = {
             badgeElec.style.display = 'inline-block';
             badgeElec.textContent = 'Carried Over';
           }
-          if (hintElec) hintElec.textContent = `From ${lastBill.billing_month || 'last bill'}: ${pElecVal} units`;
+          if (hintElec) hintElec.textContent = `From ${this.formatMonth(lastBill.billing_month) || 'last bill'}: ${pElecVal} units`;
           if (badgeWater) {
             badgeWater.style.display = 'inline-block';
             badgeWater.textContent = 'Carried Over';
           }
-          if (hintWater) hintWater.textContent = `From ${lastBill.billing_month || 'last bill'}: ${pWaterVal} units`;
+          if (hintWater) hintWater.textContent = `From ${this.formatMonth(lastBill.billing_month) || 'last bill'}: ${pWaterVal} units`;
 
           // If suggested next month is available and this is a new bill, auto populate month
           if (lastBill.suggested_next_month && !document.getElementById('bill-id').value) {
             const billMonth = document.getElementById('bill-month');
-            if (billMonth) billMonth.value = lastBill.suggested_next_month;
+            if (billMonth) {
+              billMonth.value = lastBill.suggested_next_month;
+              const monthText = document.getElementById('bill-month-text');
+              if (monthText) monthText.textContent = this.formatMonth(billMonth.value);
+            }
           }
         } else if (lastBill.source === 'tenant_initial' && (pElecVal > 0 || pWaterVal > 0)) {
           if (badgeElec) {
@@ -277,7 +291,7 @@ export const Bills = {
         <div class="card-top">
           <div>
             <div class="card-title">${b.tenant_name} <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(${b.property_name})</span></div>
-            <div class="card-subtitle">Bill #${b.bill_number} • ${b.billing_month} • Due ${b.due_date}</div>
+            <div class="card-subtitle">Bill #${b.bill_number} • ${this.formatMonth(b.billing_month)} • Due ${b.due_date}</div>
           </div>
           <div class="card-top-right">
             <span class="badge ${badgeClass}">${b.status}</span>
@@ -327,6 +341,20 @@ export const Bills = {
   },
 
   attachBillActionListeners(container) {
+    container.querySelectorAll('.app-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.card-dropdown') || e.target.closest('button') || e.target.closest('a')) {
+          return;
+        }
+        const viewBtn = card.querySelector('.btn-action-view');
+        if (viewBtn) {
+          const billId = viewBtn.getAttribute('data-bill-id');
+          if (billId) this.showInvoice(billId);
+        }
+      });
+      card.style.cursor = 'pointer';
+    });
+
     container.querySelectorAll('.btn-action-view').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -383,7 +411,7 @@ export const Bills = {
         const bill = App.bills.find(b => b.id === billId);
         const billNo = bill ? bill.bill_number : `#${billId}`;
         const tenantName = bill ? bill.tenant_name : 'Tenant';
-        const month = bill && bill.billing_month ? bill.billing_month : '';
+        const month = bill && bill.billing_month ? this.formatMonth(bill.billing_month) : '';
         const curr = window.APP_CURRENCY || '₹';
         const amount = bill ? `${curr}${bill.total_amount.toFixed(2)}` : '';
 
@@ -449,7 +477,7 @@ export const Bills = {
           </div>
           <div class="inv-meta-section">
             <div class="inv-badge-wrap">${statusBadge}</div>
-            <div class="inv-period">Billing Month: <strong>${b.billing_month}</strong></div>
+            <div class="inv-period">Billing Month: <strong>${this.formatMonth(b.billing_month)}</strong></div>
             <div class="inv-due">Due Date: <strong>${b.due_date}</strong></div>
           </div>
         </div>
@@ -480,7 +508,7 @@ export const Bills = {
           <tbody>
             <tr>
               <td><strong>Base House Rent</strong></td>
-              <td>Rent for ${b.billing_month}</td>
+              <td>Rent for ${this.formatMonth(b.billing_month)}</td>
               <td class="num">${curr}${numFmt(b.base_rent)}</td>
             </tr>
             ${b.electricity_amount > 0 ? `
@@ -695,6 +723,8 @@ export const Bills = {
       document.getElementById('bill-property-display').value = b.property_name || '';
       document.getElementById('bill-property-id').value = b.property_id || '';
       document.getElementById('bill-month').value = b.billing_month || '';
+      const monthText = document.getElementById('bill-month-text');
+      if (monthText) monthText.textContent = this.formatMonth(b.billing_month);
       document.getElementById('bill-due-date').value = b.due_date || '';
       document.getElementById('bill-base-rent').value = b.base_rent || 0;
 

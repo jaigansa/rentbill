@@ -98,6 +98,22 @@ export const UI = {
     document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
       if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
     });
+    document.getElementById('btn-ledger-share-statement')?.addEventListener('click', async () => {
+      const tenantId = this.currentLedgerTenantId;
+      if (!tenantId) return;
+      const tenant = (this.tenants || []).find(t => t.id == tenantId) || await API.getTenant(tenantId).catch(() => null);
+      if (this.currentLedgerData) {
+        Share.shareStatement(this.currentLedgerData, tenant);
+      } else {
+        try {
+          const ledger = await API.getTenantLedger(tenantId);
+          this.currentLedgerData = ledger;
+          Share.shareStatement(ledger, tenant);
+        } catch (e) {
+          this.toast(e.message, 'error');
+        }
+      }
+    });
     document.getElementById('btn-invoice-download-img')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-invoice-download-img');
       if (!this.currentBillForInvoice) return;

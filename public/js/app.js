@@ -521,14 +521,7 @@ const App = {
         const sortedMonths = Array.from(setMonths).sort().reverse();
 
         monthSelect.innerHTML = sortedMonths.map(m => {
-          let displayMonth = m;
-          try {
-            const parts = m.split('-');
-            if (parts.length === 2) {
-              const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
-              displayMonth = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-            }
-          } catch (e) {}
+          const displayMonth = this.formatMonth(m);
           return `<option value="${m}" ${m === currentSelected ? 'selected' : ''}>${displayMonth}</option>`;
         }).join('') + `<option value="ALL" ${currentSelected === 'ALL' ? 'selected' : ''}>All Time</option>`;
       }
