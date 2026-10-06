@@ -59,10 +59,6 @@ export const Tenants = {
     const zoomInitials = document.getElementById('avatar-zoom-initials');
     const zoomName = document.getElementById('avatar-zoom-name');
     const zoomUnit = document.getElementById('avatar-zoom-unit');
-    const zoomCall = document.getElementById('avatar-zoom-call');
-    const zoomSms = document.getElementById('avatar-zoom-sms');
-    const zoomEmail = document.getElementById('avatar-zoom-email');
-    const zoomEdit = document.getElementById('avatar-zoom-edit');
 
     if (zoomName) zoomName.textContent = t.name || 'Tenant Profile';
     if (zoomUnit) {
@@ -91,31 +87,6 @@ export const Tenants = {
         zoomInitials.style.border = `4px solid ${color.border}`;
         zoomInitials.textContent = initials;
       }
-    }
-
-    const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
-    const email = (t.email || '').trim();
-
-    if (zoomCall) {
-      zoomCall.href = cleanPhone ? `tel:${cleanPhone}` : 'javascript:void(0)';
-      zoomCall.classList.toggle('disabled', !cleanPhone);
-      zoomCall.title = cleanPhone ? `Call ${t.name}` : 'No phone number';
-    }
-    if (zoomSms) {
-      zoomSms.href = cleanPhone ? `sms:${cleanPhone}` : 'javascript:void(0)';
-      zoomSms.classList.toggle('disabled', !cleanPhone);
-      zoomSms.title = cleanPhone ? `SMS / Text ${t.name}` : 'No phone number';
-    }
-    if (zoomEmail) {
-      zoomEmail.href = email ? `mailto:${email}` : 'javascript:void(0)';
-      zoomEmail.classList.toggle('disabled', !email);
-      zoomEmail.title = email ? `Email ${t.name} (${email})` : 'No email added';
-    }
-    if (zoomEdit) {
-      zoomEdit.onclick = () => {
-        this.closeModal('modal-avatar-zoom');
-        this.editTenant(t.id);
-      };
     }
 
     this.openModal('modal-avatar-zoom');
