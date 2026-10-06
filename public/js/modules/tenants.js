@@ -297,10 +297,7 @@ export const Tenants = {
               <span class="tenant-contact-name" title="${t.name}">${t.name}</span>
             </div>
             <div class="tenant-contact-sub">
-              <span class="tenant-contact-unit">
-                <i data-lucide="home" style="width:12px; height:12px;"></i>
-                ${t.property_name || 'Unassigned'}
-              </span>
+              <span class="tenant-contact-unit">${t.property_name || 'Unassigned'}</span>
             </div>
           </div>
           <div class="tenant-contact-header-right">
