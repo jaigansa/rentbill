@@ -3,8 +3,8 @@ package database_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+	"time"
 
 	"rentbill/internal/database"
 )
@@ -117,7 +117,7 @@ func TestTenantPreferredChannelAndQueries(t *testing.T) {
 		TenantID:             tenantID,
 		PropertyID:           propID,
 		BillingMonth:         "Sep 2026",
-		DueDate:              "2026-10-05",
+		DueDate:              time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
 		BaseRent:             12000,
 		PrevElectricityMeter: 100,
 		CurrElectricityMeter: 150,
@@ -256,30 +256,8 @@ func TestEmailBackupConfig(t *testing.T) {
 		t.Errorf("saved config mismatch: %+v", saved)
 	}
 
-	// Auto backup check should run without error when conditions are met or not due
-	if err := db.RunAutoBackupCheck(); err != nil {
-		// Won't actually connect to fake credentials, but check logic itself should not crash
-	}
 }
 
-func TestBuildEmailMIME(t *testing.T) {
-	dummyAttachment := []byte(`{"test": "data"}`)
-	msg := database.BuildEmailMIME("sender@test.com", "recipient@test.com", "Test Subject", "<p>Hello</p>", "backup.json", dummyAttachment)
-	msgStr := string(msg)
-
-	if !strings.Contains(msgStr, "From: sender@test.com") {
-		t.Errorf("MIME missing From header")
-	}
-	if !strings.Contains(msgStr, "To: recipient@test.com") {
-		t.Errorf("MIME missing To header")
-	}
-	if !strings.Contains(msgStr, "filename=\"backup.json\"") {
-		t.Errorf("MIME missing attachment filename")
-	}
-	if !strings.Contains(msgStr, "multipart/mixed") {
-		t.Errorf("MIME missing multipart content type")
-	}
-}
 func TestMultipleCoOccupants(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
@@ -365,7 +343,7 @@ func TestBillDiscount(t *testing.T) {
 		TenantID:       tenantID,
 		PropertyID:     propID,
 		BillingMonth:   "2026-10",
-		DueDate:        "2026-11-05",
+		DueDate:        time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
 		BaseRent:       15000,
 		DiscountAmount: 1500,
 		DiscountReason: "Early bird concession",

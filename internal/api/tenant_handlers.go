@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"rentbill/internal/database"
@@ -47,7 +48,10 @@ func (s *Server) HandleTenants(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleTenantDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Path[len("/api/tenants/"):]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/tenants/") {
+		idStr = r.URL.Path[len("/api/tenants/"):]
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid tenant ID")
@@ -90,7 +94,11 @@ func (s *Server) HandleTenantDetail(w http.ResponseWriter, r *http.Request) {
 
 // Latest tenant bill helper (for auto-carrying over meter readings & suggesting next month)
 func (s *Server) HandleTenantLastBill(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Path[len("/api/tenants/") : len(r.URL.Path)-len("/last-bill")]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/tenants/") {
+		path := strings.TrimPrefix(r.URL.Path, "/api/tenants/")
+		idStr = strings.TrimSuffix(path, "/last-bill")
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid tenant ID")
@@ -149,7 +157,11 @@ func (s *Server) HandleTenantLedger(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
-	idStr := r.URL.Path[len("/api/tenants/") : len(r.URL.Path)-len("/ledger")]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/tenants/") {
+		path := strings.TrimPrefix(r.URL.Path, "/api/tenants/")
+		idStr = strings.TrimSuffix(path, "/ledger")
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid tenant ID")

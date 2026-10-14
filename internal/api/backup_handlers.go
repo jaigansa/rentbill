@@ -3,10 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"rentbill/internal/backup"
 	"rentbill/internal/database"
 )
 
@@ -104,7 +104,7 @@ func (s *Server) HandleBackupEmailSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.db.SendEmailBackup(cfg); err != nil {
+	if err := backup.SendEmailBackup(s.db, cfg); err != nil {
 		sendError(w, http.StatusInternalServerError, "Failed sending backup email: "+err.Error())
 		return
 	}
@@ -157,7 +157,7 @@ func (s *Server) HandleBackupEmailTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := database.TestSMTP(cfg); err != nil {
+	if err := backup.TestSMTP(cfg); err != nil {
 		sendError(w, http.StatusBadRequest, "Connection failed: "+err.Error())
 		return
 	}
@@ -170,25 +170,5 @@ func (s *Server) HandleBackupEmailTest(w http.ResponseWriter, r *http.Request) {
 
 // StartAutoBackupScheduler begins background execution of scheduled backup checks
 func (s *Server) StartAutoBackupScheduler(stopChan <-chan struct{}) {
-	go func() {
-		// Run initial check 5 seconds after startup
-		time.Sleep(5 * time.Second)
-		if err := s.db.RunAutoBackupCheck(); err != nil {
-			log.Printf("⚠️ Initial auto-backup check failed: %v", err)
-		}
-
-		ticker := time.NewTicker(30 * time.Minute)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				if err := s.db.RunAutoBackupCheck(); err != nil {
-					log.Printf("⚠️ Auto-backup check failed: %v", err)
-				}
-			case <-stopChan:
-				return
-			}
-		}
-	}()
+	backup.StartAutoBackupScheduler(s.db, stopChan)
 }

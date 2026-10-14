@@ -8,6 +8,10 @@ build:
 run:
 	go run .
 
+# Run tests
+test:
+	go test -v ./...
+
 # Cross-compile for Windows (creates rentbill.exe)
 windows:
 	GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o rentbill.exe .
@@ -18,4 +22,4 @@ mac:
 
 # Clean build artifacts
 clean:
-	rm -f rentbill rentbill.exe rentbill-darwin rentbill.db
+	rm -f rentbill rentbill.exe rentbill-darwin

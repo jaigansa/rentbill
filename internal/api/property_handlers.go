@@ -47,7 +47,10 @@ func (s *Server) HandleProperties(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandlePropertyDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Path[len("/api/properties/"):]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/properties/") {
+		idStr = r.URL.Path[len("/api/properties/"):]
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid property ID")
@@ -89,9 +92,11 @@ func (s *Server) HandlePropertyDetail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandlePropertyExpenses(w http.ResponseWriter, r *http.Request) {
-	// Path is /api/properties/{id}/expenses
-	path := r.URL.Path[len("/api/properties/"):]
-	idStr := strings.TrimSuffix(path, "/expenses")
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/properties/") {
+		path := r.URL.Path[len("/api/properties/"):]
+		idStr = strings.TrimSuffix(path, "/expenses")
+	}
 	propID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid property ID")

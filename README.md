@@ -90,17 +90,20 @@ make mac
 rentbill/
 ├── main.go               # Main entry point & embedded web server
 ├── Makefile              # Build & cross-compilation shortcuts
+├── rentbill.sh           # Unified Linux systemd service manager CLI
 ├── internal/
-│   ├── api/              # REST API handlers and routing
+│   ├── api/              # REST API handlers, routing & middleware
 │   └── database/         # SQLite schema, queries, calculations & email backup
-└── public/               # Pure HTML, CSS, and Vanilla JS (Embedded directly into the binary)
+└── public/               # Pure HTML, CSS, and Vanilla JS (Embedded directly into binary)
     ├── index.html        # Single-page mobile app shell
     ├── manifest.json     # PWA manifest
     ├── css/
     │   ├── style.css     # Mobile-first CSS design tokens
     │   └── print.css     # Clean invoice print stylesheet
+    ├── fonts/            # Self-hosted WOFF2 fonts (offline-ready)
     └── js/
         ├── api.js        # Backend API client
-        ├── app.js        # View controller and state management
-        └── share.js      # WhatsApp bill formatter & print engine
+        ├── app.js        # Core view coordinator & state orchestrator
+        ├── share.js      # WhatsApp bill formatter & UPI QR generator
+        └── modules/      # Modular ES modules (auth, bills, tenants, ui, etc.)
 ```

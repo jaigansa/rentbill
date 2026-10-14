@@ -136,7 +136,7 @@ do_remove() {
 
     echo ""
     echo -e "${GREEN}✅ RentBill service removed successfully!${NC}"
-    echo "   (Your database 'rentbill.db' and project files were kept safe)"
+    echo "   (Your database in 'data/' and project files were kept safe)"
 }
 
 do_status() {

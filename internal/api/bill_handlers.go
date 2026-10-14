@@ -62,7 +62,10 @@ func (s *Server) HandleBills(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleBillDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Path[len("/api/bills/"):]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/bills/") {
+		idStr = r.URL.Path[len("/api/bills/"):]
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid bill ID")

@@ -41,9 +41,24 @@ func main() {
 		port = "8080"
 	}
 
-	// Initialize SQLite Database in user directory or current folder
-	dbDir := "."
-	dbPath := filepath.Join(dbDir, "rentbill.db")
+	dbPath := os.Getenv("RENTBILL_DB_PATH")
+	for i, arg := range os.Args[1:] {
+		if (arg == "--db-path" || arg == "-db-path") && i+2 < len(os.Args) {
+			dbPath = os.Args[i+2]
+		}
+	}
+	if dbPath == "" {
+		if _, err := os.Stat("data/rentbill.db"); err == nil {
+			dbPath = "data/rentbill.db"
+		} else if _, err := os.Stat("rentbill.db"); err == nil {
+			dbPath = "rentbill.db"
+		} else {
+			dbPath = filepath.Join("data", "rentbill.db")
+		}
+	}
+	if dir := filepath.Dir(dbPath); dir != "." && dir != "" {
+		_ = os.MkdirAll(dir, 0755)
+	}
 	log.Printf("📂 Opening SQLite database: %s", dbPath)
 
 	db, err := database.InitDB(dbPath)

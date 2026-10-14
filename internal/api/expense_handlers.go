@@ -35,7 +35,10 @@ func (s *Server) HandleExpenses(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HandleExpenseDetail(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Path[len("/api/expenses/"):]
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/expenses/") {
+		idStr = r.URL.Path[len("/api/expenses/"):]
+	}
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		sendError(w, http.StatusBadRequest, "Invalid expense ID")

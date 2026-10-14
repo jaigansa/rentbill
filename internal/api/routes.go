@@ -29,53 +29,40 @@ func (s *Server) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
-	// Protected API Endpoints
-	mux.HandleFunc("/api/dashboard", server.AuthMiddleware(server.HandleDashboard))
+	// Protected API Endpoints (Go 1.22+ Method & Path Routing)
+	mux.HandleFunc("GET /api/dashboard", server.AuthMiddleware(server.HandleDashboard))
 
 	mux.HandleFunc("/api/properties", server.AuthMiddleware(server.HandleProperties))
-	mux.HandleFunc("/api/properties/", server.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/expenses") {
-			server.HandlePropertyExpenses(w, r)
-			return
-		}
-		server.HandlePropertyDetail(w, r)
-	}))
+	mux.HandleFunc("GET /api/properties/{id}/expenses", server.AuthMiddleware(server.HandlePropertyExpenses))
+	mux.HandleFunc("/api/properties/{id}", server.AuthMiddleware(server.HandlePropertyDetail))
 
 	mux.HandleFunc("/api/expenses", server.AuthMiddleware(server.HandleExpenses))
-	mux.HandleFunc("/api/expenses/", server.AuthMiddleware(server.HandleExpenseDetail))
+	mux.HandleFunc("/api/expenses/{id}", server.AuthMiddleware(server.HandleExpenseDetail))
 
 	mux.HandleFunc("/api/tenants", server.AuthMiddleware(server.HandleTenants))
-	mux.HandleFunc("/api/tenants/", server.AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/last-bill") {
-			server.HandleTenantLastBill(w, r)
-			return
-		}
-		if strings.HasSuffix(r.URL.Path, "/ledger") {
-			server.HandleTenantLedger(w, r)
-			return
-		}
-		server.HandleTenantDetail(w, r)
-	}))
+	mux.HandleFunc("GET /api/tenants/{id}/last-bill", server.AuthMiddleware(server.HandleTenantLastBill))
+	mux.HandleFunc("GET /api/tenants/{id}/ledger", server.AuthMiddleware(server.HandleTenantLedger))
+	mux.HandleFunc("/api/tenants/{id}", server.AuthMiddleware(server.HandleTenantDetail))
 
 	mux.HandleFunc("/api/bills", server.AuthMiddleware(server.HandleBills))
-	mux.HandleFunc("/api/bills/", server.AuthMiddleware(server.HandleBillDetail))
+	mux.HandleFunc("/api/bills/{id}", server.AuthMiddleware(server.HandleBillDetail))
 
 	mux.HandleFunc("/api/payments", server.AuthMiddleware(server.HandlePayments))
 	mux.HandleFunc("/api/settings", server.AuthMiddleware(server.HandleSettings))
 
 	// Backup, Restore & Reports (Protected)
-	mux.HandleFunc("/api/backup/export", server.AuthMiddleware(server.HandleBackupExport))
-	mux.HandleFunc("/api/backup/restore", server.AuthMiddleware(server.HandleBackupRestore))
-	mux.HandleFunc("/api/backup/email-send", server.AuthMiddleware(server.HandleBackupEmailSend))
-	mux.HandleFunc("/api/backup/email-test", server.AuthMiddleware(server.HandleBackupEmailTest))
-	mux.HandleFunc("/api/reports/csv", server.AuthMiddleware(server.HandleReportsCSV))
+	mux.HandleFunc("GET /api/backup/export", server.AuthMiddleware(server.HandleBackupExport))
+	mux.HandleFunc("POST /api/backup/restore", server.AuthMiddleware(server.HandleBackupRestore))
+	mux.HandleFunc("POST /api/backup/email-send", server.AuthMiddleware(server.HandleBackupEmailSend))
+	mux.HandleFunc("POST /api/backup/email-test", server.AuthMiddleware(server.HandleBackupEmailTest))
+	mux.HandleFunc("GET /api/reports/csv", server.AuthMiddleware(server.HandleReportsCSV))
 
 	// 4-Digit Security PIN & Auth Endpoints
-	mux.HandleFunc("/api/auth/status", server.HandleAuthStatus)
-	mux.HandleFunc("/api/auth/verify", server.HandleAuthVerify)
-	mux.HandleFunc("/api/auth/logout", server.HandleAuthLogout)
-	mux.HandleFunc("/api/auth/set-pin", server.HandleAuthSetPIN)
-	mux.HandleFunc("/api/auth/disable-pin", server.HandleAuthDisablePIN)
+	mux.HandleFunc("GET /api/auth/status", server.HandleAuthStatus)
+	mux.HandleFunc("POST /api/auth/verify", server.HandleAuthVerify)
+	mux.HandleFunc("POST /api/auth/logout", server.HandleAuthLogout)
+	mux.HandleFunc("POST /api/auth/set-pin", server.HandleAuthSetPIN)
+	mux.HandleFunc("POST /api/auth/disable-pin", server.HandleAuthDisablePIN)
 
 	// Embedded Static Frontend Handler
 	fileServer := http.FileServer(http.FS(publicFS))
