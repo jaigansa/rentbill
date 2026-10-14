@@ -63,9 +63,9 @@ export const UI = {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
 
-        const confirmMsg = `Are you sure you want to restore the database from "${file.name}"?\n\n` +
-          `• Existing database records will be replaced with this backup.\n` +
-          `• It is recommended to download a current backup first.`;
+        const confirmMsg = `Are you sure you want to import the database from "${file.name}"?\n\n` +
+          `• Existing database records will be replaced with this imported file.\n` +
+          `• It is recommended to export your current database first.`;
         if (!confirm(confirmMsg)) {
           inputRestoreBackup.value = '';
           return;
@@ -77,18 +77,18 @@ export const UI = {
             try {
               const json = JSON.parse(event.target.result);
               const res = await API.restoreBackup(json);
-              this.toast(res.message || 'Database restored successfully!');
+              this.toast(res.message || 'Database imported successfully!');
               this.closeModal('modal-settings');
               inputRestoreBackup.value = '';
               await this.refreshAll();
             } catch (err) {
-              alert('Restore failed: ' + err.message);
+              alert('Import failed: ' + err.message);
               inputRestoreBackup.value = '';
             }
           };
           reader.readAsText(file);
         } catch (err) {
-          alert('Error reading backup file: ' + err.message);
+          alert('Error reading database file: ' + err.message);
           inputRestoreBackup.value = '';
         }
       });

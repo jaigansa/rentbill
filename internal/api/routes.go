@@ -50,10 +50,9 @@ func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
 	mux.HandleFunc("/api/payments", server.AuthMiddleware(server.HandlePayments))
 	mux.HandleFunc("/api/settings", server.AuthMiddleware(server.HandleSettings))
 
-	// Backup, Restore & Reports (Protected)
+	// Database Import & Export (Protected)
 	mux.HandleFunc("GET /api/backup/export", server.AuthMiddleware(server.HandleBackupExport))
 	mux.HandleFunc("POST /api/backup/restore", server.AuthMiddleware(server.HandleBackupRestore))
-	mux.HandleFunc("GET /api/reports/csv", server.AuthMiddleware(server.HandleReportsCSV))
 
 	// 4-Digit Security PIN & Auth Endpoints
 	mux.HandleFunc("GET /api/auth/status", server.HandleAuthStatus)

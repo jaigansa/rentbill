@@ -23,7 +23,7 @@ func (s *Server) HandleBackupExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filename := fmt.Sprintf("rentbill-backup-%s.json", time.Now().Format("2006-01-02-150405"))
+	filename := fmt.Sprintf("rentbill-database-%s.json", time.Now().Format("2006-01-02-150405"))
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	_ = json.NewEncoder(w).Encode(backup)
@@ -47,7 +47,7 @@ func (s *Server) HandleBackupRestore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSON(w, http.StatusOK, map[string]interface{}{
-		"message":          "Database restored successfully",
+		"message":          "Database imported successfully",
 		"properties_count": len(data.Properties),
 		"tenants_count":    len(data.Tenants),
 		"bills_count":      len(data.Bills),

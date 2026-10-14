@@ -17,7 +17,7 @@ It includes a built-in embedded frontend (Pure HTML, CSS, Vanilla JS), an embedd
 - **WhatsApp Bill Sharing**: One-tap pre-formatted bill breakdown ready to send directly to your tenant's WhatsApp.
 - **Receipt & PDF Invoices**: Clean, printable invoices formatted with `@media print`.
 - **Payment Tracking**: Record Cash, UPI, and Bank payments with balance and overdue status tracking.
-- **Offline Backup & Restore**: One-click complete database snapshot export (.json) and instant restore across devices.
+- **Import & Export Database**: One-click complete database export (.json) and instant restore across devices.
 
 ---
 

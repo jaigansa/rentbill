@@ -1473,35 +1473,16 @@
         </div>
 
         <div class="settings-section">
-          <h4><i data-lucide="file-spreadsheet" style="vertical-align:-2px; margin-right:4px; color:var(--success);"></i> Export Reports (Excel / CSV)</h4>
-          <p class="settings-desc">Download clean spreadsheets with full breakdowns for tax, bookkeeping, and accounting.</p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <a href="/api/reports/csv?type=bills" class="btn btn-secondary btn-sm" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
-              <i data-lucide="download"></i> Bills & Dues (.csv)
-            </a>
-            <a href="/api/reports/csv?type=payments" class="btn btn-secondary btn-sm" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
-              <i data-lucide="download"></i> Payments (.csv)
-            </a>
-            <a href="/api/reports/csv?type=expenses" class="btn btn-secondary btn-sm" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
-              <i data-lucide="download"></i> Expenses (.csv)
-            </a>
-            <a href="/api/reports/csv?type=meters" class="btn btn-secondary btn-sm" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
-              <i data-lucide="download"></i> Meter Log (.csv)
-            </a>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h4><i data-lucide="database" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Offline Backup & Restore</h4>
-          <p class="settings-desc">Export your entire system (properties, tenants, bills, payments, expenses) as a single portable file, or restore on another device.</p>
+          <h4><i data-lucide="database" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Import & Export Database</h4>
+          <p class="settings-desc">Export your complete database (properties, tenants, bills, payments, expenses) as a portable JSON file, or import and restore data on any device.</p>
           <div style="display:flex; flex-direction:column; gap:8px;">
             <a href="/api/backup/export" class="btn btn-secondary btn-block" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
-              <i data-lucide="download-cloud"></i> Export Full Database Backup (.json)
+              <i data-lucide="download-cloud"></i> Export Database (.json)
             </a>
             <div>
               <input type="file" id="input-restore-backup" accept=".json" style="display:none;">
               <button type="button" class="btn btn-secondary btn-block" id="btn-trigger-restore" style="display:flex; align-items:center; justify-content:center; gap:6px;">
-                <i data-lucide="upload-cloud"></i> Restore Database from Backup File
+                <i data-lucide="upload-cloud"></i> Import Database (.json)
               </button>
             </div>
           </div>
