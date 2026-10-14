@@ -9,6 +9,7 @@ import { Tenants } from './modules/tenants.js';
 import { Bills } from './modules/bills.js';
 import { Settlement } from './modules/settlement.js';
 import { Reminders } from './modules/reminders.js';
+import { Theme } from './modules/theme.js';
 
 window.APP_NAME = 'RentBill';
 window.APP_CURRENCY = '₹';
@@ -23,6 +24,7 @@ const App = {
   ...Bills,
   ...Settlement,
   ...Reminders,
+  ...Theme,
 
   // Root state properties
   activeTab: 'dashboard',
@@ -46,6 +48,7 @@ const App = {
   isVerifyingPIN: false,
 
   async init() {
+    this.initTheme();
     this.bindVisualViewport();
     this.setupDateBadge();
     this.bindNavigation();

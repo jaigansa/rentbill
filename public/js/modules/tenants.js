@@ -3,7 +3,10 @@ import { toast } from './utils.js';
 
 export const Tenants = {
   getAvatarColor(name) {
-    const colors = [
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+    const lightColors = [
       { bg: '#e8f0fe', text: '#1967d2', border: '#c2e7ff' }, // Blue
       { bg: '#fce8e6', text: '#c5221f', border: '#fad2cf' }, // Red
       { bg: '#fef7e0', text: '#b06000', border: '#feefc3' }, // Yellow/Amber
@@ -13,6 +16,19 @@ export const Tenants = {
       { bg: '#feefe3', text: '#af3a03', border: '#fedfc8' }, // Orange
       { bg: '#fce4ec', text: '#b80672', border: '#f8bbd0' }, // Pink
     ];
+
+    const darkColors = [
+      { bg: 'rgba(59, 130, 246, 0.22)', text: '#93c5fd', border: 'rgba(59, 130, 246, 0.45)' },
+      { bg: 'rgba(239, 68, 68, 0.22)', text: '#fca5a5', border: 'rgba(239, 68, 68, 0.45)' },
+      { bg: 'rgba(245, 158, 11, 0.22)', text: '#fcd34d', border: 'rgba(245, 158, 11, 0.45)' },
+      { bg: 'rgba(16, 185, 129, 0.22)', text: '#6ee7b7', border: 'rgba(16, 185, 129, 0.45)' },
+      { bg: 'rgba(168, 85, 247, 0.22)', text: '#d8b4fe', border: 'rgba(168, 85, 247, 0.45)' },
+      { bg: 'rgba(20, 184, 166, 0.22)', text: '#5eead4', border: 'rgba(20, 184, 166, 0.45)' },
+      { bg: 'rgba(249, 115, 22, 0.22)', text: '#fdba74', border: 'rgba(249, 115, 22, 0.45)' },
+      { bg: 'rgba(236, 72, 153, 0.22)', text: '#f472b6', border: 'rgba(236, 72, 153, 0.45)' },
+    ];
+
+    const colors = isDark ? darkColors : lightColors;
     if (!name) return colors[0];
     let hash = 0;
     for (let i = 0; i < name.length; i++) {

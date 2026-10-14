@@ -12,6 +12,24 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/print.css" media="print">
   <link rel="manifest" href="/manifest.json">
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('rb_theme') || 'system';
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = saved === 'dark' || (saved === 'system' && prefersDark);
+        if (isDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#090d16');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#2563eb');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -27,6 +45,9 @@
     <div class="top-actions">
       <button class="icon-btn" id="btn-lock-app" title="Lock App Now" aria-label="Lock App" style="display:none;">
         <i data-lucide="lock"></i>
+      </button>
+      <button class="icon-btn" id="btn-toggle-theme" title="Toggle Theme" aria-label="Toggle Theme">
+        <i data-lucide="moon" id="theme-toggle-icon"></i>
       </button>
       <button class="icon-btn" id="btn-open-settings" title="Settings" aria-label="Settings">
         <i data-lucide="settings"></i>
@@ -1445,6 +1466,18 @@
       <div class="settings-body">
         
         <div class="settings-section">
+          <h4><i data-lucide="palette" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Appearance &amp; Theme</h4>
+          <p class="settings-desc">Choose between Light mode, Dark mode, or follow your device system settings.</p>
+          <div class="form-group" style="margin-bottom:0;">
+            <select id="settings-theme-select">
+              <option value="system">Auto (System Default)</option>
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h4><i data-lucide="shield-check" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> App Security (4-Digit PIN Lock)</h4>
           <p class="settings-desc">Protect your rental figures and tenant records with a quick 4-digit PIN whenever the app is opened or backgrounded.</p>
           <div id="pin-settings-status" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:10px;">
@@ -1452,7 +1485,7 @@
               <i data-lucide="lock" style="width:16px; height:16px; color:var(--text-muted);" id="pin-status-icon"></i>
               <span style="font-size:0.85rem; font-weight:600;" id="pin-status-text">PIN Lock: Disabled</span>
             </div>
-            <span class="badge" id="pin-status-badge" style="background:#e2e8f0; color:#475569;">OFF</span>
+            <span class="badge badge-date" id="pin-status-badge">OFF</span>
           </div>
           <div style="display:flex; gap:8px;">
             <button type="button" class="btn btn-primary btn-sm" id="btn-open-pin-setup" style="flex:1;">
