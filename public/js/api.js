@@ -253,33 +253,6 @@ const API = {
       const err = await res.json().catch(() => ({ error: 'Restore failed' }));
       throw new Error(err.error || 'Restore failed');
     }
-    return res.json();
-  },
-
-  async sendEmailBackup(data = {}) {
-    const res = await this.fetchWithAuth('/api/backup/email-send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await res.json().catch(() => ({ error: 'Failed to send email backup' }));
-    if (!res.ok) {
-      throw new Error(result.error || 'Failed to send email backup');
-    }
-    return result;
-  },
-
-  async testEmailBackup(data = {}) {
-    const res = await this.fetchWithAuth('/api/backup/email-test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await res.json().catch(() => ({ error: 'Connection test failed' }));
-    if (!res.ok) {
-      throw new Error(result.error || 'Connection test failed');
-    }
-    return result;
   },
 
   // 4-Digit Security PIN & Session Auth

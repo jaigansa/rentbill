@@ -6,26 +6,16 @@ import (
 	"net/http"
 )
 
-// Settings Handlers (Email Backup / App Settings)
+// Settings Handlers (App Settings)
 func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		cfg := s.db.GetEmailBackupConfig()
 		currencySymbol := s.db.GetSetting("currency_symbol")
 		if currencySymbol == "" {
 			currencySymbol = "₹"
 		}
 		sendJSON(w, http.StatusOK, map[string]interface{}{
-			"currency_symbol":          currencySymbol,
-			"smtp_host":                cfg.Host,
-			"smtp_port":                cfg.Port,
-			"smtp_user":                cfg.User,
-			"smtp_pass":                cfg.Pass,
-			"smtp_to":                  cfg.To,
-			"auto_backup_enabled":      cfg.Enabled,
-			"auto_backup_interval":     cfg.Interval,
-			"last_backup_email_time":   cfg.LastSent,
-			"last_backup_email_status": cfg.LastStatus,
+			"currency_symbol": currencySymbol,
 		})
 
 	case http.MethodPost:
