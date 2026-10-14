@@ -292,10 +292,6 @@ const App = {
     try {
       const s = await API.getSettings();
       window.APP_CURRENCY = s.currency_symbol || '₹';
-
-      // Set current URL in settings
-      const lanUrl = document.getElementById('lan-current-url');
-      if (lanUrl) lanUrl.textContent = window.location.origin;
       this.refreshIcons();
     } catch (e) {
       console.error(e);

@@ -2,7 +2,7 @@
 
 RentBill is a modern, mobile-first rental management and billing web app packaged into a **single, portable Go binary**.
 
-It includes a built-in embedded frontend (Pure HTML, CSS, Vanilla JS), an embedded SQLite database (no CGO or external database required), automatic Wi-Fi / LAN IP detection for immediate access on mobile phones, WhatsApp bill sharing, and printable PDF receipts.
+It includes a built-in embedded frontend (Pure HTML, CSS, Vanilla JS), an embedded SQLite database (no CGO or external database required), WhatsApp bill sharing, and printable PDF receipts.
 
 ---
 
@@ -31,11 +31,9 @@ It includes a built-in embedded frontend (Pure HTML, CSS, Vanilla JS), an embedd
 When started, it outputs:
 ```
 ======================================================
-    🏠  RentBill Mobile Web Server Started!          
+    🏠  RentBill Server Started!                      
 ======================================================
-  • Local PC:     http://localhost:8080
-  • Mobile Wi-Fi: http://192.168.1.15:8080
-  (Open the Mobile Wi-Fi link on your phone browser)
+  • Web URL: http://localhost:8080
 ======================================================
 ```
 
@@ -61,9 +59,6 @@ Manage the app on Linux using the single unified script:
 # Follow live service logs
 ./rentbill.sh --logs
 ```
-
-### 3. Open on Your Phone
-Make sure your phone is connected to the same Wi-Fi network as your PC, then open the **Mobile Wi-Fi** URL in Safari, Chrome, or any mobile browser!
 
 ---
 

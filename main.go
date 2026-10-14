@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,21 +18,6 @@ import (
 
 //go:embed public/*
 var publicFS embed.FS
-
-func getLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return ""
-	}
-	for _, address := range addrs {
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return ""
-}
 
 func main() {
 	port := os.Getenv("PORT")
@@ -98,16 +82,10 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
-	localIP := getLocalIP()
-
 	fmt.Println("======================================================")
-	fmt.Println("    🏠  RentBill Mobile Web Server Started!          ")
+	fmt.Println("    🏠  RentBill Server Started!                      ")
 	fmt.Println("======================================================")
-	fmt.Printf("  • Local PC:     http://localhost:%s\n", port)
-	if localIP != "" {
-		fmt.Printf("  • Mobile Wi-Fi: http://%s:%s\n", localIP, port)
-		fmt.Println("  (Open the Mobile Wi-Fi link on your phone browser)")
-	}
+	fmt.Printf("  • Web URL: http://localhost:%s\n", port)
 	fmt.Println("======================================================")
 
 	// Graceful shutdown channel
