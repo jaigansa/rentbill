@@ -133,7 +133,7 @@ export const Settlement = {
       this.openModal('modal-vacant-calculation');
       this.refreshIcons();
     } catch (err) {
-      alert('Error opening Vacant Form: ' + err.message);
+      this.toast('Error opening Vacant Form: ' + err.message, 'error');
     }
   },
 
@@ -356,7 +356,7 @@ export const Settlement = {
   async completeVacantMoveOut() {
     const data = this.currentVacantCalcData;
     if (!data || !data.tenantId) {
-      alert('Missing tenant data');
+      this.toast('Missing tenant data', 'warning');
       return;
     }
 
@@ -432,7 +432,7 @@ export const Settlement = {
       this.closeModal('modal-vacant-calculation');
       await this.refreshAll();
     } catch (err) {
-      alert('Error during move-out: ' + err.message);
+      this.toast('Error during move-out: ' + err.message, 'error');
     } finally {
       const btn = document.getElementById('btn-vacant-confirm');
       if (btn) {

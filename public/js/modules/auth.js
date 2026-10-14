@@ -217,9 +217,83 @@ export const Auth = {
     const modalTitle = document.getElementById('pin-setup-modal-title');
     const btnSave = document.getElementById('btn-save-pin');
 
+    const resetPinValidation = () => {
+      newPinInput?.classList.remove('is-invalid', 'is-valid');
+      confirmPinInput?.classList.remove('is-invalid', 'is-valid');
+      const hintNew = document.getElementById('hint-new-pin');
+      const hintConfirm = document.getElementById('hint-confirm-pin');
+      if (hintNew) {
+        hintNew.className = 'form-inline-feedback';
+        hintNew.style.color = 'var(--text-muted)';
+        hintNew.textContent = 'Must be exactly 4 numbers (0-9).';
+      }
+      if (hintConfirm) {
+        hintConfirm.style.display = 'none';
+        hintConfirm.textContent = '';
+      }
+    };
+
+    const validatePins = () => {
+      const nPin = newPinInput ? newPinInput.value.trim() : '';
+      const cPin = confirmPinInput ? confirmPinInput.value.trim() : '';
+      const hintNew = document.getElementById('hint-new-pin');
+      const hintConfirm = document.getElementById('hint-confirm-pin');
+
+      if (nPin.length > 0) {
+        if (/^\d{4}$/.test(nPin)) {
+          newPinInput.classList.remove('is-invalid');
+          newPinInput.classList.add('is-valid');
+          if (hintNew) {
+            hintNew.className = 'form-inline-feedback feedback-success';
+            hintNew.textContent = '✓ Valid 4-digit numeric PIN';
+          }
+        } else {
+          newPinInput.classList.add('is-invalid');
+          newPinInput.classList.remove('is-valid');
+          if (hintNew) {
+            hintNew.className = 'form-inline-feedback feedback-danger';
+            hintNew.textContent = 'PIN must be exactly 4 digits (0-9)';
+          }
+        }
+      } else {
+        newPinInput?.classList.remove('is-invalid', 'is-valid');
+        if (hintNew) {
+          hintNew.className = 'form-inline-feedback';
+          hintNew.style.color = 'var(--text-muted)';
+          hintNew.textContent = 'Must be exactly 4 numbers (0-9).';
+        }
+      }
+
+      if (cPin.length > 0) {
+        if (hintConfirm) hintConfirm.style.display = 'block';
+        if (cPin === nPin && /^\d{4}$/.test(nPin)) {
+          confirmPinInput.classList.remove('is-invalid');
+          confirmPinInput.classList.add('is-valid');
+          if (hintConfirm) {
+            hintConfirm.className = 'form-inline-feedback feedback-success';
+            hintConfirm.textContent = '✓ PINs match';
+          }
+        } else {
+          confirmPinInput.classList.add('is-invalid');
+          confirmPinInput.classList.remove('is-valid');
+          if (hintConfirm) {
+            hintConfirm.className = 'form-inline-feedback feedback-danger';
+            hintConfirm.textContent = 'PINs do not match';
+          }
+        }
+      } else {
+        confirmPinInput?.classList.remove('is-invalid', 'is-valid');
+        if (hintConfirm) hintConfirm.style.display = 'none';
+      }
+    };
+
+    newPinInput?.addEventListener('input', validatePins);
+    confirmPinInput?.addEventListener('input', validatePins);
+
     if (btnOpenSetup) {
       btnOpenSetup.addEventListener('click', () => {
         if (formPin) formPin.reset();
+        resetPinValidation();
         if (currentPinGroup) {
           currentPinGroup.style.display = this.isPINEnabled ? 'block' : 'none';
         }
@@ -245,12 +319,14 @@ export const Auth = {
         const confirmPin = confirmPinInput ? confirmPinInput.value.trim() : '';
 
         if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-          alert('New PIN must be exactly 4 digits (0-9).');
+          this.toast('New PIN must be exactly 4 digits (0-9).', 'warning');
+          newPinInput?.focus();
           return;
         }
 
         if (newPin !== confirmPin) {
-          alert('New PIN and Confirm PIN do not match.');
+          this.toast('New PIN and Confirm PIN do not match.', 'warning');
+          confirmPinInput?.focus();
           return;
         }
 
@@ -260,9 +336,10 @@ export const Auth = {
           this.updatePINStatusUI(true);
           sessionStorage.setItem('rb_unlocked', 'true');
           this.closeModal('modal-pin-setup');
+          resetPinValidation();
           this.toast('4-Digit PIN enabled successfully!');
         } catch (err) {
-          alert(err.message || 'Failed configuring PIN');
+          this.toast(err.message || 'Failed configuring PIN', 'error');
         }
       });
     }
@@ -274,7 +351,7 @@ export const Auth = {
         const pin = prompt('Enter your current 4-Digit PIN to disable the lock:');
         if (pin === null) return;
         if (!pin || pin.length !== 4) {
-          alert('Please enter your 4-digit PIN.');
+          this.toast('Please enter your 4-digit PIN.', 'warning');
           return;
         }
 
@@ -285,7 +362,7 @@ export const Auth = {
           sessionStorage.removeItem('rb_unlocked');
           this.toast('PIN Lock has been disabled.');
         } catch (err) {
-          alert(err.message || 'Incorrect PIN. Could not disable.');
+          this.toast(err.message || 'Incorrect PIN. Could not disable.', 'error');
         }
       });
     }

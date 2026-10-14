@@ -66,6 +66,42 @@ const App = {
   bindForms() {
     this.bindTenantPhotoUpload?.();
 
+    // Live tenant phone format validation
+    const phoneInput = document.getElementById('tenant-phone');
+    if (phoneInput) {
+      phoneInput.addEventListener('input', () => {
+        const val = phoneInput.value.trim();
+        const hint = document.getElementById('hint-tenant-phone');
+        if (!val) {
+          phoneInput.classList.remove('is-invalid', 'is-valid');
+          if (hint) {
+            hint.style.display = 'none';
+            hint.textContent = '';
+          }
+          return;
+        }
+        const clean = val.replace(/[\s\-\(\)]/g, '');
+        const isValid = /^\+?[0-9]{7,15}$/.test(clean);
+        if (isValid) {
+          phoneInput.classList.remove('is-invalid');
+          phoneInput.classList.add('is-valid');
+          if (hint) {
+            hint.style.display = 'block';
+            hint.className = 'form-inline-feedback feedback-success';
+            hint.textContent = '✓ Valid phone format';
+          }
+        } else {
+          phoneInput.classList.add('is-invalid');
+          phoneInput.classList.remove('is-valid');
+          if (hint) {
+            hint.style.display = 'block';
+            hint.className = 'form-inline-feedback feedback-danger';
+            hint.textContent = 'Enter valid phone number (min 7 digits)';
+          }
+        }
+      });
+    }
+
     // Property Form (Create / Edit)
     document.getElementById('form-property')?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -94,7 +130,7 @@ const App = {
         e.target.reset();
         await this.refreshAll();
       } catch (err) {
-        alert('Error: ' + err.message);
+        this.toast('Error: ' + err.message, 'error');
       }
     });
 
@@ -150,7 +186,7 @@ const App = {
         if (coListEl) coListEl.innerHTML = '';
         await this.refreshAll();
       } catch (err) {
-        alert('Error: ' + err.message);
+        this.toast('Error: ' + err.message, 'error');
       }
     });
 
@@ -162,7 +198,7 @@ const App = {
       const propId = parseInt(document.getElementById('bill-property-id').value, 10);
 
       if (!propId) {
-        alert('Selected tenant has no assigned property unit.');
+        this.toast('Selected tenant has no assigned property unit.', 'warning');
         return;
       }
 
@@ -171,14 +207,16 @@ const App = {
       const prevElec = parseFloat(document.getElementById('bill-prev-meter').value) || 0;
       const currElec = parseFloat(document.getElementById('bill-curr-meter').value) || 0;
       if (currElec < prevElec) {
-        alert(`Current Electricity Meter reading (${currElec}) cannot be less than Previous reading (${prevElec}).`);
+        this.toast(`Current Electricity Meter reading (${currElec}) cannot be less than Previous reading (${prevElec}).`, 'warning');
+        document.getElementById('bill-curr-meter')?.focus();
         return;
       }
 
       const prevWater = parseFloat(document.getElementById('bill-prev-water-meter').value) || 0;
       const currWater = parseFloat(document.getElementById('bill-curr-water-meter').value) || 0;
       if (wType === 'METER' && currWater < prevWater) {
-        alert(`Current Water Meter reading (${currWater}) cannot be less than Previous reading (${prevWater}).`);
+        this.toast(`Current Water Meter reading (${currWater}) cannot be less than Previous reading (${prevWater}).`, 'warning');
+        document.getElementById('bill-curr-water-meter')?.focus();
         return;
       }
 
@@ -222,7 +260,7 @@ const App = {
           this.showInvoice(created.id);
         }
       } catch (err) {
-        alert('Error: ' + err.message);
+        this.toast('Error: ' + err.message, 'error');
       }
     });
 
@@ -247,7 +285,7 @@ const App = {
         await this.refreshAll();
         this.showInvoice(billId);
       } catch (err) {
-        alert('Error: ' + err.message);
+        this.toast('Error: ' + err.message, 'error');
       }
     });
 
@@ -282,7 +320,7 @@ const App = {
           this.openPropertyExpenses(this.currentExpensesPropertyId);
         }
       } catch (err) {
-        alert('Error saving expense: ' + err.message);
+        this.toast('Error saving expense: ' + err.message, 'error');
       }
     });
 

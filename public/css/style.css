@@ -1299,6 +1299,51 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--text-muted) !important;
 }
 
+/* Live Inline Form Validation Styles */
+.form-group input.is-invalid,
+.form-group select.is-invalid,
+.form-group textarea.is-invalid {
+  border-color: var(--danger) !important;
+  background-color: var(--danger-light) !important;
+}
+
+.form-group input.is-invalid:focus,
+.form-group select.is-invalid:focus,
+.form-group textarea.is-invalid:focus {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+.form-group input.is-valid,
+.form-group select.is-valid,
+.form-group textarea.is-valid {
+  border-color: var(--success) !important;
+}
+
+.form-group input.is-valid:focus,
+.form-group select.is-valid:focus,
+.form-group textarea.is-valid:focus {
+  border-color: var(--success) !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+}
+
+.form-inline-feedback {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  margin-top: 3px;
+  line-height: 1.3;
+  transition: all 0.15s ease;
+}
+
+.form-inline-feedback.feedback-danger {
+  color: var(--danger) !important;
+}
+
+.form-inline-feedback.feedback-success {
+  color: var(--success) !important;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

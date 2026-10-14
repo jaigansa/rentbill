@@ -82,13 +82,13 @@ export const UI = {
               inputRestoreBackup.value = '';
               await this.refreshAll();
             } catch (err) {
-              alert('Import failed: ' + err.message);
+              this.toast('Import failed: ' + err.message, 'error');
               inputRestoreBackup.value = '';
             }
           };
           reader.readAsText(file);
         } catch (err) {
-          alert('Error reading database file: ' + err.message);
+          this.toast('Error reading database file: ' + err.message, 'error');
           inputRestoreBackup.value = '';
         }
       });
@@ -134,7 +134,7 @@ export const UI = {
           btn.disabled = false;
           btn.innerHTML = originalHtml;
           if (window.lucide) window.lucide.createIcons();
-          alert('Failed generating image: ' + err.message);
+          this.toast('Failed generating image: ' + err.message, 'error');
         }
       } else {
         Share.downloadReceiptImage(this.currentBillForInvoice);

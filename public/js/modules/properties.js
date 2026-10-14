@@ -144,7 +144,7 @@ export const Properties = {
 
       this.openModal('modal-property');
     } catch (err) {
-      alert('Error: ' + err.message);
+      this.toast('Error: ' + err.message, 'error');
     }
   },
 
@@ -169,7 +169,7 @@ export const Properties = {
           this.toast('Property deleted successfully');
           await this.refreshAll();
         } catch (err) {
-          alert('Error deleting property: ' + err.message);
+          this.toast('Error deleting property: ' + err.message, 'error');
         }
       }
     });
@@ -522,7 +522,7 @@ export const Properties = {
     try {
       const ex = await API.getPropertyExpenses(this.currentExpensesPropertyId).then(list => list.find(e => e.id == expenseId));
       if (!ex) {
-        alert('Expense not found');
+        this.toast('Expense not found', 'warning');
         return;
       }
 
@@ -540,7 +540,7 @@ export const Properties = {
 
       this.openModal('modal-expense');
     } catch (err) {
-      alert('Error: ' + err.message);
+      this.toast('Error: ' + err.message, 'error');
     }
   },
 
@@ -559,7 +559,7 @@ export const Properties = {
             this.openPropertyExpenses(this.currentExpensesPropertyId);
           }
         } catch (err) {
-          alert('Error deleting expense: ' + err.message);
+          this.toast('Error deleting expense: ' + err.message, 'error');
         }
       }
     });

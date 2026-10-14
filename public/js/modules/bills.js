@@ -69,11 +69,17 @@ export const Bills = {
 
       // Electricity validation & calculation
       const warnElec = document.getElementById('warn-curr-elec');
-      if (warnElec) {
-        if (currElecMeter.value !== '' && cElec < pElec) {
-          warnElec.style.display = 'block';
+      if (currElecMeter.value !== '' && cElec < pElec) {
+        if (warnElec) warnElec.style.display = 'block';
+        currElecMeter.classList.add('is-invalid');
+        currElecMeter.classList.remove('is-valid');
+      } else {
+        if (warnElec) warnElec.style.display = 'none';
+        currElecMeter.classList.remove('is-invalid');
+        if (currElecMeter.value !== '' && cElec >= pElec) {
+          currElecMeter.classList.add('is-valid');
         } else {
-          warnElec.style.display = 'none';
+          currElecMeter.classList.remove('is-valid');
         }
       }
 
@@ -90,11 +96,17 @@ export const Bills = {
         const wRate = parseFloat(waterRate.value) || 0;
 
         const warnWater = document.getElementById('warn-curr-water');
-        if (warnWater) {
-          if (currWaterMeter.value !== '' && cWater < pWater) {
-            warnWater.style.display = 'block';
+        if (currWaterMeter.value !== '' && cWater < pWater) {
+          if (warnWater) warnWater.style.display = 'block';
+          currWaterMeter.classList.add('is-invalid');
+          currWaterMeter.classList.remove('is-valid');
+        } else {
+          if (warnWater) warnWater.style.display = 'none';
+          currWaterMeter.classList.remove('is-invalid');
+          if (currWaterMeter.value !== '' && cWater >= pWater) {
+            currWaterMeter.classList.add('is-valid');
           } else {
-            warnWater.style.display = 'none';
+            currWaterMeter.classList.remove('is-valid');
           }
         }
 
@@ -431,7 +443,7 @@ export const Bills = {
               this.toast('Bill deleted');
               await this.refreshAll();
             } catch (err) {
-              alert('Error: ' + err.message);
+              this.toast('Error: ' + err.message, 'error');
             }
           }
         });
@@ -639,7 +651,7 @@ export const Bills = {
       this.openModal('modal-invoice');
       this.refreshIcons();
     } catch (e) {
-      alert('Error: ' + e.message);
+      this.toast('Error: ' + e.message, 'error');
     }
   },
 
@@ -662,7 +674,7 @@ export const Bills = {
     document.getElementById('bill-water-subtotal').textContent = `${window.APP_CURRENCY}0.00`;
     document.getElementById('bill-calculated-total').textContent = `${window.APP_CURRENCY}0.00`;
 
-    // Reset carryover hints & warnings
+    // Reset carryover hints, warnings & validation classes
     document.getElementById('badge-elec-meter-source')?.setAttribute('style', 'display:none;');
     document.getElementById('badge-water-meter-source')?.setAttribute('style', 'display:none;');
     document.getElementById('badge-prev-balance')?.setAttribute('style', 'display:none;');
@@ -673,6 +685,8 @@ export const Bills = {
     document.getElementById('warn-curr-water')?.setAttribute('style', 'display:none;');
     document.getElementById('btn-unlock-prev-elec')?.setAttribute('style', 'display:none;');
     document.getElementById('btn-unlock-prev-water')?.setAttribute('style', 'display:none;');
+    document.getElementById('bill-curr-meter')?.classList.remove('is-invalid', 'is-valid');
+    document.getElementById('bill-curr-water-meter')?.classList.remove('is-invalid', 'is-valid');
 
     const prevElec = document.getElementById('bill-prev-meter');
     if (prevElec) {
@@ -695,7 +709,7 @@ export const Bills = {
       document.getElementById('bill-id').value = b.id;
       document.getElementById('modal-bill-title').textContent = `Edit Bill #${b.bill_number}`;
 
-      // Reset carryover hints & warnings for edit
+      // Reset carryover hints, warnings & validation classes for edit
       document.getElementById('badge-elec-meter-source')?.setAttribute('style', 'display:none;');
       document.getElementById('badge-water-meter-source')?.setAttribute('style', 'display:none;');
       document.getElementById('badge-prev-balance')?.setAttribute('style', 'display:none;');
@@ -706,6 +720,8 @@ export const Bills = {
       document.getElementById('warn-curr-water')?.setAttribute('style', 'display:none;');
       document.getElementById('btn-unlock-prev-elec')?.setAttribute('style', 'display:none;');
       document.getElementById('btn-unlock-prev-water')?.setAttribute('style', 'display:none;');
+      document.getElementById('bill-curr-meter')?.classList.remove('is-invalid', 'is-valid');
+      document.getElementById('bill-curr-water-meter')?.classList.remove('is-invalid', 'is-valid');
 
       const prevElec = document.getElementById('bill-prev-meter');
       if (prevElec) {
@@ -756,7 +772,7 @@ export const Bills = {
       document.getElementById('bill-base-rent').dispatchEvent(new Event('input'));
       this.openModal('modal-bill');
     } catch (err) {
-      alert('Error: ' + err.message);
+      this.toast('Error: ' + err.message, 'error');
     }
   },
 
@@ -776,7 +792,7 @@ export const Bills = {
       this.openModal('modal-payment');
       this.refreshIcons();
     } catch (e) {
-      alert('Error: ' + e.message);
+      this.toast('Error: ' + e.message, 'error');
     }
   }
 };

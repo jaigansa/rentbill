@@ -1,4 +1,5 @@
 // Tenants Controller: Tenant CRUD, Co-occupants, Long Press Expand, Ledger
+import { toast } from './utils.js';
 
 export const Tenants = {
   getAvatarColor(name) {
@@ -125,7 +126,7 @@ export const Tenants = {
       if (!file) return;
 
       if (!file.type.startsWith('image/')) {
-        alert('Please choose an image file (JPEG, PNG, WebP).');
+        toast('Please choose an image file (JPEG, PNG, WebP).', 'warning');
         return;
       }
 
@@ -586,6 +587,13 @@ export const Tenants = {
     }
     if (btnRemove) btnRemove.style.display = 'none';
 
+    document.getElementById('tenant-phone')?.classList.remove('is-invalid', 'is-valid');
+    const phoneHint = document.getElementById('hint-tenant-phone');
+    if (phoneHint) {
+      phoneHint.style.display = 'none';
+      phoneHint.textContent = '';
+    }
+
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
     this.refreshIcons();
@@ -598,6 +606,12 @@ export const Tenants = {
       document.getElementById('modal-tenant-title').textContent = 'Edit Tenant';
       document.getElementById('tenant-name').value = t.name;
       document.getElementById('tenant-phone').value = t.phone;
+      document.getElementById('tenant-phone')?.classList.remove('is-invalid', 'is-valid');
+      const phoneHint = document.getElementById('hint-tenant-phone');
+      if (phoneHint) {
+        phoneHint.style.display = 'none';
+        phoneHint.textContent = '';
+      }
       document.getElementById('tenant-email').value = t.email || '';
 
       // Populate photo preview
@@ -665,7 +679,7 @@ export const Tenants = {
       this.openModal('modal-tenant');
       this.refreshIcons();
     } catch (err) {
-      alert('Error: ' + err.message);
+      this.toast('Error: ' + err.message, 'error');
     }
   },
 
@@ -688,7 +702,7 @@ export const Tenants = {
           this.toast('Tenant deleted successfully');
           await this.refreshAll();
         } catch (err) {
-          alert('Error deleting tenant: ' + err.message);
+          this.toast('Error deleting tenant: ' + err.message, 'error');
         }
       }
     });
@@ -711,7 +725,7 @@ export const Tenants = {
       this.toast(`Tenant ${tenantName} reactivated`);
       await this.refreshAll();
     } catch (err) {
-      alert('Error reactivating tenant: ' + err.message);
+      this.toast('Error reactivating tenant: ' + err.message, 'error');
     }
   },
 
