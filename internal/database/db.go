@@ -17,6 +17,9 @@ func InitDB(dataSourceName string) (*DB, error) {
 		return nil, fmt.Errorf("error opening db: %w", err)
 	}
 
+	// Single connection pool to prevent SQLite table/database lock collisions in pure Go
+	db.SetMaxOpenConns(1)
+
 	// Performance pragmas for SQLite
 	pragmas := []string{
 		"PRAGMA journal_mode = WAL;",
@@ -186,4 +189,3 @@ func createTables(db *sql.DB) error {
 	}
 	return nil
 }
-

@@ -419,4 +419,3 @@ func TestSessionLifecycleAndPIN(t *testing.T) {
 		t.Errorf("expected PIN to be disabled")
 	}
 }
-

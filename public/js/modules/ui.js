@@ -35,6 +35,25 @@ export const UI = {
     document.getElementById('btn-quick-add-property')?.addEventListener('click', () => this.openPropertyModal());
     document.getElementById('btn-new-property-tab')?.addEventListener('click', () => this.openPropertyModal());
     document.getElementById('btn-open-settings')?.addEventListener('click', () => this.openSettingsModal());
+    document.getElementById('btn-lan-share')?.addEventListener('click', () => this.openLanShareModal());
+    document.getElementById('btn-copy-lan-url')?.addEventListener('click', () => {
+      const input = document.getElementById('lan-share-url-input');
+      if (input && input.value) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(input.value).then(() => {
+            this.showToast('Copied Wi-Fi URL to clipboard!', 'success');
+          }).catch(() => {
+            input.select();
+            document.execCommand('copy');
+            this.showToast('Copied Wi-Fi URL to clipboard!', 'success');
+          });
+        } else {
+          input.select();
+          document.execCommand('copy');
+          this.showToast('Copied Wi-Fi URL to clipboard!', 'success');
+        }
+      }
+    });
     document.getElementById('btn-prop-add-expense')?.addEventListener('click', () => {
       if (this.currentExpensesPropertyId) {
         this.openAddExpenseModal(this.currentExpensesPropertyId);
@@ -359,5 +378,65 @@ export const UI = {
 
     this.openModal('modal-action-sheet');
     this.refreshIcons();
+  },
+
+  async openLanShareModal() {
+    this.openModal('modal-lan-share');
+    const badge = document.getElementById('lan-share-badge');
+    const qrContainer = document.getElementById('lan-share-qrcode');
+    const urlInput = document.getElementById('lan-share-url-input');
+    const hint = document.getElementById('lan-share-inactive-hint');
+    const instructions = document.getElementById('lan-share-instructions');
+
+    if (qrContainer) qrContainer.innerHTML = '<span style="color:var(--text-muted); font-size:12px;">Loading Wi-Fi details...</span>';
+
+    try {
+      const info = await API.getNetworkInfo();
+      const port = info.port || 8080;
+      let targetUrl = info.local_url;
+      if (info.lan_urls && info.lan_urls.length > 0) {
+        targetUrl = info.lan_urls[0];
+      }
+
+      if (urlInput) urlInput.value = targetUrl || window.location.href;
+
+      if (info.lan_shared) {
+        if (badge) {
+          badge.className = 'badge badge-success';
+          badge.style.background = '#10b981';
+          badge.style.color = '#ffffff';
+          badge.innerHTML = `<i data-lucide="wifi" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"></i> Wi-Fi Sharing Active (Port ${port})`;
+        }
+        if (hint) hint.style.display = 'none';
+        if (instructions) instructions.textContent = 'Scan with your mobile camera while connected to the same Wi-Fi network.';
+      } else {
+        if (badge) {
+          badge.className = 'badge badge-warning';
+          badge.style.background = '#f59e0b';
+          badge.style.color = '#ffffff';
+          badge.innerHTML = `<i data-lucide="shield-alert" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"></i> Loopback Only (Port ${port})`;
+        }
+        if (hint) hint.style.display = 'block';
+        if (instructions) instructions.textContent = 'Desktop loopback URL shown. Run with "-share" to allow Wi-Fi phone access.';
+      }
+
+      // Render clean QR code
+      if (qrContainer) {
+        qrContainer.innerHTML = '';
+        if (typeof QRCode !== 'undefined' && targetUrl) {
+          new QRCode(qrContainer, {
+            text: targetUrl,
+            width: 168,
+            height: 168,
+            colorDark: '#0f172a',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+        }
+      }
+      this.refreshIcons();
+    } catch (err) {
+      if (qrContainer) qrContainer.innerHTML = `<span style="color:#ef4444; font-size:12px;">Failed to load network info: ${err.message}</span>`;
+    }
   }
 };

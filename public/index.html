@@ -15,6 +15,16 @@
   <script>
     (function() {
       try {
+        // Securely capture ephemeral local app token
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          sessionStorage.setItem('rb_app_token', token);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (e) {}
+
+      try {
         const saved = localStorage.getItem('rb_theme') || 'system';
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const isDark = saved === 'dark' || (saved === 'system' && prefersDark);
@@ -43,6 +53,9 @@
       </div>
     </div>
     <div class="top-actions">
+      <button class="icon-btn" id="btn-lan-share" title="Connect Phone (Wi-Fi)" aria-label="Connect Phone">
+        <i data-lucide="smartphone"></i>
+      </button>
       <button class="icon-btn" id="btn-lock-app" title="Lock App Now" aria-label="Lock App" style="display:none;">
         <i data-lucide="lock"></i>
       </button>
@@ -1551,6 +1564,49 @@
           <button type="submit" class="btn btn-primary" id="btn-save-pin">Save & Enable PIN</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Connect Phone via Wi-Fi / Local Network Sharing -->
+  <div class="modal" id="modal-lan-share">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i data-lucide="smartphone" style="vertical-align:-2px; margin-right:6px;"></i> Connect Phone (Wi-Fi)</h3>
+        <button class="modal-close" data-close="modal-lan-share">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px 20px 24px;">
+        <div id="lan-share-status-wrap" style="margin-bottom:14px; text-align:center;">
+          <span id="lan-share-badge" class="badge" style="padding:6px 14px; font-size:13px; font-weight:600; border-radius:20px;">
+            Checking status...
+          </span>
+        </div>
+
+        <div id="lan-share-qrcode-container" style="display:flex; justify-content:center; align-items:center; margin:16px auto; padding:16px; background:#ffffff; border-radius:12px; width:200px; height:200px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <div id="lan-share-qrcode"></div>
+        </div>
+
+        <p id="lan-share-instructions" style="text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+          Scan with your phone camera while connected to the same Wi-Fi network.
+        </p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-muted);">Direct Mobile URL:</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="lan-share-url-input" readonly style="font-size:12px; font-family:monospace; background:var(--bg-subtle, #f3f4f6); cursor:text; flex:1;" onclick="this.select();">
+            <button type="button" class="btn btn-secondary" id="btn-copy-lan-url" style="white-space:nowrap; padding:0 12px; font-size:13px;">
+              <i data-lucide="copy" style="width:14px; height:14px; vertical-align:-2px;"></i> Copy
+            </button>
+          </div>
+        </div>
+
+        <div id="lan-share-inactive-hint" style="display:none; padding:12px 14px; background:rgba(234, 179, 8, 0.12); border:1px solid rgba(234, 179, 8, 0.4); border-radius:8px; font-size:12px; line-height:1.45; color:var(--text-main);">
+          ⚠️ <strong>Local Loopback Only:</strong> LAN sharing is currently inactive. Run RentBill with <code>./rentbill -share</code> (or <code>make share</code>) to enable mobile access across your Wi-Fi network.
+        </div>
+
+        <div class="modal-footer" style="padding:0; margin-top:16px; border:none; display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary" data-close="modal-lan-share">Close</button>
+        </div>
+      </div>
     </div>
   </div>
 

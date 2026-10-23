@@ -27,26 +27,60 @@ print_banner() {
 
 usage() {
     print_banner
-    echo "Usage: $0 [OPTION]"
+    echo "Usage: $0 [OPTION] [FLAGS]"
     echo ""
     echo "Options:"
-    echo "  --build      Compile the application binary from source"
-    echo "  --install    Install and start RentBill as a background systemd user service"
-    echo "  --update     Rebuild binary and restart the running systemd service"
-    echo "  --remove     Stop, disable, and remove the systemd service"
-    echo "  --status     Check current status of the background service"
-    echo "  --logs       Follow live logs from the service"
-    echo "  --help       Show this help message"
+    echo "  --build              Compile the application binary from source"
+    echo "  --install [--share]  Install and start RentBill as an auto-starting systemd user service"
+    echo "                       (Include --share to allow mobile phone Wi-Fi access on boot)"
+    echo "  --desktop [--share]  Create a Linux desktop application shortcut (app menu launcher)"
+    echo "  --update  [--share]  Rebuild binary and restart the running systemd service"
+    echo "  --remove             Stop, disable, and remove the systemd service"
+    echo "  --status             Check current status of the background service"
+    echo "  --logs               Follow live logs from the service"
+    echo "  --help               Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0 --install --share   # Run as background service with Wi-Fi mobile access enabled"
+    echo "  $0 --desktop --share   # Create desktop app launcher with Wi-Fi sharing"
     echo ""
 }
 
+ensure_go() {
+    if command -v go >/dev/null 2>&1; then
+        return 0
+    fi
+    # Search common Go install locations
+    local candidate_paths=(
+        "/usr/local/go/bin"
+        "${HOME}/go/bin"
+        "${HOME}/.local/share/mise/shims"
+        "${HOME}/.asdf/shims"
+        "${HOME}/.nix-profile/bin"
+    )
+    for p in "${candidate_paths[@]}"; do
+        if [ -x "${p}/go" ]; then
+            export PATH="${p}:${PATH}"
+            return 0
+        fi
+    done
+    # Search for Go toolchain in module cache if present
+    local tc
+    tc=$(find "${HOME}/go/pkg/mod/golang.org/toolchain"*"/bin" -name "go" -type f -perm /111 2>/dev/null | head -n 1)
+    if [ -n "$tc" ]; then
+        export PATH="$(dirname "$tc"):${PATH}"
+        return 0
+    fi
+    return 1
+}
+
 do_build() {
-    echo -e "${YELLOW}🔨 Building '${APP_NAME}' binary...${NC}"
-    if ! command -v go >/dev/null 2>&1; then
+    echo -e "${YELLOW}🔨 Building '${APP_NAME}' pure Go binary (CGO_ENABLED=0)...${NC}"
+    if ! ensure_go; then
         echo -e "${RED}❌ Error: 'go' is not installed or not in PATH.${NC}"
         exit 1
     fi
-    (cd "${SCRIPT_DIR}" && go build -ldflags="-s -w" -o "${APP_NAME}" .)
+    (cd "${SCRIPT_DIR}" && CGO_ENABLED=0 go build -ldflags="-s -w" -o "${APP_NAME}" .)
     chmod +x "${SCRIPT_DIR}/${APP_NAME}"
     echo -e "${GREEN}✅ Build successful: ${SCRIPT_DIR}/${APP_NAME}${NC}"
 }
@@ -64,6 +98,12 @@ do_install() {
     echo -e "${YELLOW}⚙️  Configuring user systemd service...${NC}"
     mkdir -p "${USER_SYSTEMD_DIR}"
 
+    local exec_args="-server -port 8080"
+    if [[ "$*" == *"--share"* ]] || [[ "$*" == *"-share"* ]] || [[ "$*" == *"--lan"* ]] || [[ "$*" == *"-lan"* ]]; then
+        exec_args="${exec_args} -share"
+        echo -e "${GREEN}📡 Local Network (Wi-Fi) sharing enabled in service${NC}"
+    fi
+
     cat <<EOF > "${SERVICE_FILE}"
 [Unit]
 Description=RentBill Rental Management Service
@@ -72,7 +112,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=${SCRIPT_DIR}
-ExecStart=${SCRIPT_DIR}/${APP_NAME}
+ExecStart=${SCRIPT_DIR}/${APP_NAME} ${exec_args}
 Restart=on-failure
 RestartSec=5s
 
@@ -94,13 +134,59 @@ EOF
     echo -e "${GREEN}✅ RentBill installed and running successfully!${NC}"
     echo "  • Status: $0 --status"
     echo "  • Logs:   $0 --logs"
-    echo "  • Access: http://localhost:8080"
+    echo "  • Local:  http://localhost:8080"
+    if [[ "${exec_args}" == *"-share"* ]]; then
+        echo "  • Wi-Fi:  Accessible to mobile phones on the same Wi-Fi network"
+    fi
+}
+
+do_desktop() {
+    print_banner
+    echo -e "${YELLOW}🖥️  Installing Linux desktop application launcher...${NC}"
+    local app_dir="${HOME}/.local/share/applications"
+    mkdir -p "${app_dir}"
+
+    # Ensure binary exists or build it
+    if [ ! -f "${SCRIPT_DIR}/${APP_NAME}" ]; then
+        echo "Binary not found. Initiating build..."
+        do_build
+    fi
+
+    local bin_args=""
+    if [[ "$*" == *"--share"* ]] || [[ "$*" == *"-share"* ]] || [[ "$*" == *"--lan"* ]] || [[ "$*" == *"-lan"* ]]; then
+        bin_args=" -share"
+        echo -e "${GREEN}📡 Wi-Fi sharing will be active when launched from desktop menu${NC}"
+    fi
+
+    local desktop_file="${app_dir}/rentbill.desktop"
+    cat <<EOF > "${desktop_file}"
+[Desktop Entry]
+Name=RentBill
+GenericName=Rental & Billing Manager
+Comment=Manage tenants, utility meter calculations, and rent receipts
+Exec=${SCRIPT_DIR}/${APP_NAME}${bin_args}
+Icon=${SCRIPT_DIR}/public/favicon.svg
+Terminal=false
+Type=Application
+Categories=Office;Finance;Utility;
+Keywords=rent;bill;tenant;property;finance;
+StartupNotify=true
+EOF
+
+    chmod +x "${desktop_file}"
+    echo -e "${GREEN}✅ Desktop launcher created: ${desktop_file}${NC}"
+    echo "   You can now launch RentBill directly from your application launcher (Rofi, Wofi, GNOME, etc.)"
 }
 
 do_update() {
     print_banner
     echo -e "${YELLOW}🔄 Updating RentBill...${NC}"
     do_build
+
+    if [[ "$*" == *"--share"* ]] || [[ "$*" == *"-share"* ]]; then
+        do_install "$@"
+        return
+    fi
 
     if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
         echo "🔁 Restarting background service..."
@@ -152,10 +238,13 @@ case "$1" in
         do_build
         ;;
     --install)
-        do_install
+        do_install "$@"
+        ;;
+    --desktop)
+        do_desktop "$@"
         ;;
     --update)
-        do_update
+        do_update "$@"
         ;;
     --remove)
         do_remove

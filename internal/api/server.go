@@ -8,11 +8,33 @@ import (
 )
 
 type Server struct {
-	db *database.DB
+	db            *database.DB
+	LocalAppToken string
+	AllowRemote   bool
+	StaticPort    int
+	LANURLs       []string
+	IsLANShared   bool
 }
 
 func NewServer(db *database.DB) *Server {
-	return &Server{db: db}
+	return &Server{
+		db:      db,
+		LANURLs: []string{},
+	}
+}
+
+func (s *Server) SetLocalAppToken(token string) {
+	s.LocalAppToken = token
+}
+
+func (s *Server) SetAllowRemote(allow bool) {
+	s.AllowRemote = allow
+}
+
+func (s *Server) SetNetworkInfo(port int, lanURLs []string, isShared bool) {
+	s.StaticPort = port
+	s.LANURLs = lanURLs
+	s.IsLANShared = isShared
 }
 
 // JSON Helper functions

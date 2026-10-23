@@ -133,7 +133,7 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 
 	// Calculate collection rate percentage
 	if summary.TotalBilled > 0 {
-		summary.CollectionRate = math.Round((summary.TotalCollected / summary.TotalBilled) * 1000) / 10
+		summary.CollectionRate = math.Round((summary.TotalCollected/summary.TotalBilled)*1000) / 10
 		if summary.CollectionRate > 100 {
 			summary.CollectionRate = 100
 		}

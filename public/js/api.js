@@ -12,6 +12,15 @@ const API = {
         if (!options.headers['Authorization']) options.headers['Authorization'] = `Bearer ${token}`;
       }
     }
+    // Attach local GUI app security token if available
+    const appToken = sessionStorage.getItem('rb_app_token');
+    if (appToken) {
+      if (options.headers instanceof Headers) {
+        if (!options.headers.has('X-RentBill-Token')) options.headers.set('X-RentBill-Token', appToken);
+      } else {
+        if (!options.headers['X-RentBill-Token']) options.headers['X-RentBill-Token'] = appToken;
+      }
+    }
     // Ensure cookies are included
     if (!options.credentials) {
       options.credentials = 'same-origin';
@@ -28,6 +37,12 @@ const API = {
       }
     }
     return res;
+  },
+
+  async getNetworkInfo() {
+    const res = await this.fetchWithAuth('/api/network/info');
+    if (!res.ok) throw new Error('Failed to load network info');
+    return res.json();
   },
 
   async getDashboard(month = '') {
@@ -263,10 +278,9 @@ const API = {
   },
 
   async verifyPIN(pin) {
-    const res = await fetch('/api/auth/verify', {
+    const res = await this.fetchWithAuth('/api/auth/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
       body: JSON.stringify({ pin: pin })
     });
     if (!res.ok) {

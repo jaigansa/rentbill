@@ -1,0 +1,6 @@
+.git
+data/*.db*
+rentbill
+rentbill.exe
+rentbill-*
+.env

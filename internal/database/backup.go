@@ -7,14 +7,14 @@ import (
 )
 
 type BackupData struct {
-	Version      string            `json:"version"`
-	ExportedAt   string            `json:"exported_at"`
-	Properties   []Property        `json:"properties"`
-	Tenants      []Tenant          `json:"tenants"`
-	Bills        []Bill            `json:"bills"`
-	Payments     []Payment         `json:"payments"`
-	Expenses     []Expense         `json:"expenses"`
-	AppSettings  map[string]string `json:"app_settings"`
+	Version     string            `json:"version"`
+	ExportedAt  string            `json:"exported_at"`
+	Properties  []Property        `json:"properties"`
+	Tenants     []Tenant          `json:"tenants"`
+	Bills       []Bill            `json:"bills"`
+	Payments    []Payment         `json:"payments"`
+	Expenses    []Expense         `json:"expenses"`
+	AppSettings map[string]string `json:"app_settings"`
 }
 
 func (db *DB) GetAllExpenses() ([]Expense, error) {
