@@ -175,15 +175,6 @@ export const Properties = {
     });
   },
 
-  openAddTenantForProperty(propertyId) {
-    this.closeModal('modal-unit-detail');
-    this.openTenantModal();
-    const propSelect = document.getElementById('tenant-prop-id');
-    if (propSelect) {
-      propSelect.value = propertyId;
-    }
-  },
-
   renderOccupancyUnitGrid() {
     const grid = document.getElementById('dash-unit-grid');
     if (!grid) return;
@@ -291,17 +282,6 @@ export const Properties = {
     }).join('');
 
     this.refreshIcons();
-  },
-
-  openNewTenantForProperty(propertyId) {
-    this.openModal('modal-tenant');
-    document.getElementById('form-tenant')?.reset();
-    document.getElementById('tenant-id').value = '';
-    document.getElementById('modal-tenant-title').textContent = 'Add New Tenant';
-    const propSelect = document.getElementById('tenant-prop-id');
-    if (propSelect) propSelect.value = propertyId;
-    const statusSelect = document.getElementById('tenant-is-active');
-    if (statusSelect) statusSelect.value = '1';
   },
 
   showUnitDetail(propertyId) {

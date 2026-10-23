@@ -155,27 +155,17 @@ type DashboardAlerts struct {
 }
 
 type DashboardSummary struct {
-	TotalProperties  int64           `json:"total_properties"`
-	TotalTenants     int64           `json:"total_tenants"`
-	OccupiedUnits    int64           `json:"occupied_units"`
-	VacantUnits      int64           `json:"vacant_units"`
-	VacantProperties []Property      `json:"vacant_properties"`
-	TotalBilled      float64         `json:"total_billed"`
-	TotalCollected   float64         `json:"total_collected"`
-	TotalPending     float64         `json:"total_pending"`
-	TotalOverdue     float64         `json:"total_overdue"`
-	TotalExpenses    float64         `json:"total_expenses"`
-	NetProfit        float64         `json:"net_profit"`
-	CollectionRate   float64         `json:"collection_rate"`
-	TotalElecUnits   float64         `json:"total_elec_units"`
-	TotalWaterUnits  float64         `json:"total_water_units"`
-	TotalElecAmount  float64         `json:"total_elec_amount"`
-	TotalWaterAmount float64         `json:"total_water_amount"`
-	ActionRequired   DashboardAlerts `json:"action_required"`
-	AvailableMonths  []string        `json:"available_months"`
-	SelectedMonth    string          `json:"selected_month"`
-	PendingBills     int64           `json:"pending_bills_count"`
-	RecentBills      []Bill          `json:"recent_bills"`
+	TotalProperties int64           `json:"total_properties"`
+	TotalBilled     float64         `json:"total_billed"`
+	TotalCollected  float64         `json:"total_collected"`
+	TotalPending    float64         `json:"total_pending"`
+	TotalOverdue    float64         `json:"total_overdue"`
+	TotalExpenses   float64         `json:"total_expenses"`
+	NetProfit       float64         `json:"net_profit"`
+	CollectionRate  float64         `json:"collection_rate"`
+	ActionRequired  DashboardAlerts `json:"action_required"`
+	AvailableMonths []string        `json:"available_months"`
+	SelectedMonth   string          `json:"selected_month"`
 }
 
 func GenerateBillNumber() string {

@@ -11,9 +11,7 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 	var summary DashboardSummary
 	summary.ActionRequired.OverdueBills = []Bill{}
 	summary.ActionRequired.UnbilledTenants = []Tenant{}
-	summary.VacantProperties = []Property{}
 	summary.AvailableMonths = []string{}
-	summary.RecentBills = []Bill{}
 
 	// Query distinct billing months available in database
 	rowsM, err := db.Query("SELECT DISTINCT billing_month FROM bills WHERE billing_month != '' ORDER BY billing_month DESC")
@@ -50,37 +48,10 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 		summary.SelectedMonth = month
 	}
 
-	// 1. Property & Occupancy counts
+	// 1. Total Property count
 	_ = db.QueryRow("SELECT COUNT(*) FROM properties").Scan(&summary.TotalProperties)
-	_ = db.QueryRow("SELECT COUNT(*) FROM tenants WHERE is_active = 1").Scan(&summary.TotalTenants)
-	_ = db.QueryRow(`
-		SELECT COUNT(DISTINCT property_id) 
-		FROM tenants 
-		WHERE is_active = 1 AND property_id IS NOT NULL
-	`).Scan(&summary.OccupiedUnits)
 
-	if summary.TotalProperties >= summary.OccupiedUnits {
-		summary.VacantUnits = summary.TotalProperties - summary.OccupiedUnits
-	}
-
-	// List vacant properties
-	vacantRows, err := db.Query(`
-		SELECT p.id, p.name, COALESCE(p.unit_type, 'Apartment'), p.default_rent, COALESCE(p.address, '')
-		FROM properties p
-		WHERE p.id NOT IN (SELECT DISTINCT property_id FROM tenants WHERE is_active = 1 AND property_id IS NOT NULL)
-		ORDER BY p.name ASC
-	`)
-	if err == nil {
-		for vacantRows.Next() {
-			var p Property
-			if err := vacantRows.Scan(&p.ID, &p.Name, &p.UnitType, &p.DefaultRent, &p.Address); err == nil {
-				summary.VacantProperties = append(summary.VacantProperties, p)
-			}
-		}
-		vacantRows.Close()
-	}
-
-	// 2. Financial & Utility Aggregation (Filtered by month unless "ALL")
+	// 2. Financial Aggregation (Filtered by month unless "ALL")
 	var query string
 	var args []interface{}
 
@@ -90,12 +61,7 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 			COALESCE(SUM(total_amount), 0),
 			COALESCE(SUM(paid_amount), 0),
 			COALESCE(SUM(CASE WHEN status != 'PAID' THEN (total_amount - paid_amount) ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN status = 'OVERDUE' OR (status != 'PAID' AND due_date < date('now')) THEN (total_amount - paid_amount) ELSE 0 END), 0),
-			COALESCE(COUNT(CASE WHEN status != 'PAID' THEN 1 END), 0),
-			COALESCE(SUM(electricity_units), 0),
-			COALESCE(SUM(water_units), 0),
-			COALESCE(SUM(electricity_amount), 0),
-			COALESCE(SUM(water_amount), 0)
+			COALESCE(SUM(CASE WHEN status = 'OVERDUE' OR (status != 'PAID' AND due_date < date('now')) THEN (total_amount - paid_amount) ELSE 0 END), 0)
 		FROM bills
 		`
 	} else {
@@ -104,12 +70,7 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 			COALESCE(SUM(total_amount), 0),
 			COALESCE(SUM(paid_amount), 0),
 			COALESCE(SUM(CASE WHEN status != 'PAID' THEN (total_amount - paid_amount) ELSE 0 END), 0),
-			COALESCE(SUM(CASE WHEN status = 'OVERDUE' OR (status != 'PAID' AND due_date < date('now')) THEN (total_amount - paid_amount) ELSE 0 END), 0),
-			COALESCE(COUNT(CASE WHEN status != 'PAID' THEN 1 END), 0),
-			COALESCE(SUM(electricity_units), 0),
-			COALESCE(SUM(water_units), 0),
-			COALESCE(SUM(electricity_amount), 0),
-			COALESCE(SUM(water_amount), 0)
+			COALESCE(SUM(CASE WHEN status = 'OVERDUE' OR (status != 'PAID' AND due_date < date('now')) THEN (total_amount - paid_amount) ELSE 0 END), 0)
 		FROM bills
 		WHERE billing_month = ?
 		`
@@ -121,11 +82,6 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 		&summary.TotalCollected,
 		&summary.TotalPending,
 		&summary.TotalOverdue,
-		&summary.PendingBills,
-		&summary.TotalElecUnits,
-		&summary.TotalWaterUnits,
-		&summary.TotalElecAmount,
-		&summary.TotalWaterAmount,
 	)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err

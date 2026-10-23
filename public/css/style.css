@@ -227,7 +227,6 @@ body {
 .action-sheet-dialog,
 .action-sheet-body,
 .settings-body,
-#ledger-statement-container,
 #ledger-bills-container,
 .bills-list,
 textarea {
@@ -238,7 +237,6 @@ textarea {
 /* Subtle auto-fading scrollbar feel on scrollable content boxes */
 .modal-dialog::-webkit-scrollbar-thumb,
 .settings-body::-webkit-scrollbar-thumb,
-#ledger-statement-container::-webkit-scrollbar-thumb,
 #ledger-bills-container::-webkit-scrollbar-thumb,
 .action-sheet-body::-webkit-scrollbar-thumb,
 textarea::-webkit-scrollbar-thumb {
@@ -247,7 +245,6 @@ textarea::-webkit-scrollbar-thumb {
 
 .modal-dialog:hover::-webkit-scrollbar-thumb,
 .settings-body:hover::-webkit-scrollbar-thumb,
-#ledger-statement-container:hover::-webkit-scrollbar-thumb,
 #ledger-bills-container:hover::-webkit-scrollbar-thumb,
 .action-sheet-body:hover::-webkit-scrollbar-thumb,
 textarea:hover::-webkit-scrollbar-thumb {
@@ -2020,16 +2017,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   margin-bottom: 10px;
 }
 
-.lan-card {
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 14px;
-  font-family: monospace;
-  font-size: 0.95rem;
-  color: var(--primary);
-}
-
 /* Protective Hold to Delete */
 .delete-warning-box {
   background: var(--danger-light);
@@ -2844,28 +2831,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   text-decoration: underline;
 }
 
-/* Tenant Name Call Link */
-.tenant-name-call {
-  color: var(--text-main);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.tenant-name-call:hover,
-.tenant-name-call:active {
-  color: var(--primary);
-}
-
-.tenant-name-call:hover i,
-.tenant-name-call:active i {
-  opacity: 1 !important;
-  color: var(--primary);
-}
-
 /* Google Contacts Inspired Tenant Card */
 .tenant-card {
   user-select: none;
@@ -2967,15 +2932,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   font-weight: 600;
 }
 
-.tenant-contact-phone {
-  color: var(--text-muted);
-}
-
-.tenant-contact-dot {
-  opacity: 0.5;
-  font-size: 0.75rem;
-}
-
 .tenant-contact-header-right {
   display: flex;
   align-items: center;
@@ -3032,10 +2988,6 @@ textarea:hover::-webkit-scrollbar-thumb {
 .tenant-action-btn.btn-action-call:hover i,
 .tenant-action-btn.btn-action-sms:hover i {
   color: #2563eb;
-}
-
-.tenant-action-btn.btn-action-wa:hover i {
-  color: var(--whatsapp);
 }
 
 .tenant-action-btn.btn-action-email:hover i {
@@ -3620,45 +3572,6 @@ textarea:hover::-webkit-scrollbar-thumb {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-/* Toggle Switch Component */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: var(--border, #cbd5e1);
-  transition: .25s ease;
-  border-radius: 24px;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: .25s ease;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-input:checked + .slider {
-  background-color: var(--primary, #2563eb);
-}
-input:checked + .slider:before {
-  transform: translateX(20px);
 }
 
 /* Co-occupants dynamic rows */
