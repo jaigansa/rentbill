@@ -362,7 +362,7 @@ export const Tenants = {
                 </button>
                 ${t.is_active ? `
                   <button type="button" class="dropdown-item" onclick="App.openVacantCalculation(${t.id})">
-                    <i data-lucide="user-x"></i> Move Out / Vacant Form
+                    <i data-lucide="user-x"></i> Vacant
                   </button>
                 ` : `
                   <button type="button" class="dropdown-item" onclick="App.openVacantCalculation(${t.id})">
