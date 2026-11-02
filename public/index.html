@@ -167,33 +167,6 @@
           <!-- Populated dynamically via JS -->
         </div>
       </div>
-
-      <!-- Module 3: Occupancy & Unit Status Widget -->
-      <div class="dash-section">
-        <div class="dash-section-header">
-          <div class="dash-section-title">
-            <i data-lucide="building-2" style="color:var(--primary); width:18px; height:18px;"></i>
-            <span>Occupancy &amp; Unit Status</span>
-          </div>
-          <span class="badge badge-paid" id="dash-occupancy-badge">0/0 Units (0%)</span>
-        </div>
-        <div class="dash-occupancy-card">
-          <div class="dash-month-bar">
-            <div class="unit-filter-pills" id="unit-filter-pills">
-              <button type="button" class="unit-filter-btn active" data-unit-filter="all">All (<span id="unit-filter-cnt-all">0</span>)</button>
-              <button type="button" class="unit-filter-btn" data-unit-filter="occupied">Occupied (<span id="unit-filter-cnt-occ">0</span>)</button>
-              <button type="button" class="unit-filter-btn" data-unit-filter="vacant">Vacant (<span id="unit-filter-cnt-vac">0</span>)</button>
-            </div>
-          </div>
-
-          <!-- Dynamic Unit Grid -->
-          <div class="unit-grid" id="dash-unit-grid">
-            <div class="empty-state" style="padding:16px;">Loading unit status map...</div>
-          </div>
-        </div>
-      </div>
-
-
     </section>
 
     <!-- Tab 2: Tenants View -->

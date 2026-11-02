@@ -386,17 +386,6 @@ const App = {
         }
       });
     }
-
-    // Unit Status Filter Buttons (All / Occupied / Vacant)
-    document.querySelectorAll('.unit-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filter = btn.getAttribute('data-unit-filter') || 'all';
-        this.currentUnitFilter = filter;
-        document.querySelectorAll('.unit-filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.renderOccupancyUnitGrid();
-      });
-    });
   },
 
   async loadDashboard() {
@@ -543,23 +532,6 @@ const App = {
         }
       }
 
-      // 5. Occupancy & Unit Status Matrix Widget
-      if (!this.properties || this.properties.length === 0) {
-        this.properties = await API.getProperties().catch(() => []);
-      }
-      if (!this.tenants || this.tenants.length === 0) {
-        this.tenants = await API.getTenants().catch(() => []);
-      }
-
-      const totalUnits = (this.properties && this.properties.length > 0) ? this.properties.length : (data.total_properties || 0);
-      const activeTenantsMap = (this.tenants || []).filter(t => t.is_active && t.property_id);
-      const occupiedUnits = new Set(activeTenantsMap.map(t => t.property_id)).size;
-      const occPct = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
-
-      const occBadge = document.getElementById('dash-occupancy-badge');
-      if (occBadge) occBadge.textContent = `${occupiedUnits}/${totalUnits} Units (${occPct}%)`;
-
-      this.renderOccupancyUnitGrid();
       this.refreshIcons();
     } catch (err) {
       console.error('Dashboard load error:', err);
