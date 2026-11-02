@@ -4579,97 +4579,175 @@ select option {
   margin-bottom: 10px;
 }
 
-/* Consolidated Hero Cashflow Card */
+/* Consolidated Executive Hero Cashflow Card */
 .hero-cashflow-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 12px 14px;
+  padding: 12px;
   margin-bottom: 12px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+/* Dual-Hero Row */
+.cashflow-hero-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.cashflow-row-top {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.cashflow-primary {
+.cashflow-hero-panel {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cashflow-label {
+.hero-panel-collected {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.hero-panel-profit {
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.22);
+}
+
+.hero-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.hero-panel-collected .hero-panel-icon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.hero-panel-profit .hero-panel-icon {
+  background: rgba(37, 99, 235, 0.2);
+  color: var(--primary);
+}
+
+.hero-panel-icon i,
+.hero-panel-icon [data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+.hero-panel-label {
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 750;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
 }
 
-.cashflow-value {
-  font-size: 1.45rem;
+.hero-panel-collected .hero-panel-label {
+  color: #059669;
+}
+
+[data-theme="dark"] .hero-panel-collected .hero-panel-label {
+  color: #34d399;
+}
+
+.hero-panel-profit .hero-panel-label {
+  color: #2563eb;
+}
+
+[data-theme="dark"] .hero-panel-profit .hero-panel-label {
+  color: #60a5fa;
+}
+
+.hero-panel-value {
+  font-size: 1.35rem;
   font-weight: 850;
   line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
-.cashflow-split {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* Bottom 4-Metric Grid */
+.cashflow-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
-.cashflow-stat-mini {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+@media (min-width: 540px) {
+  .cashflow-metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
 }
 
-.cashflow-stat-mini .mini-lbl {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.cashflow-stat-mini strong {
-  font-size: 0.88rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.cashflow-progress-track {
-  width: 100%;
-  height: 5px;
+.cashflow-metric-tile {
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: 999px;
-  overflow: hidden;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.cashflow-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary), #10b981);
-  border-radius: 999px;
-  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+.cashflow-metric-tile:hover {
+  border-color: rgba(148, 163, 184, 0.35);
 }
 
-.cashflow-row-bottom {
+.metric-tile-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-top: 1px dashed var(--border);
-  padding-top: 7px;
-  font-size: 0.74rem;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-muted);
+}
+
+.metric-tile-header i,
+.metric-tile-header [data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+.tile-billed .metric-tile-header {
+  color: var(--primary);
+}
+
+.tile-pending .metric-tile-header {
+  color: var(--warning);
+}
+
+.tile-expenses .metric-tile-header {
+  color: #8b5cf6;
+}
+
+.tile-overdue .metric-tile-header {
+  color: var(--danger);
+}
+
+.metric-tile-val {
+  font-size: 0.96rem;
+  font-weight: 750;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 /* Compact Tenant Card */

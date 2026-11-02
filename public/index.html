@@ -96,37 +96,59 @@
         </div>
       </div>
 
-      <!-- Hero Cashflow Card (All 6 core financial indicators condensed into 1 sleek hero card) -->
+      <!-- Hero Cashflow Card (Executive Financial Overview) -->
       <div class="hero-cashflow-card">
-        <div class="cashflow-row-top">
-          <div class="cashflow-primary">
-            <span class="cashflow-label">Collected</span>
-            <div class="cashflow-value text-success" id="dash-total-collected">₹0</div>
+        <!-- Top Dual-Hero Row: Collected & Net Profit -->
+        <div class="cashflow-hero-row">
+          <div class="cashflow-hero-panel hero-panel-collected">
+            <div class="hero-panel-header">
+              <span class="hero-panel-icon"><i data-lucide="wallet"></i></span>
+              <span class="hero-panel-label">Collected</span>
+            </div>
+            <div class="hero-panel-value text-success" id="dash-total-collected">₹0</div>
           </div>
-          <div class="cashflow-split">
-            <div class="cashflow-stat-mini">
-              <span class="mini-lbl">Billed:</span>
-              <strong id="dash-total-billed">₹0</strong>
+
+          <div class="cashflow-hero-panel hero-panel-profit">
+            <div class="hero-panel-header">
+              <span class="hero-panel-icon"><i data-lucide="trending-up"></i></span>
+              <span class="hero-panel-label">Net Profit</span>
             </div>
-            <div class="cashflow-stat-mini">
-              <span class="mini-lbl">Pending:</span>
-              <strong id="dash-total-pending" class="text-warning">₹0</strong>
-            </div>
+            <div class="hero-panel-value text-success" id="dash-net-profit">₹0</div>
           </div>
         </div>
 
-        <div class="cashflow-row-bottom">
-          <div class="cashflow-stat-mini">
-            <span class="mini-lbl">Expenses:</span>
-            <strong id="dash-total-expenses">₹0</strong>
+        <!-- Bottom 4-Metric Grid: Billed, Pending, Expenses, Overdue -->
+        <div class="cashflow-metrics-grid">
+          <div class="cashflow-metric-tile tile-billed">
+            <div class="metric-tile-header">
+              <i data-lucide="file-text"></i>
+              <span>Billed</span>
+            </div>
+            <strong class="metric-tile-val" id="dash-total-billed">₹0</strong>
           </div>
-          <div class="cashflow-stat-mini">
-            <span class="mini-lbl">Net Profit:</span>
-            <strong id="dash-net-profit" class="text-success">₹0</strong>
+
+          <div class="cashflow-metric-tile tile-pending">
+            <div class="metric-tile-header">
+              <i data-lucide="clock"></i>
+              <span>Pending</span>
+            </div>
+            <strong class="metric-tile-val text-warning" id="dash-total-pending">₹0</strong>
           </div>
-          <div class="cashflow-stat-mini">
-            <span class="mini-lbl">Overdue:</span>
-            <strong id="dash-total-overdue" class="text-danger">₹0</strong>
+
+          <div class="cashflow-metric-tile tile-expenses">
+            <div class="metric-tile-header">
+              <i data-lucide="receipt"></i>
+              <span>Expenses</span>
+            </div>
+            <strong class="metric-tile-val" id="dash-total-expenses">₹0</strong>
+          </div>
+
+          <div class="cashflow-metric-tile tile-overdue">
+            <div class="metric-tile-header">
+              <i data-lucide="alert-circle"></i>
+              <span>Overdue</span>
+            </div>
+            <strong class="metric-tile-val text-danger" id="dash-total-overdue">₹0</strong>
           </div>
         </div>
       </div>
