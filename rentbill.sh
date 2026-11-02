@@ -9,8 +9,15 @@ set -e
 APP_NAME="rentbill"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_NAME="${APP_NAME}.service"
+
+# Linux standard installation locations (XDG Base Directory Specification)
+INSTALL_BIN_DIR="${HOME}/.local/bin"
+INSTALL_DATA_DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/${APP_NAME}"
+INSTALL_APP_DIR="${HOME}/.local/share/applications"
+INSTALL_ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/${SERVICE_NAME}"
+DEFAULT_DB="${INSTALL_DATA_DIR}/${APP_NAME}.db"
 
 # Helper colors
 RED='\033[0;31m'
@@ -184,7 +191,8 @@ setup_dependencies() {
 
     echo -e "${GREEN}✓ Go compiler:${NC} $(go version)"
 
-    # 2. Ensure data directory exists
+    # 2. Ensure data directories exist
+    mkdir -p "${INSTALL_DATA_DIR}"
     mkdir -p "${SCRIPT_DIR}/data"
 
     # 3. Ensure Go module dependencies are downloaded
@@ -226,10 +234,30 @@ do_build() {
     echo -e "${GREEN}✅ Build successful: ${SCRIPT_DIR}/${APP_NAME}${NC}"
 }
 
+install_binary_and_assets() {
+    echo -e "${BLUE}▶ Installing binary and desktop assets...${NC}"
+    mkdir -p "${INSTALL_BIN_DIR}"
+    mkdir -p "${INSTALL_DATA_DIR}"
+    mkdir -p "${INSTALL_ICON_DIR}"
+    mkdir -p "${HOME}/.local/share/pixmaps"
+
+    cp -f "${SCRIPT_DIR}/${APP_NAME}" "${INSTALL_BIN_DIR}/${APP_NAME}"
+    chmod +x "${INSTALL_BIN_DIR}/${APP_NAME}"
+
+    if [ -f "${SCRIPT_DIR}/public/favicon.svg" ]; then
+        cp -f "${SCRIPT_DIR}/public/favicon.svg" "${INSTALL_ICON_DIR}/${APP_NAME}.svg"
+        cp -f "${SCRIPT_DIR}/public/favicon.svg" "${HOME}/.local/share/pixmaps/${APP_NAME}.svg"
+    fi
+}
+
 do_install() {
     ensure_binary
     echo -e "${YELLOW}⚙️  Configuring user systemd service...${NC}"
     mkdir -p "${USER_SYSTEMD_DIR}"
+    mkdir -p "${INSTALL_DATA_DIR}"
+
+    # Install binary and icons to standard Linux directories
+    install_binary_and_assets
 
     # Stop any conflicting standalone foreground process before starting service
     pkill -x "${APP_NAME}" 2>/dev/null || true
@@ -247,8 +275,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=${SCRIPT_DIR}
-ExecStart=${SCRIPT_DIR}/${APP_NAME} ${exec_args}
+WorkingDirectory=${INSTALL_DATA_DIR}
+ExecStart=${INSTALL_BIN_DIR}/${APP_NAME} ${exec_args} -db-path ${DEFAULT_DB}
 Restart=on-failure
 RestartSec=5s
 
@@ -268,11 +296,17 @@ EOF
 
     echo ""
     echo -e "${GREEN}✅ RentBill installed and running successfully!${NC}"
-    echo "  • Status: $0 status"
-    echo "  • Logs:   $0 logs"
-    echo "  • Local:  http://localhost:${PORT}"
+    echo "  • Binary:   ${INSTALL_BIN_DIR}/${APP_NAME}"
+    echo "  • Database: ${DEFAULT_DB}"
+    echo "  • Service:  ${SERVICE_FILE}"
+    echo "  • Status:   $0 status"
+    echo "  • Logs:     $0 logs"
+    echo "  • Local:    http://localhost:${PORT}"
     if [ "$SHARE" = true ]; then
-        echo "  • Wi-Fi:  Accessible to mobile phones on the same Wi-Fi network"
+        echo "  • Wi-Fi:    Accessible to mobile phones on the same Wi-Fi network"
+    fi
+    if [[ ":$PATH:" != *":${INSTALL_BIN_DIR}:"* ]]; then
+        echo -e "${YELLOW}  💡 Tip: Ensure '${INSTALL_BIN_DIR}' is in your PATH to run 'rentbill' from any terminal.${NC}"
     fi
 }
 
@@ -290,8 +324,8 @@ do_server() {
 do_desktop() {
     ensure_binary
     echo -e "${YELLOW}🖥️  Installing Linux desktop application launcher...${NC}"
-    local app_dir="${HOME}/.local/share/applications"
-    mkdir -p "${app_dir}"
+    mkdir -p "${INSTALL_APP_DIR}"
+    install_binary_and_assets
 
     local bin_args=""
     if [ "$SHARE" = true ]; then
@@ -299,29 +333,38 @@ do_desktop() {
         echo -e "${GREEN}📡 Wi-Fi sharing will be active when launched from desktop menu${NC}"
     fi
 
-    local desktop_file="${app_dir}/rentbill.desktop"
+    local desktop_file="${INSTALL_APP_DIR}/rentbill.desktop"
     cat <<EOF > "${desktop_file}"
 [Desktop Entry]
 Name=RentBill
 GenericName=Rental & Billing Manager
 Comment=Manage tenants, utility meter calculations, and rent receipts
-Exec=${SCRIPT_DIR}/${APP_NAME}${bin_args}
-Icon=${SCRIPT_DIR}/public/favicon.svg
+Exec=${INSTALL_BIN_DIR}/${APP_NAME}${bin_args}
+Icon=rentbill
 Terminal=false
 Type=Application
 Categories=Office;Finance;Utility;
 Keywords=rent;bill;tenant;property;finance;
 StartupNotify=true
+Path=${INSTALL_DATA_DIR}
 EOF
 
     chmod +x "${desktop_file}"
+    update-desktop-database "${INSTALL_APP_DIR}" 2>/dev/null || true
     echo -e "${GREEN}✅ Desktop launcher created: ${desktop_file}${NC}"
     echo "   You can now launch RentBill directly from your application launcher (Rofi, Wofi, GNOME, etc.)"
+    echo "   • Binary:   ${INSTALL_BIN_DIR}/${APP_NAME}"
+    echo "   • Database: ${DEFAULT_DB}"
 }
 
 do_update() {
     echo -e "${YELLOW}🔄 Updating RentBill...${NC}"
     do_build
+
+    if [ -f "${INSTALL_BIN_DIR}/${APP_NAME}" ]; then
+        echo "📦 Updating installed binary in '${INSTALL_BIN_DIR}/${APP_NAME}'..."
+        install_binary_and_assets
+    fi
 
     if [ "$SHARE" = true ]; then
         do_install
@@ -338,7 +381,7 @@ do_update() {
 }
 
 do_remove() {
-    echo -e "${YELLOW}🗑️  Removing RentBill service...${NC}"
+    echo -e "${YELLOW}🗑️  Removing RentBill service and installation...${NC}"
 
     if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
         echo "🛑 Stopping service..."
@@ -355,13 +398,23 @@ do_remove() {
         rm -f "${SERVICE_FILE}"
     fi
 
+    if [ -f "${INSTALL_APP_DIR}/rentbill.desktop" ]; then
+        echo "🗑️  Removing desktop launcher..."
+        rm -f "${INSTALL_APP_DIR}/rentbill.desktop"
+    fi
+
+    if [ -f "${INSTALL_BIN_DIR}/${APP_NAME}" ]; then
+        echo "🗑️  Removing installed binary from ${INSTALL_BIN_DIR}..."
+        rm -f "${INSTALL_BIN_DIR}/${APP_NAME}"
+    fi
+
     echo "🔄 Reloading systemd user daemon..."
     systemctl --user daemon-reload
     systemctl --user reset-failed 2>/dev/null || true
 
     echo ""
-    echo -e "${GREEN}✅ RentBill service removed successfully!${NC}"
-    echo "   (Your database in 'data/' and project files were kept safe)"
+    echo -e "${GREEN}✅ RentBill service and application removed successfully!${NC}"
+    echo "   (Your persistent database in '${INSTALL_DATA_DIR}/' was kept safe)"
 }
 
 do_status() {
@@ -374,7 +427,7 @@ do_logs() {
 
 # ==============================================================================
 # Global CLI Argument Parsing & Command Normalization
-# Supports both: ./linux.sh <cmd> and ./linux.sh --<cmd> with flags in any order
+# Supports both: ./rentbill.sh <cmd> and ./rentbill.sh --<cmd> with flags in any order
 # ==============================================================================
 ACTION=""
 SHARE=false

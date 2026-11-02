@@ -71,15 +71,15 @@ You can run RentBill in headless server mode directly in your terminal:
 
 ```bash
 # Local machine only (127.0.0.1:8080)
-./linux.sh server
+./rentbill.sh server
 # or: make server
 
 # With Wi-Fi mobile phone sharing enabled
-./linux.sh server --share
+./rentbill.sh server --share
 # or: make share
 
 # On a custom port
-./linux.sh server --share --port 8085
+./rentbill.sh server --share --port 8085
 ```
 
 ---
@@ -90,11 +90,11 @@ Install RentBill as an auto-starting systemd user service that keeps running in 
 
 ```bash
 # Install & start service with Wi-Fi mobile sharing enabled
-./linux.sh install --share
+./rentbill.sh install --share
 
 # Check status or follow logs
-./linux.sh status
-./linux.sh logs
+./rentbill.sh status
+./rentbill.sh logs
 ```
 
 ---
@@ -109,7 +109,7 @@ Install RentBill as an auto-starting systemd user service that keeps running in 
 | `-token <secret>` | `auto-generated` | Custom security token for API access |
 | `-server`, `-headless`, `-no-gui` | `false` | Run as headless background server (without desktop GUI window) |
 | `-allow-remote` | `false` | Allow non-localhost connections (alias for `-share`) |
-| `-db-path <path>` | `data/rentbill.db` | Path to SQLite database file |
+| `-db-path <path>` | `~/.local/share/rentbill/rentbill.db` (or `./data/rentbill.db` if present) | Path to SQLite database file |
 | `-reset-pin` | `false` | Emergency reset and disable 4-digit security PIN |
 | `-version`, `-v` | `false` | Print version and architecture info |
 | `-help`, `-h` | `false` | Display help and flag descriptions |
@@ -140,68 +140,57 @@ make all
 
 ---
 
-## 🐧 Linux CLI Manager (`linux.sh` / `rentbill.sh`)
+## 🐧 Linux CLI Manager (`rentbill.sh`)
 
-Manage RentBill easily on Linux using the unified CLI script (`./linux.sh` or `./rentbill.sh`).
+Manage RentBill easily on Linux using the unified CLI script (`./rentbill.sh`).
 It automatically detects and installs Go toolchains if needed, manages dependencies, runs foreground servers, and configures background `systemd` user services.
 
 ```bash
 # Compile binary (auto-installs Go compiler & project dependencies if missing)
-./linux.sh build
+./rentbill.sh build
 # or: make build
 
 # Setup Go toolchain and verify module dependencies only
-./linux.sh setup
+./rentbill.sh setup
 # or: make setup
 
 # Run headless server in foreground (supports --share and --port)
-./linux.sh server --share --port 8080
+./rentbill.sh server --share --port 8080
 # or: make share
 
 # Install and start auto-starting background systemd service with Wi-Fi sharing
-./linux.sh install --share
+./rentbill.sh install --share
 # or: make install-share
 
 # Install background service for local loopback only (127.0.0.1)
-./linux.sh install
+./rentbill.sh install
 # or: make install
 
 # Install Linux desktop application shortcut (app launcher menu)
-./linux.sh desktop --share
+./rentbill.sh desktop --share
 # or: make desktop
 
 # Check background service status
-./linux.sh status
+./rentbill.sh status
 
 # Follow live service logs
-./linux.sh logs
+./rentbill.sh logs
 
 # Rebuild binary and restart background service
-./linux.sh update --share
+./rentbill.sh update --share
 
 # Stop, disable, and remove background service
-./linux.sh remove
+./rentbill.sh remove
 ```
 
 > **Note:** Commands accept both clean verbs (`build`, `install`, `server`, etc.) and standard flag syntax (`--build`, `--install`, `--server-install`, `--server`). Flags like `--share` (`-s`) and `--port <num>` (`-p`) can be passed in any position.
 
----
-
-## 🐳 Docker Deployment
-
-To run RentBill inside a lightweight container:
-
-```bash
-# Build the Docker image
-docker build -t rentbill .
-
-# Run with persistent SQLite data on port 8080
-docker run -d \
-  --name rentbill \
-  -p 8080:8080 \
-  -v "$(pwd)/data:/app/data" \
-  rentbill
-```
+### Standard Linux File Locations (XDG Specification)
+* **Binary**: `~/.local/bin/rentbill`
+* **Database**: `~/.local/share/rentbill/rentbill.db`
+* **Desktop Launcher**: `~/.local/share/applications/rentbill.desktop`
+* **Icons**: `~/.local/share/icons/hicolor/scalable/apps/rentbill.svg`
+* **Systemd Service**: `~/.config/systemd/user/rentbill.service`
 
 ---
 

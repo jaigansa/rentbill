@@ -37,17 +37,47 @@ func generateSecurityToken() string {
 	return hex.EncodeToString(b)
 }
 
-func main() {
-	defaultDB := os.Getenv("RENTBILL_DB_PATH")
-	if defaultDB == "" {
-		if _, err := os.Stat("data/rentbill.db"); err == nil {
-			defaultDB = "data/rentbill.db"
-		} else if _, err := os.Stat("rentbill.db"); err == nil {
-			defaultDB = "rentbill.db"
-		} else {
-			defaultDB = filepath.Join("data", "rentbill.db")
+// getDefaultDBPath resolves the persistent database location following XDG standards
+func getDefaultDBPath() string {
+	if envPath := os.Getenv("RENTBILL_DB_PATH"); envPath != "" {
+		return envPath
+	}
+
+	// 1. If running in a repository or directory with an existing local database, prioritize it
+	if _, err := os.Stat(filepath.Join("data", "rentbill.db")); err == nil {
+		return filepath.Join("data", "rentbill.db")
+	}
+	if _, err := os.Stat("rentbill.db"); err == nil {
+		return "rentbill.db"
+	}
+
+	// 2. Standard XDG / OS persistent data directory
+	// Linux / BSD: ~/.local/share/rentbill/rentbill.db
+	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+		dataHome := os.Getenv("XDG_DATA_HOME")
+		if dataHome == "" {
+			if home, err := os.UserHomeDir(); err == nil {
+				dataHome = filepath.Join(home, ".local", "share")
+			}
+		}
+		if dataHome != "" {
+			return filepath.Join(dataHome, "rentbill", "rentbill.db")
+		}
+	} else if runtime.GOOS == "darwin" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, "Library", "Application Support", "rentbill", "rentbill.db")
+		}
+	} else if runtime.GOOS == "windows" {
+		if appData := os.Getenv("APPDATA"); appData != "" {
+			return filepath.Join(appData, "RentBill", "rentbill.db")
 		}
 	}
+
+	return filepath.Join("data", "rentbill.db")
+}
+
+func main() {
+	defaultDB := getDefaultDBPath()
 
 	defaultPort := os.Getenv("PORT")
 	if defaultPort == "" {

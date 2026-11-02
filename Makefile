@@ -22,7 +22,7 @@ server:
 
 # Setup Go compiler and download project dependencies
 setup:
-	./linux.sh --setup
+	./rentbill.sh setup
 
 # Install as auto-starting systemd user service with Wi-Fi mobile sharing
 install-share: build
