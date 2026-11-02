@@ -351,8 +351,11 @@ export const Tenants = {
                 <button type="button" class="dropdown-item" onclick="App.openBillModalForTenant(${t.id})">
                   <i data-lucide="plus"></i> Generate Bill
                 </button>
+                <button type="button" class="dropdown-item" onclick="App.openPaymentForTenant(${t.id})">
+                  <i data-lucide="arrow-down-left"></i> Record Payment
+                </button>
                 <button type="button" class="dropdown-item" onclick="App.openTenantLedger(${t.id})">
-                  <i data-lucide="receipt"></i> View Bills & Ledger
+                  <i data-lucide="receipt"></i> View Bills
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
                   <i data-lucide="edit-3"></i> Edit Tenant
@@ -377,19 +380,13 @@ export const Tenants = {
           </div>
         </div>
 
-        <!-- Row 2: Financial Chips & Direct 1-Tap Action Buttons -->
+        <!-- Row 2: Financial Chips & Details Toggle -->
         <div class="tenant-compact-mid">
           <div class="tenant-compact-finance" onclick="App.openTenantLedger(${t.id})" title="Tap to view bills ledger">
             <span class="compact-chip chip-paid">Paid: ${this.formatMoney(totalPaid, true)}</span>
             <span class="compact-chip ${totalDue > 0 ? 'chip-due' : 'chip-cleared'}">Due: ${this.formatMoney(totalDue, true)}</span>
           </div>
           <div class="tenant-compact-btn-strip">
-            <button type="button" class="btn btn-xs btn-primary-light" onclick="App.openBillModalForTenant(${t.id})" title="Generate Bill">
-              <i data-lucide="file-plus-2"></i> Bill
-            </button>
-            <button type="button" class="btn btn-xs btn-success" onclick="App.openPaymentForTenant(${t.id})" title="Record Payment">
-              <i data-lucide="arrow-down-left"></i> Pay
-            </button>
             <button type="button" class="btn btn-xs btn-ghost btn-details-toggle" onclick="App.toggleTenantCardExpand(${t.id})" title="Toggle Details">
               <i data-lucide="chevron-down" id="tenant-expand-icon-${t.id}"></i>
             </button>
