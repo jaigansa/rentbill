@@ -403,8 +403,8 @@ export const UI = {
       if (info.lan_shared) {
         if (badge) {
           badge.className = 'badge badge-success';
-          badge.style.background = '#10b981';
-          badge.style.color = '#ffffff';
+          badge.style.background = '';
+          badge.style.color = '';
           badge.innerHTML = `<i data-lucide="wifi" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"></i> Wi-Fi Sharing Active (Port ${port})`;
         }
         if (hint) hint.style.display = 'none';
@@ -412,8 +412,8 @@ export const UI = {
       } else {
         if (badge) {
           badge.className = 'badge badge-warning';
-          badge.style.background = '#f59e0b';
-          badge.style.color = '#ffffff';
+          badge.style.background = '';
+          badge.style.color = '';
           badge.innerHTML = `<i data-lucide="shield-alert" style="width:13px;height:13px;vertical-align:-2px;margin-right:4px;"></i> Loopback Only (Port ${port})`;
         }
         if (hint) hint.style.display = 'block';

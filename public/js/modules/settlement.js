@@ -447,34 +447,34 @@ export const Settlement = {
     const curr = window.APP_CURRENCY || '₹';
 
     const lines = [
-      `🏠 *MOVE-OUT & VACANT SETTLEMENT STATEMENT*`,
+      `*MOVE-OUT & VACANT SETTLEMENT STATEMENT*`,
       `----------------------------------------`,
-      `👤 *Resident:* ${calcData.tenantName}`,
-      `🏢 *Property / Unit:* ${calcData.unitName}`,
-      calcData.moveInDate ? `📅 *Move-In Date:* ${calcData.moveInDate}` : '',
-      `🚪 *Move-Out Date:* ${calcData.moveOutDate}`,
-      calcData.tenancyDuration ? `⏳ *Tenancy Period:* ${calcData.tenancyDuration}` : '',
+      `*Resident:* ${calcData.tenantName}`,
+      `*Property / Unit:* ${calcData.unitName}`,
+      calcData.moveInDate ? `*Move-In Date:* ${calcData.moveInDate}` : '',
+      `*Move-Out Date:* ${calcData.moveOutDate}`,
+      calcData.tenancyDuration ? `*Tenancy Period:* ${calcData.tenancyDuration}` : '',
       `----------------------------------------`,
-      `💰 *SECURITY DEPOSIT & CREDITS:*`,
+      `*SECURITY DEPOSIT & CREDITS:*`,
       `+ Security Deposit: ${curr}${calcData.deposit.toFixed(2)}`,
       calcData.extraCredit > 0 ? `+ Extra Credit/Advance: ${curr}${calcData.extraCredit.toFixed(2)}` : '',
       `*Total Credits:* ${curr}${calcData.totalCredits.toFixed(2)}`,
       `----------------------------------------`,
-      `🧾 *FINAL DUES & DEDUCTIONS:*`,
-      calcData.arrears > 0 ? `• Past Unpaid Bills: ${curr}${calcData.arrears.toFixed(2)}` : '',
-      calcData.elecAmount > 0 ? `• Electricity (${calcData.elecUnits} units @ ${curr}${calcData.elecRate}): ${curr}${calcData.elecAmount.toFixed(2)} (Meter: ${calcData.prevElec} ➔ ${calcData.currElec})` : '',
-      calcData.waterAmount > 0 ? `• Water Charges: ${curr}${calcData.waterAmount.toFixed(2)}` : '',
-      calcData.rentAmount > 0 ? `• Move-Out Rent (${calcData.occupiedDays} days): ${curr}${calcData.rentAmount.toFixed(2)}` : '',
-      calcData.painting > 0 ? `• Painting / Whitewash: ${curr}${calcData.painting.toFixed(2)}` : '',
-      calcData.cleaning > 0 ? `• Deep Cleaning: ${curr}${calcData.cleaning.toFixed(2)}` : '',
-      calcData.repairs > 0 ? `• Repairs & Damages: ${curr}${calcData.repairs.toFixed(2)}` : '',
-      calcData.otherDeduct > 0 ? `• Other Deductions: ${curr}${calcData.otherDeduct.toFixed(2)}` : '',
-      calcData.notes ? `• Remarks: ${calcData.notes}` : '',
+      `*FINAL DUES & DEDUCTIONS:*`,
+      calcData.arrears > 0 ? `➤ Past Unpaid Bills: ${curr}${calcData.arrears.toFixed(2)}` : '',
+      calcData.elecAmount > 0 ? `➤ Electricity: ${curr}${calcData.elecAmount.toFixed(2)}\n  └➤ Meter: ${calcData.prevElec} to ${calcData.currElec} (${calcData.elecUnits} units @ ${curr}${calcData.elecRate})` : '',
+      calcData.waterAmount > 0 ? `➤ Water Charges: ${curr}${calcData.waterAmount.toFixed(2)}` : '',
+      calcData.rentAmount > 0 ? `➤ Move-Out Rent: ${curr}${calcData.rentAmount.toFixed(2)}\n  └➤ Occupied: ${calcData.occupiedDays} days` : '',
+      calcData.painting > 0 ? `➤ Painting / Whitewash: ${curr}${calcData.painting.toFixed(2)}` : '',
+      calcData.cleaning > 0 ? `➤ Deep Cleaning: ${curr}${calcData.cleaning.toFixed(2)}` : '',
+      calcData.repairs > 0 ? `➤ Repairs & Damages: ${curr}${calcData.repairs.toFixed(2)}` : '',
+      calcData.otherDeduct > 0 ? `➤ Other Deductions: ${curr}${calcData.otherDeduct.toFixed(2)}` : '',
+      calcData.notes ? `➤ Remarks: ${calcData.notes}` : '',
       `*Total Deductions:* ${curr}${calcData.totalDebits.toFixed(2)}`,
       `========================================`,
       calcData.netAmount >= 0
-        ? `🟢 *NET REFUND TO TENANT:* ${curr}${calcData.netAmount.toFixed(2)}`
-        : `🔴 *NET DUE FROM TENANT:* ${curr}${Math.abs(calcData.netAmount).toFixed(2)}`,
+        ? `*NET REFUND TO TENANT:* ${curr}${calcData.netAmount.toFixed(2)}`
+        : `*NET DUE FROM TENANT:* ${curr}${Math.abs(calcData.netAmount).toFixed(2)}`,
       `========================================`,
       `Unit Status: Vacated • All Records Archived Safe`,
       `Thank you!`
@@ -594,14 +594,14 @@ export const Settlement = {
             ${data.elecAmount > 0 ? `
               <tr>
                 <td>Final Electricity Consumption</td>
-                <td>Meter: ${data.prevElec} ➔ ${data.currElec} (${data.elecUnits} units @ ${curr}${data.elecRate})</td>
+                <td>Meter: ${data.prevElec} to ${data.currElec} (${data.elecUnits} units @ ${curr}${data.elecRate})</td>
                 <td class="num" style="color:#b91c1c;">- ${numFmt(data.elecAmount)}</td>
               </tr>
             ` : ''}
             ${data.waterAmount > 0 ? `
               <tr>
                 <td>Final Water Consumption Charges</td>
-                <td>${data.waterMode === 'METERED' ? `Meter: ${data.prevWater} ➔ ${data.currWater} (${data.waterUnits} units)` : 'Fixed charge for period'}</td>
+                <td>${data.waterMode === 'METERED' ? `Meter: ${data.prevWater} to ${data.currWater} (${data.waterUnits} units)` : 'Fixed charge for period'}</td>
                 <td class="num" style="color:#b91c1c;">- ${numFmt(data.waterAmount)}</td>
               </tr>
             ` : ''}

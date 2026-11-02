@@ -41,7 +41,7 @@
     })();
   </script>
 </head>
-<body>
+<body oncontextmenu="return false;">
 
   <!-- Top App Bar -->
   <header class="top-nav">
@@ -76,7 +76,6 @@
       <div class="section-header">
         <div>
           <h2>Dashboard</h2>
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Overview & Monthly Command Center</div>
         </div>
         <span class="badge badge-date" id="current-date-badge"></span>
       </div>
@@ -89,7 +88,6 @@
               <i data-lucide="chevron-left"></i>
             </button>
             <div class="month-select-wrapper">
-              <i data-lucide="calendar" class="month-icon"></i>
               <select id="dash-month-select" class="month-select-dropdown">
                 <!-- Dynamically populated via JS -->
               </select>
@@ -230,7 +228,10 @@
       </div>
 
       <div id="tenants-list-container" class="cards-list">
-        <div class="empty-state">No tenants added yet.</div>
+        <div class="empty-state">
+          <i data-lucide="users" style="width:36px; height:36px;"></i>
+          <div>No tenants added yet.</div>
+        </div>
       </div>
     </section>
 
@@ -263,7 +264,10 @@
       </div>
 
       <div id="properties-list-container" class="cards-list">
-        <div class="empty-state">No properties added yet.</div>
+        <div class="empty-state">
+          <i data-lucide="building-2" style="width:36px; height:36px;"></i>
+          <div>No properties added yet.</div>
+        </div>
       </div>
     </section>
 
@@ -810,7 +814,10 @@
 
       <!-- Ledger Bills List -->
       <div id="ledger-bills-container" class="bills-list">
-        <div class="empty-state">Loading tenant bills...</div>
+        <div class="empty-state">
+          <i data-lucide="receipt" style="width:36px; height:36px;"></i>
+          <div>Loading tenant bills...</div>
+        </div>
       </div>
 
       <!-- Modal Footer -->
@@ -860,7 +867,10 @@
 
       <!-- Expenses List Container -->
       <div id="property-expenses-container" class="bills-list" style="max-height: 480px; overflow-y: auto; padding-right: 2px;">
-        <div class="empty-state">Loading property expenses...</div>
+        <div class="empty-state">
+          <i data-lucide="receipt-text" style="width:36px; height:36px;"></i>
+          <div>Loading property expenses...</div>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -1294,12 +1304,60 @@
           </button>
         </div>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <label for="share-preview-text" style="margin-bottom:0;">Message Preview</label>
-            <span id="share-char-count" style="font-size:0.75rem; color:var(--text-muted);">0 chars</span>
+        <!-- Real Character & Words Length View Stats Bar -->
+        <div class="share-stats-bar" id="share-stats-bar">
+          <div class="share-stat-pill" title="Real character length">
+            <i data-lucide="hash"></i>
+            <span id="share-char-count-real"><strong>0</strong> chars</span>
           </div>
-          <textarea id="share-preview-text" rows="7" readonly class="input-readonly" style="font-size:0.8rem; font-family:monospace; resize:none;"></textarea>
+          <div class="share-stat-pill" title="Word count">
+            <i data-lucide="align-left"></i>
+            <span id="share-word-count"><strong>0</strong> words</span>
+          </div>
+          <div class="share-stat-pill" id="share-sms-parts-pill" title="SMS Segments (160 chars / part)">
+            <i data-lucide="message-square"></i>
+            <span id="share-sms-parts"><strong>1</strong> SMS</span>
+          </div>
+          <div class="share-preview-tabs">
+            <button type="button" class="preview-mode-btn active" id="btn-view-whatsapp" title="Real WhatsApp Chat View">
+              <i data-lucide="message-circle"></i> WhatsApp View
+            </button>
+            <button type="button" class="preview-mode-btn" id="btn-view-raw" title="Raw Text View">
+              <i data-lucide="code"></i> Raw Text
+            </button>
+          </div>
+        </div>
+
+        <!-- Real WhatsApp Chat Screen Preview -->
+        <div id="share-whatsapp-screen" class="whatsapp-chat-container">
+          <div class="whatsapp-chat-header">
+            <div class="whatsapp-chat-avatar">
+              <span id="share-wa-avatar-char">T</span>
+            </div>
+            <div class="whatsapp-chat-info">
+              <div class="whatsapp-chat-name" id="share-wa-tenant-name">Tenant</div>
+              <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
+            </div>
+            <div class="whatsapp-chat-actions">
+              <i data-lucide="phone" style="width:13px; height:13px;"></i>
+              <i data-lucide="video" style="width:13px; height:13px;"></i>
+              <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
+            </div>
+          </div>
+          <div class="whatsapp-chat-body">
+            <div class="whatsapp-chat-bubble">
+              <div class="whatsapp-bubble-text" id="share-wa-bubble-content"></div>
+              <div class="whatsapp-bubble-meta">
+                <span class="whatsapp-bubble-time" id="share-wa-time">10:00 AM</span>
+                <span class="whatsapp-ticks" title="Read by tenant">✓✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Text Preview & Edit Container -->
+        <div class="form-group" id="share-raw-container" style="display:none; margin-top: 8px;">
+          <textarea id="share-preview-text" rows="8" class="form-control" style="font-size:0.82rem; font-family:monospace; resize:vertical; width:100%;" placeholder="Edit bill message here..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -1383,17 +1441,66 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-top:14px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <label for="reminder-message-text" style="margin-bottom:0;">Message Preview (Editable)</label>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span id="reminder-char-counter" style="font-size:0.75rem; color:var(--text-muted);">0 chars</span>
-              <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
-                <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
-              </button>
+        <!-- Real Character & Words Length View Stats Bar -->
+        <div class="share-stats-bar" id="reminder-stats-bar" style="margin-top: 14px;">
+          <div class="share-stat-pill" title="Character count">
+            <i data-lucide="hash"></i>
+            <span id="reminder-stat-chars"><strong>0</strong> chars</span>
+          </div>
+          <div class="share-stat-pill" title="Word count">
+            <i data-lucide="align-left"></i>
+            <span id="reminder-stat-words"><strong>0</strong> words</span>
+          </div>
+          <div class="share-stat-pill" id="reminder-stat-sms-pill" title="SMS Segments (160 chars / part)">
+            <i data-lucide="message-square"></i>
+            <span id="reminder-stat-sms"><strong>1</strong> SMS</span>
+          </div>
+          <div class="share-preview-tabs" id="reminder-preview-tabs">
+            <button type="button" class="preview-mode-btn active" id="btn-reminder-view-wa" title="Real WhatsApp Chat View">
+              <i data-lucide="message-circle"></i> WhatsApp View
+            </button>
+            <button type="button" class="preview-mode-btn" id="btn-reminder-view-raw" title="Raw Text View">
+              <i data-lucide="code"></i> Raw Text
+            </button>
+          </div>
+        </div>
+
+        <!-- Real WhatsApp Chat Screen Preview for Reminders -->
+        <div id="reminder-whatsapp-screen" class="whatsapp-chat-container">
+          <div class="whatsapp-chat-header">
+            <div class="whatsapp-chat-avatar">
+              <span id="reminder-wa-avatar-char">T</span>
+            </div>
+            <div class="whatsapp-chat-info">
+              <div class="whatsapp-chat-name" id="reminder-wa-tenant-name">Tenant</div>
+              <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
+            </div>
+            <div class="whatsapp-chat-actions">
+              <i data-lucide="phone" style="width:13px; height:13px;"></i>
+              <i data-lucide="video" style="width:13px; height:13px;"></i>
+              <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
             </div>
           </div>
-          <textarea id="reminder-message-text" rows="6" class="form-control" style="font-size:0.82rem; font-family:inherit; resize:vertical;"></textarea>
+          <div class="whatsapp-chat-body">
+            <div class="whatsapp-chat-bubble">
+              <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
+              <div class="whatsapp-bubble-meta">
+                <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
+                <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Text Preview & Edit Container -->
+        <div class="form-group" id="reminder-raw-container" style="display:none; margin-top: 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="reminder-message-text" style="margin-bottom:0; font-size:0.8rem; font-weight:600;">Message Text (Editable)</label>
+            <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
+              <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
+            </button>
+          </div>
+          <textarea id="reminder-message-text" rows="9" class="form-control" style="font-size:0.82rem; font-family:monospace; line-height:1.45; resize:vertical; width:100%; white-space:pre-wrap;" placeholder="Edit notice text here..."></textarea>
         </div>
       </div>
       <div class="modal-footer" style="flex-wrap:wrap; gap:8px;">

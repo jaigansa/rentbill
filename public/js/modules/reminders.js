@@ -71,6 +71,42 @@ export const Reminders = {
     const btnSendIcon = document.getElementById('btn-send-primary-icon');
     const btnSendText = document.getElementById('btn-send-primary-text');
 
+    const waNameEl = document.getElementById('reminder-wa-tenant-name');
+    const waAvatarEl = document.getElementById('reminder-wa-avatar-char');
+    const waTimeEl = document.getElementById('reminder-wa-time');
+    const waBubbleEl = document.getElementById('reminder-wa-bubble-content');
+    const waScreen = document.getElementById('reminder-whatsapp-screen');
+    const rawContainer = document.getElementById('reminder-raw-container');
+    const btnViewWa = document.getElementById('btn-reminder-view-wa');
+    const btnViewRaw = document.getElementById('btn-reminder-view-raw');
+
+    if (waNameEl) waNameEl.textContent = tenantName;
+    if (waAvatarEl) waAvatarEl.textContent = (tenantName[0] || 'T').toUpperCase();
+    if (waTimeEl) {
+      const now = new Date();
+      waTimeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    const setViewMode = (mode) => {
+      if (mode === 'whatsapp') {
+        if (btnViewWa) btnViewWa.classList.add('active');
+        if (btnViewRaw) btnViewRaw.classList.remove('active');
+        if (waScreen) waScreen.style.display = 'block';
+        if (rawContainer) rawContainer.style.display = 'none';
+      } else {
+        if (btnViewRaw) btnViewRaw.classList.add('active');
+        if (btnViewWa) btnViewWa.classList.remove('active');
+        if (rawContainer) rawContainer.style.display = 'block';
+        if (waScreen) waScreen.style.display = 'none';
+      }
+    };
+
+    if (btnViewWa) btnViewWa.onclick = () => setViewMode('whatsapp');
+    if (btnViewRaw) btnViewRaw.onclick = () => setViewMode('raw');
+
+    // Default view mode based on channel
+    setViewMode(activeChannel === 'whatsapp' ? 'whatsapp' : 'raw');
+
     const updatePrimaryButton = () => {
       if (!btnSendPrimary) return;
       if (activeChannel === 'whatsapp') {
@@ -91,13 +127,29 @@ export const Reminders = {
     };
 
     const updateCharCounter = (text) => {
-      if (!counterEl) return;
-      const chars = (text || '').length;
-      if (activeChannel === 'sms_rcs') {
-        const smsSegments = Math.ceil(chars / 160) || 1;
-        counterEl.textContent = `${chars} chars (${smsSegments} SMS / RCS)`;
-      } else {
-        counterEl.textContent = `${chars} chars`;
+      const str = text || '';
+      const chars = str.length;
+      const words = str.trim() ? str.trim().split(/\s+/).length : 0;
+      const smsSegments = Math.max(1, Math.ceil(chars / 160));
+
+      const statChars = document.getElementById('reminder-stat-chars');
+      const statWords = document.getElementById('reminder-stat-words');
+      const statSms = document.getElementById('reminder-stat-sms');
+
+      if (statChars) statChars.innerHTML = `<strong>${chars}</strong> chars`;
+      if (statWords) statWords.innerHTML = `<strong>${words}</strong> words`;
+      if (statSms) statSms.innerHTML = `<strong>${smsSegments}</strong> SMS`;
+
+      if (counterEl) {
+        if (activeChannel === 'sms_rcs') {
+          counterEl.innerHTML = `<strong>${chars}</strong> chars &bull; <strong>${words}</strong> words &bull; <strong>${smsSegments}</strong> SMS`;
+        } else {
+          counterEl.innerHTML = `<strong>${chars}</strong> chars &bull; <strong>${words}</strong> words`;
+        }
+      }
+
+      if (waBubbleEl && typeof Share.formatWhatsAppMarkup === 'function') {
+        waBubbleEl.innerHTML = Share.formatWhatsAppMarkup(str);
       }
     };
 
@@ -118,6 +170,7 @@ export const Reminders = {
         channelPills.forEach(x => x.classList.remove('active'));
         p.classList.add('active');
         activeChannel = p.getAttribute('data-channel');
+        setViewMode(activeChannel === 'whatsapp' ? 'whatsapp' : 'raw');
         regenerateMessage();
       };
     });

@@ -24,7 +24,12 @@ export const Properties = {
     const curr = window.APP_CURRENCY || '₹';
 
     if (!this.properties || this.properties.length === 0) {
-      container.innerHTML = `<div class="empty-state">No properties added yet. Tap "Add Property" to begin.</div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="building-2" style="width:36px; height:36px;"></i>
+          <div>No properties added yet. Tap "Add Property" to begin.</div>
+        </div>`;
+      this.refreshIcons();
       return;
     }
 
@@ -105,7 +110,7 @@ export const Properties = {
         </div>
         ${(p.expense_count > 0 || p.total_expenses > 0) ? `
           <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm); margin-top:8px;">
-            <span><i data-lucide="wrench" style="width:13px; height:13px; color:#dc2626; vertical-align:-2px;"></i> Expenses: <strong style="color:#dc2626;" title="${this.formatFullMoney(p.total_expenses || 0)}">${this.formatMoney(p.total_expenses || 0, true)}</strong> (${p.expense_count || 0})</span>
+            <span><i data-lucide="wrench" style="width:13px; height:13px; color:var(--danger); vertical-align:-2px;"></i> Expenses: <strong style="color:var(--danger);" title="${this.formatFullMoney(p.total_expenses || 0)}">${this.formatMoney(p.total_expenses || 0, true)}</strong> (${p.expense_count || 0})</span>
             <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};" title="${this.formatFullMoney(p.net_profit || 0)}">${this.formatMoney(p.net_profit || 0, true)}</strong></span>
           </div>
         ` : ''}
@@ -300,15 +305,10 @@ export const Properties = {
     const iconWrap = document.getElementById('unit-detail-icon-wrap');
     if (iconWrap) {
       iconWrap.innerHTML = typeSvg;
-      if (isOccupied) {
-        iconWrap.style.background = 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)';
-        iconWrap.style.color = '#059669';
-        iconWrap.style.border = '1px solid #a7f3d0';
-      } else {
-        iconWrap.style.background = 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)';
-        iconWrap.style.color = '#64748b';
-        iconWrap.style.border = '1px solid var(--border)';
-      }
+      iconWrap.className = 'unit-type-icon ' + (isOccupied ? 'unit-occupied' : 'unit-vacant');
+      iconWrap.style.background = '';
+      iconWrap.style.color = '';
+      iconWrap.style.border = '';
     }
 
     const titleEl = document.getElementById('unit-detail-title');
@@ -431,8 +431,9 @@ export const Properties = {
         if (!expenses || expenses.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              No expenses recorded for this property yet.<br>
-              Tap "+ Add Expense" above to record maintenance or repair costs.
+              <i data-lucide="receipt-text" style="width:36px; height:36px;"></i>
+              <div>No expenses recorded for this property yet.</div>
+              <div style="font-size:0.82rem; opacity:0.8; margin-top:2px;">Tap "+ Add Expense" above to record maintenance or repair costs.</div>
             </div>
           `;
         } else {
@@ -447,7 +448,7 @@ export const Properties = {
                   </div>
                 </div>
                 <div class="card-top-right">
-                  <strong style="color:#dc2626; font-size:1.05rem;">${curr}${ex.amount.toFixed(2)}</strong>
+                  <strong style="color:var(--danger, #dc2626); font-size:1.05rem;">${curr}${ex.amount.toFixed(2)}</strong>
                   <div class="card-dropdown">
                     <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="Expense options">
                       <i data-lucide="more-vertical"></i>

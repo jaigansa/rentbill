@@ -65,10 +65,36 @@ When started on desktop, RentBill automatically opens its native GUI application
 ======================================================
 ```
 
-### 2. Headless Server Mode (e.g. systemd or Docker)
-If you want to run RentBill without a desktop GUI window:
+### 2. Run as Headless Server (Local or Wi-Fi Sharing)
+
+You can run RentBill in headless server mode directly in your terminal:
+
 ```bash
-./rentbill -server -port 8080
+# Local machine only (127.0.0.1:8080)
+./linux.sh server
+# or: make server
+
+# With Wi-Fi mobile phone sharing enabled
+./linux.sh server --share
+# or: make share
+
+# On a custom port
+./linux.sh server --share --port 8085
+```
+
+---
+
+### 3. Run as Background System Service (Auto-Start on Boot)
+
+Install RentBill as an auto-starting systemd user service that keeps running in the background and restarts automatically on reboot:
+
+```bash
+# Install & start service with Wi-Fi mobile sharing enabled
+./linux.sh install --share
+
+# Check status or follow logs
+./linux.sh status
+./linux.sh logs
 ```
 
 ---
@@ -114,34 +140,67 @@ make all
 
 ---
 
-## 🐧 Linux Service & Desktop Installation (`rentbill.sh`)
+## 🐧 Linux CLI Manager (`linux.sh` / `rentbill.sh`)
 
-Manage RentBill on Linux using the unified CLI script or `make`:
+Manage RentBill easily on Linux using the unified CLI script (`./linux.sh` or `./rentbill.sh`).
+It automatically detects and installs Go toolchains if needed, manages dependencies, runs foreground servers, and configures background `systemd` user services.
 
 ```bash
-# 1. Install & start auto-starting background service WITH Wi-Fi mobile sharing
-./rentbill.sh --install --share
+# Compile binary (auto-installs Go compiler & project dependencies if missing)
+./linux.sh build
+# or: make build
+
+# Setup Go toolchain and verify module dependencies only
+./linux.sh setup
+# or: make setup
+
+# Run headless server in foreground (supports --share and --port)
+./linux.sh server --share --port 8080
+# or: make share
+
+# Install and start auto-starting background systemd service with Wi-Fi sharing
+./linux.sh install --share
 # or: make install-share
 
-# 2. Install background service for local loopback only (127.0.0.1)
-./rentbill.sh --install
+# Install background service for local loopback only (127.0.0.1)
+./linux.sh install
 # or: make install
 
-# 3. Install Linux desktop menu shortcut (with Wi-Fi sharing enabled on launch)
-./rentbill.sh --desktop --share
+# Install Linux desktop application shortcut (app launcher menu)
+./linux.sh desktop --share
 # or: make desktop
 
 # Check background service status
-./rentbill.sh --status
+./linux.sh status
 
 # Follow live service logs
-./rentbill.sh --logs
+./linux.sh logs
 
-# Rebuild and restart service after making changes
-./rentbill.sh --update --share
+# Rebuild binary and restart background service
+./linux.sh update --share
 
-# Stop and remove background service
-./rentbill.sh --remove
+# Stop, disable, and remove background service
+./linux.sh remove
+```
+
+> **Note:** Commands accept both clean verbs (`build`, `install`, `server`, etc.) and standard flag syntax (`--build`, `--install`, `--server-install`, `--server`). Flags like `--share` (`-s`) and `--port <num>` (`-p`) can be passed in any position.
+
+---
+
+## 🐳 Docker Deployment
+
+To run RentBill inside a lightweight container:
+
+```bash
+# Build the Docker image
+docker build -t rentbill .
+
+# Run with persistent SQLite data on port 8080
+docker run -d \
+  --name rentbill \
+  -p 8080:8080 \
+  -v "$(pwd)/data:/app/data" \
+  rentbill
 ```
 
 ---

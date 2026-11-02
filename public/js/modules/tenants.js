@@ -2,6 +2,15 @@
 import { toast } from './utils.js';
 
 export const Tenants = {
+  getAvatarColorIndex(name) {
+    if (!name) return 0;
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return Math.abs(hash) % 8;
+  },
+
   getAvatarColor(name) {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
       (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -29,12 +38,7 @@ export const Tenants = {
     ];
 
     const colors = isDark ? darkColors : lightColors;
-    if (!name) return colors[0];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const index = Math.abs(hash) % colors.length;
+    const index = this.getAvatarColorIndex(name);
     return colors[index];
   },
 
@@ -54,11 +58,11 @@ export const Tenants = {
         </div>
       `;
     }
-    const color = this.getAvatarColor(t.name || '');
+    const colorIdx = this.getAvatarColorIndex(t.name || '');
     const initials = this.getInitials(t.name || '');
     const fontSize = Math.round(size * 0.38);
     return `
-      <div class="tenant-avatar tenant-avatar-initials" onclick="App.openAvatarZoom(${t.id}, event)" title="Tap to view photo" style="width:${size}px; height:${size}px; min-width:${size}px; background:${color.bg}; color:${color.text}; border:1.5px solid ${color.border}; font-size:${fontSize}px;">
+      <div class="tenant-avatar tenant-avatar-initials avatar-color-${colorIdx}" onclick="App.openAvatarZoom(${t.id}, event)" title="Tap to view photo" style="width:${size}px; height:${size}px; min-width:${size}px; font-size:${fontSize}px;">
         ${initials}
       </div>
     `;
@@ -96,12 +100,13 @@ export const Tenants = {
         zoomImg.style.display = 'none';
       }
       if (zoomInitials) {
-        const color = this.getAvatarColor(t.name || '');
+        const colorIdx = this.getAvatarColorIndex(t.name || '');
         const initials = this.getInitials(t.name || '');
+        zoomInitials.className = `avatar-zoom-initials avatar-color-${colorIdx}`;
         zoomInitials.style.display = 'flex';
-        zoomInitials.style.background = color.bg;
-        zoomInitials.style.color = color.text;
-        zoomInitials.style.border = `4px solid ${color.border}`;
+        zoomInitials.style.background = '';
+        zoomInitials.style.color = '';
+        zoomInitials.style.border = '';
         zoomInitials.textContent = initials;
       }
     }
@@ -238,7 +243,12 @@ export const Tenants = {
     const curr = window.APP_CURRENCY || '₹';
 
     if (!this.tenants || this.tenants.length === 0) {
-      container.innerHTML = `<div class="empty-state">No tenants found. Tap "Add Tenant" to begin.</div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="users" style="width:36px; height:36px;"></i>
+          <div>No tenants found. Tap "Add Tenant" to begin.</div>
+        </div>`;
+      this.refreshIcons();
       return;
     }
 
@@ -595,6 +605,7 @@ export const Tenants = {
       previewImg.style.display = 'none';
     }
     if (placeholder) {
+      placeholder.className = 'tenant-photo-avatar-placeholder';
       placeholder.style.display = 'flex';
       placeholder.style.background = 'var(--surface-alt)';
       placeholder.style.color = 'var(--text-muted)';
@@ -653,12 +664,13 @@ export const Tenants = {
           previewImg.style.display = 'none';
         }
         if (placeholder) {
-          const color = this.getAvatarColor(t.name);
+          const colorIdx = this.getAvatarColorIndex(t.name);
           const initials = this.getInitials(t.name);
+          placeholder.className = `tenant-photo-avatar-placeholder avatar-color-${colorIdx}`;
           placeholder.style.display = 'flex';
-          placeholder.style.background = color.bg;
-          placeholder.style.color = color.text;
-          placeholder.style.border = `1.5px solid ${color.border}`;
+          placeholder.style.background = '';
+          placeholder.style.color = '';
+          placeholder.style.border = '';
           placeholder.innerHTML = `<span style="font-weight:700; font-size:1.35rem;">${initials}</span>`;
         }
         if (btnRemove) btnRemove.style.display = 'none';
@@ -794,7 +806,8 @@ export const Tenants = {
         if (!bills || bills.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
-              No bills found for this tenant.
+              <i data-lucide="receipt" style="width:36px; height:36px;"></i>
+              <div>No bills found for this tenant.</div>
             </div>
           `;
         } else {

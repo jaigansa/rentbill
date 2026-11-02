@@ -1,4 +1,4 @@
-.PHONY: all build run open test check clean windows mac mac-intel linux linux-arm64 help
+.PHONY: all build setup run open test check clean windows mac mac-intel linux linux-arm64 help
 
 APP_NAME ?= rentbill
 VERSION ?= 1.0.0
@@ -19,6 +19,10 @@ share:
 # Run in headless server mode
 server:
 	CGO_ENABLED=0 go run . -server -port 8080
+
+# Setup Go compiler and download project dependencies
+setup:
+	./linux.sh --setup
 
 # Install as auto-starting systemd user service with Wi-Fi mobile sharing
 install-share: build

@@ -642,6 +642,11 @@ const App = {
 window.App = App;
 export default App;
 
+// Disable browser default right-click context menu
+document.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
 });

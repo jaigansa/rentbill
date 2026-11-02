@@ -285,7 +285,12 @@ export const Bills = {
     }
 
     if (list.length === 0) {
-      container.innerHTML = `<div class="empty-state">No ${filter === 'ALL' ? '' : filter.toLowerCase()} bills found.</div>`;
+      container.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="receipt" style="width:36px; height:36px;"></i>
+          <div>No ${filter === 'ALL' ? '' : filter.toLowerCase()} bills found.</div>
+        </div>`;
+      this.refreshIcons();
       return;
     }
 
@@ -528,7 +533,7 @@ export const Bills = {
                 <td><strong>Electricity Charges</strong></td>
                 <td>
                   ${b.electricity_units} units @ ${curr}${b.electricity_rate}
-                  <div class="inv-subtext">Meter: ${b.prev_electricity_meter} ➔ ${b.curr_electricity_meter}</div>
+                  <div class="inv-subtext">Meter: ${b.prev_electricity_meter} to ${b.curr_electricity_meter}</div>
                 </td>
                 <td class="num">${curr}${numFmt(b.electricity_amount)}</td>
               </tr>
@@ -539,7 +544,7 @@ export const Bills = {
                 <td>
                   ${b.water_billing_type === 'METER' ? `
                     ${b.water_units} units @ ${curr}${b.water_rate}
-                    <div class="inv-subtext">Meter: ${b.prev_water_meter} ➔ ${b.curr_water_meter}</div>
+                    <div class="inv-subtext">Meter: ${b.prev_water_meter} to ${b.curr_water_meter}</div>
                   ` : 'Fixed Monthly Charge'}
                 </td>
                 <td class="num">${curr}${numFmt(b.water_amount)}</td>
