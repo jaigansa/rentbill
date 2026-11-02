@@ -490,7 +490,7 @@ export const Bills = {
           <div class="inv-brand-section">
             <div class="inv-title">RENT INVOICE / RECEIPT</div>
             <div class="inv-num">Invoice #: <strong>${b.bill_number}</strong></div>
-            <div class="inv-date">Date: ${issueDate}</div>
+            <div class="inv-date">Bill Date: <strong>${issueDate || 'N/A'}</strong></div>
           </div>
           <div class="inv-meta-section">
             <div class="inv-badge-wrap">${statusBadge}</div>
@@ -639,6 +639,12 @@ export const Bills = {
         ${b.notes ? `
           <div class="inv-notes-box">
             <strong>Note:</strong> ${b.notes}
+          </div>
+        ` : ''}
+
+        ${b.status !== 'PAID' ? `
+          <div class="inv-pay-instruction" style="margin: 10px 0; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary, #2563eb); border-radius: 6px; font-size: 0.85rem; color: var(--text);">
+            <strong>📌 Payment Note:</strong> Once paid, kindly share the payment confirmation / transaction screenshot.
           </div>
         ` : ''}
 

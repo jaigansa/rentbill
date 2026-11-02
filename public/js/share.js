@@ -146,11 +146,13 @@ const Share = {
     const currency = window.APP_CURRENCY || '₹';
     const numFmt = (n) => (typeof n === 'number' ? n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (n || '0.00'));
     const divider = '------------------------------------------';
+    const billDate = this.formatDate(bill.created_at || new Date().toISOString());
 
     const lines = [
       `RENT & UTILITY INVOICE`,
       divider,
       `Invoice No:    #${bill.bill_number}`,
+      `Bill Date:     ${billDate}`,
       `Billing Month: ${this.formatMonth(bill.billing_month)}`,
       `Due Date:      ${bill.due_date || 'N/A'}`,
       divider,
@@ -246,6 +248,12 @@ const Share = {
       }
     }
 
+    const isPaid = bill.status === 'PAID' || (bill.balance_amount !== undefined && bill.balance_amount <= 0 && bill.total_amount > 0);
+    if (!isPaid) {
+      lines.push(divider);
+      lines.push(`📌 Once paid, kindly share the payment details / transaction screenshot.`);
+    }
+
     if (bill.notes) {
       lines.push(divider);
       lines.push(`Notes:`);
@@ -263,9 +271,11 @@ const Share = {
     const currency = window.APP_CURRENCY || '₹';
     const numFmt = (n) => (typeof n === 'number' ? n.toFixed(2) : (n || '0.00'));
     const due = bill.due_date || '';
+    const billDate = this.formatDate(bill.created_at || new Date().toISOString());
     const balance = (bill.balance_amount !== undefined && bill.balance_amount !== null)
       ? bill.balance_amount
       : (bill.total_amount - (bill.paid_amount || 0));
+    const isPaid = bill.status === 'PAID' || (bill.balance_amount !== undefined && bill.balance_amount <= 0 && bill.total_amount > 0);
 
     let payDetails = '';
     if (bill.payment_upi) {
@@ -275,11 +285,12 @@ const Share = {
     }
 
     if (isCompact) {
-      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${this.formatMonth(bill.billing_month)}) is ${currency}${numFmt(bill.total_amount)}. Due: ${due}.`;
+      let msg = `RentBill: Hi ${bill.tenant_name}, rent bill for ${bill.property_name} (${this.formatMonth(bill.billing_month)}) dated ${billDate} is ${currency}${numFmt(bill.total_amount)}. Due: ${due}.`;
       if (balance > 0 && balance !== bill.total_amount) {
         msg += ` Due Bal: ${currency}${numFmt(balance)}.`;
       }
       if (payDetails) msg += ` ${payDetails}.`;
+      if (!isPaid) msg += ` Once paid, please share payment details.`;
       msg += ` Thank you!`;
       return msg;
     }
@@ -289,6 +300,7 @@ const Share = {
       `Tenant: ${bill.tenant_name}`,
       `Unit: ${bill.property_name}`,
       `Bill No: #${bill.bill_number}`,
+      `Bill Date: ${billDate}`,
       `Due Date: ${due}`,
       `------------------------------------------`,
       `➤ Base Rent: ${currency}${numFmt(bill.base_rent)}`,
@@ -338,6 +350,9 @@ const Share = {
     }
     if (payDetails) {
       lines.push(payDetails);
+    }
+    if (!isPaid) {
+      lines.push(`Once paid, kindly share the payment details / transaction screenshot.`);
     }
     lines.push(`Thank you! - RentBill`);
     return lines.join('\n');
@@ -730,7 +745,7 @@ const Share = {
 
     ctx.fillStyle = '#64748b';
     ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Date: ${issueDate}`, 32, y + 18);
+    ctx.fillText(`Bill Date: ${issueDate}`, 32, y + 18);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = '#0f172a';
@@ -1021,7 +1036,16 @@ const Share = {
       y += payBoxH + 16;
     }
 
-    // 8. Notes
+    // 8. Payment Confirmation Notice for Unpaid Bills
+    if (status !== 'PAID') {
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#0284c7';
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('📌 Once paid, kindly share the payment details / transaction screenshot.', 32, y + 16);
+      y += 20;
+    }
+
+    // 9. Notes
     if (bill.notes) {
       ctx.textAlign = 'left';
       ctx.fillStyle = '#475569';
