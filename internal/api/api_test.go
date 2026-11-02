@@ -296,3 +296,48 @@ func TestLANSharingAndPrivateIPValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestDefaultSecurityModeWithoutToken(t *testing.T) {
+	server, _, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	// Default: server.LocalAppToken is "" (no -token supplied)
+	handler := server.SecurityMiddleware(mux)
+
+	// 1. Health check /api/health should always return 200 OK
+	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	req.Host = "127.0.0.1:8080"
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/health, got %d", rec.Code)
+	}
+
+	// 2. Normal API access should succeed without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/dashboard without token, got %d", rec.Code)
+	}
+
+	// 3. DNS Rebinding must still be rejected even without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "evil-domain.com:8080"
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request for rebinding domain without token, got %d", rec.Code)
+	}
+
+	// 4. Cross-Origin CSRF must still be rejected even without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Origin", "http://malicious-website.com")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for external origin without token, got %d", rec.Code)
+	}
+}

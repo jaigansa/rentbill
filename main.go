@@ -101,7 +101,16 @@ func tryConnectRunningInstance(port string) (string, bool) {
 		}
 	}
 
-	// Secondary check: verify HTML shell
+	// Secondary check: verify health endpoint
+	respHealth, errHealth := client.Get(fmt.Sprintf("http://127.0.0.1:%s/api/health", port))
+	if errHealth == nil {
+		defer respHealth.Body.Close()
+		if respHealth.StatusCode == http.StatusOK {
+			return fmt.Sprintf("http://127.0.0.1:%s/", port), true
+		}
+	}
+
+	// Tertiary check: verify HTML shell
 	respRoot, errRoot := client.Get(fmt.Sprintf("http://127.0.0.1:%s/", port))
 	if errRoot == nil {
 		defer respRoot.Body.Close()
@@ -126,7 +135,7 @@ func main() {
 	hostFlag := flag.String("host", "", "Bind host address (default: 127.0.0.1 for local, 0.0.0.0 for LAN share)")
 	shareFlag := flag.Bool("share", false, "Share RentBill over local network (Wi-Fi access for mobile phones)")
 	flag.BoolVar(shareFlag, "lan", false, "Share RentBill over local network (alias)")
-	tokenFlag := flag.String("token", "", "Custom security token (default: auto-generated 256-bit random token)")
+	tokenFlag := flag.String("token", "", "Optional custom security token (enforces token authentication on all API requests)")
 	dbPath := flag.String("db-path", defaultDB, "Path to SQLite database file")
 	serverMode := flag.Bool("server", false, "Run as headless background server (without desktop GUI window)")
 	flag.BoolVar(serverMode, "headless", false, "Run as headless background server (alias)")
@@ -209,11 +218,11 @@ func main() {
 		}
 	}
 
-	// Generate Cryptographic One-Time Security Token for local GUI and authorized LAN access
+	// Security Token: only enforce when explicitly provided by the user via -token flag.
+	// For normal local desktop GUI and server operations, Zero-Trust is enforced via
+	// strict Anti-CSRF Origin/Referer checks, Anti-DNS-Rebinding Host validation,
+	// Content-Security-Policy, and the 4-digit PIN authentication system.
 	appToken := *tokenFlag
-	if appToken == "" {
-		appToken = generateSecurityToken()
-	}
 
 	// Strip 'public' prefix from embedded filesystem
 	subFS, err := fs.Sub(publicFS, "public")
@@ -246,12 +255,21 @@ func main() {
 	defer listener.Close()
 
 	assignedPort := listener.Addr().(*net.TCPAddr).Port
-	localURL := fmt.Sprintf("http://127.0.0.1:%d/?token=%s", assignedPort, appToken)
+	var localURL string
+	if appToken != "" {
+		localURL = fmt.Sprintf("http://127.0.0.1:%d/?token=%s", assignedPort, appToken)
+	} else {
+		localURL = fmt.Sprintf("http://127.0.0.1:%d/", assignedPort)
+	}
 
 	// Detect LAN IPs for mobile sharing
 	var lanURLs []string
 	for _, ip := range getLocalIPs() {
-		lanURLs = append(lanURLs, fmt.Sprintf("http://%s:%d/?token=%s", ip, assignedPort, appToken))
+		if appToken != "" {
+			lanURLs = append(lanURLs, fmt.Sprintf("http://%s:%d/?token=%s", ip, assignedPort, appToken))
+		} else {
+			lanURLs = append(lanURLs, fmt.Sprintf("http://%s:%d/", ip, assignedPort))
+		}
 	}
 	server.SetNetworkInfo(assignedPort, lanURLs, isLANShared)
 
@@ -293,7 +311,11 @@ func main() {
 			fmt.Println("  • LAN Sharing:   🔒 Disabled (Local Desktop Loopback Only)")
 			fmt.Println("  • Tip:           Run with '-share' to enable mobile phone access")
 		}
-		fmt.Println("  • Security:      Zero-Trust Token Auth (Anti-CSRF / Anti-Rebinding)")
+		if appToken != "" {
+			fmt.Println("  • Security:      Zero-Trust Token Auth (Anti-CSRF / Anti-Rebinding)")
+		} else {
+			fmt.Println("  • Security:      Zero-Trust Protected (Anti-CSRF / Rebinding / PIN)")
+		}
 		fmt.Printf("  • Database:      %s (Pure Go SQLite)\n", *dbPath)
 		fmt.Println("======================================================")
 		fmt.Println("  💡 Tip: Close the RentBill desktop window to exit.")

@@ -40,32 +40,32 @@ func (s *Server) SecurityMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Content-Security-Policy", "default-src 'self' 'unsafe-inline' data:; connect-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none';")
 
-		// 2. Strict protections when LocalAppToken is active (Desktop / GUI mode)
-		if s.LocalAppToken != "" {
-			// Anti-DNS-Rebinding: Validate Host header (allows localhost, and private IPs if LAN sharing)
-			if !isAllowedHost(r.Host, s.AllowRemote) {
-				http.Error(w, "Bad Request: Invalid host header", http.StatusBadRequest)
+		// 2. Anti-DNS-Rebinding: Validate Host header (allows localhost, and private IPs if LAN sharing)
+		if !isAllowedHost(r.Host, s.AllowRemote) {
+			http.Error(w, "Bad Request: Invalid host header", http.StatusBadRequest)
+			return
+		}
+
+		// 3. Anti-CSRF: Validate Origin header if present
+		if origin := r.Header.Get("Origin"); origin != "" {
+			if !s.isAllowedOrigin(origin) {
+				http.Error(w, "Forbidden: Cross-origin request rejected", http.StatusForbidden)
 				return
 			}
+		}
 
-			// Anti-CSRF: Validate Origin header if present
-			if origin := r.Header.Get("Origin"); origin != "" {
-				if !s.isAllowedOrigin(origin) {
-					http.Error(w, "Forbidden: Cross-origin request rejected", http.StatusForbidden)
-					return
-				}
+		// 4. Anti-CSRF: Validate Referer header if present
+		if referer := r.Header.Get("Referer"); referer != "" {
+			if !s.isAllowedReferer(referer) {
+				http.Error(w, "Forbidden: External referer rejected", http.StatusForbidden)
+				return
 			}
+		}
 
-			// Anti-CSRF: Validate Referer header if present
-			if referer := r.Header.Get("Referer"); referer != "" {
-				if !s.isAllowedReferer(referer) {
-					http.Error(w, "Forbidden: External referer rejected", http.StatusForbidden)
-					return
-				}
-			}
-
-			// Local Token Authentication for all /api/ endpoints
-			if strings.HasPrefix(r.URL.Path, "/api/") {
+		// 5. Strict protections when LocalAppToken is active
+		if s.LocalAppToken != "" {
+			// Local Token Authentication for all /api/ endpoints EXCEPT /api/health
+			if strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/health" {
 				reqToken := r.Header.Get("X-RentBill-Token")
 				if reqToken == "" {
 					if cookie, err := r.Cookie("rb_app_token"); err == nil {
@@ -139,7 +139,11 @@ func isAllowedHost(host string, allowRemote bool) bool {
 func (s *Server) HandleNetworkInfo(w http.ResponseWriter, r *http.Request) {
 	localURL := ""
 	if s.StaticPort > 0 {
-		localURL = fmt.Sprintf("http://127.0.0.1:%d/?token=%s", s.StaticPort, s.LocalAppToken)
+		if s.LocalAppToken != "" {
+			localURL = fmt.Sprintf("http://127.0.0.1:%d/?token=%s", s.StaticPort, s.LocalAppToken)
+		} else {
+			localURL = fmt.Sprintf("http://127.0.0.1:%d/", s.StaticPort)
+		}
 	}
 	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"lan_shared": s.IsLANShared,
@@ -151,6 +155,14 @@ func (s *Server) HandleNetworkInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
+	// Liveness / Health Check Endpoint
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
+		sendJSON(w, http.StatusOK, map[string]interface{}{
+			"status": "ok",
+			"app":    "rentbill",
+		})
+	})
+
 	// Network & Wi-Fi Sharing Endpoint
 	mux.HandleFunc("GET /api/network/info", server.HandleNetworkInfo)
 
