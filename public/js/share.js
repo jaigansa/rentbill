@@ -153,7 +153,7 @@ const Share = {
       divider,
       `Invoice No:    #${bill.bill_number}`,
       `Bill Date:     ${billDate}`,
-      `Billing Month: ${this.formatMonth(bill.billing_month)}`,
+      `Rent For:      ${this.formatMonth(bill.billing_month)}`,
       `Due Date:      ${bill.due_date || 'N/A'}`,
       divider,
       `TENANT & PROPERTY:`,
@@ -750,7 +750,7 @@ const Share = {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#0f172a';
     ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Billing Month: ${this.formatMonth(bill.billing_month)}`, width - 32, y);
+    ctx.fillText(`Rent For: ${this.formatMonth(bill.billing_month)}`, width - 32, y);
 
     ctx.fillStyle = '#64748b';
     ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -1232,7 +1232,7 @@ const Share = {
       ];
 
       if (billNum) lines.push(`${pad('Invoice No:', 15)}#${billNum}`);
-      if (month) lines.push(`${pad('Billing Month:', 15)}${month}`);
+      if (month) lines.push(`${pad('Rent For:', 15)}${month}`);
       if (dueFormatted !== 'N/A') lines.push(`${pad('Due Date:', 15)}${dueLabel}`);
       lines.push(`${pad('Notice Status:', 15)}${statusText}`);
       lines.push(divider);
@@ -1306,7 +1306,7 @@ const Share = {
     ];
 
     if (billNum) lines.push(`${pad('*Invoice No:*', 17)}#${billNum}`);
-    if (month) lines.push(`${pad('*Billing Month:*', 17)}${month}`);
+    if (month) lines.push(`${pad('*Rent For:*', 17)}${month}`);
     if (dueFormatted !== 'N/A') lines.push(`${pad('*Due Date:*', 17)}${dueLabel}`);
     lines.push(`${pad('*Notice Status:*', 17)}${statusText}`);
     lines.push(divider);

@@ -494,7 +494,7 @@ export const Bills = {
           </div>
           <div class="inv-meta-section">
             <div class="inv-badge-wrap">${statusBadge}</div>
-            <div class="inv-period">Billing Month: <strong>${this.formatMonth(b.billing_month)}</strong></div>
+            <div class="inv-period">Rent For: <strong>${this.formatMonth(b.billing_month)}</strong></div>
             <div class="inv-due">Due Date: <strong>${b.due_date}</strong></div>
           </div>
         </div>
