@@ -134,7 +134,9 @@ func LaunchWindow(ctx context.Context, targetURL string) (*WindowSession, error)
 // Wait blocks until the GUI window is closed by the user
 func (s *WindowSession) Wait() error {
 	if s.cmd == nil {
-		return nil
+		// When using default browser (no child process to wait on),
+		// keep the backend running indefinitely until explicitly stopped
+		select {}
 	}
 	err := s.cmd.Wait()
 	s.Close()

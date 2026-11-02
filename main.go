@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -15,6 +16,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -74,6 +76,41 @@ func getDefaultDBPath() string {
 	}
 
 	return filepath.Join("data", "rentbill.db")
+}
+
+// tryConnectRunningInstance checks if a RentBill server is already running on the given port
+func tryConnectRunningInstance(port string) (string, bool) {
+	client := &http.Client{Timeout: 600 * time.Millisecond}
+	apiURL := fmt.Sprintf("http://127.0.0.1:%s/api/network/info", port)
+
+	resp, err := client.Get(apiURL)
+	if err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			var info struct {
+				LocalURL string `json:"local_url"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&info); err == nil && info.LocalURL != "" {
+				return info.LocalURL, true
+			}
+			return fmt.Sprintf("http://127.0.0.1:%s/", port), true
+		}
+		// When security token is active on the running instance, 403 Forbidden confirms RentBill is listening
+		if resp.StatusCode == http.StatusForbidden {
+			return fmt.Sprintf("http://127.0.0.1:%s/", port), true
+		}
+	}
+
+	// Secondary check: verify HTML shell
+	respRoot, errRoot := client.Get(fmt.Sprintf("http://127.0.0.1:%s/", port))
+	if errRoot == nil {
+		defer respRoot.Body.Close()
+		if respRoot.StatusCode == http.StatusOK && strings.Contains(respRoot.Header.Get("Content-Security-Policy"), "rentbill") {
+			return fmt.Sprintf("http://127.0.0.1:%s/", port), true
+		}
+	}
+
+	return "", false
 }
 
 func main() {
@@ -155,6 +192,23 @@ func main() {
 		}
 	}
 
+	// In GUI Desktop mode: check if RentBill is already running on the target port
+	if isGUIMode {
+		if existingURL, ok := tryConnectRunningInstance(bindPort); ok {
+			fmt.Printf("🚀 RentBill is already running. Connecting GUI window to %s\n", existingURL)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			session, err := gui.LaunchWindow(ctx, existingURL)
+			if err != nil {
+				_ = gui.OpenInDefaultBrowser(existingURL)
+				return
+			}
+			_ = session.Wait()
+			return
+		}
+	}
+
 	// Generate Cryptographic One-Time Security Token for local GUI and authorized LAN access
 	appToken := *tokenFlag
 	if appToken == "" {
@@ -178,10 +232,16 @@ func main() {
 	// Wrap entire router with security middleware (Anti-CSRF, Anti-DNS-Rebinding, Token Auth)
 	secureHandler := server.SecurityMiddleware(mux)
 
-	// Start TCP listener with helpful port conflict message
+	// Start TCP listener (with automatic fallback to available port in GUI desktop mode)
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", bindHost, bindPort))
 	if err != nil {
-		log.Fatalf("❌ Failed to bind to %s:%s: %v\n💡 If port %s is already in use by another app, choose a different port using '-port <number>' (e.g., ./rentbill -port 8085) or set PORT=8085.", bindHost, bindPort, err, bindPort)
+		if isGUIMode && *portFlag == defaultPort {
+			// Auto-fallback for desktop mode if default port 8080 is blocked by other non-RentBill software
+			listener, err = net.Listen("tcp", fmt.Sprintf("%s:0", bindHost))
+		}
+		if err != nil {
+			log.Fatalf("❌ Failed to bind to %s:%s: %v\n💡 If port %s is already in use by another app, choose a different port using '-port <number>' (e.g., ./rentbill -port 8085) or set PORT=8085.", bindHost, bindPort, err, bindPort)
+		}
 	}
 	defer listener.Close()
 
