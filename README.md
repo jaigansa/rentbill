@@ -142,48 +142,27 @@ make all
 
 ## 🐧 Linux CLI Manager (`rentbill.sh`)
 
-Manage RentBill easily on Linux using the unified CLI script (`./rentbill.sh`).
-It automatically detects and installs Go toolchains if needed, manages dependencies, runs foreground servers, and configures background `systemd` user services.
+Manage RentBill easily on Linux using the simplified CLI script (`./rentbill.sh`).
+It automatically configures dependencies, manages the application lifecycle, and handles the desktop launcher and background `systemd` user service in one place.
 
 ```bash
-# Compile binary (auto-installs Go compiler & project dependencies if missing)
-./rentbill.sh build
-# or: make build
-
-# Setup Go toolchain and verify module dependencies only
-./rentbill.sh setup
-# or: make setup
-
-# Run headless server in foreground (supports --share and --port)
-./rentbill.sh server --share --port 8080
-# or: make share
-
-# Install and start auto-starting background systemd service with Wi-Fi sharing
+# 1. Complete install (binary + desktop app launcher + background service)
 ./rentbill.sh install --share
-# or: make install-share
 
-# Install background service for local loopback only (127.0.0.1)
-./rentbill.sh install
-# or: make install
+# 2. Run directly in foreground (GUI window, or add --server for headless)
+./rentbill.sh run
 
-# Install Linux desktop application shortcut (app launcher menu)
-./rentbill.sh desktop --share
-# or: make desktop
-
-# Check background service status
+# 3. Check background service status and URL
 ./rentbill.sh status
 
-# Follow live service logs
+# 4. Follow live service logs
 ./rentbill.sh logs
 
-# Rebuild binary and restart background service
-./rentbill.sh update --share
-
-# Stop, disable, and remove background service
-./rentbill.sh remove
+# 5. Clean uninstall (stops service, removes launcher and binary; keeps DB safe)
+./rentbill.sh uninstall
 ```
 
-> **Note:** Commands accept both clean verbs (`build`, `install`, `server`, etc.) and standard flag syntax (`--build`, `--install`, `--server-install`, `--server`). Flags like `--share` (`-s`) and `--port <num>` (`-p`) can be passed in any position.
+> **Note:** Additional developer commands (`build`, `update`, `start`, `stop`, `restart`) and standard flag syntax (`--install`, `--server`, `-s`, `-p <port>`) are fully supported.
 
 ### Standard Linux File Locations (XDG Specification)
 * **Binary**: `~/.local/bin/rentbill`

@@ -37,28 +37,23 @@ usage() {
     echo "Usage: $0 [COMMAND] [FLAGS]"
     echo ""
     echo "Commands:"
-    echo "  build              Compile binary (auto-sets up compiler & dependencies)"
-    echo "  setup              Setup Go toolchain and verify project dependencies"
-    echo "  server             Run headless server in foreground"
-    echo "  install            Install and start as background systemd service"
-    echo "  desktop            Create desktop menu application launcher"
-    echo "  update             Rebuild binary and restart background service"
-    echo "  remove             Stop, disable, and remove background service"
+    echo "  install            Full install (desktop launcher + background service)"
+    echo "  run                Run RentBill in foreground (GUI or --server)"
     echo "  status             Check status of background service"
     echo "  logs               Follow live logs of background service"
-    echo "  help               Show this help message"
+    echo "  uninstall          Stop and remove service, desktop launcher & binary"
     echo ""
-    echo "Flags (can be used with server, install, desktop, update):"
+    echo "Flags:"
     echo "  --share, -s        Enable local network Wi-Fi mobile sharing"
     echo "  --port, -p <num>   Set HTTP port (default: 8080)"
+    echo "  --server           Run in headless server mode (with 'run')"
     echo ""
     echo "Examples:"
-    echo "  $0 build"
-    echo "  $0 server --share"
-    echo "  $0 install --share --port 8080"
+    echo "  $0 install --share"
+    echo "  $0 run"
     echo "  $0 status"
-    echo ""
-    echo "Note: Commands also accept standard flags syntax (e.g. --install, --server)."
+    echo "  $0 logs"
+    echo "  $0 uninstall"
     echo ""
 }
 
@@ -250,21 +245,52 @@ install_binary_and_assets() {
     fi
 }
 
+install_desktop_entry() {
+    ensure_binary
+    echo -e "${YELLOW}🖥️  Configuring Linux desktop application launcher...${NC}"
+    mkdir -p "${INSTALL_APP_DIR}"
+    install_binary_and_assets
+
+    local bin_args=""
+    if [ "$SHARE" = true ]; then
+        bin_args=" -share"
+    fi
+
+    local desktop_file="${INSTALL_APP_DIR}/rentbill.desktop"
+    cat <<EOF > "${desktop_file}"
+[Desktop Entry]
+Name=RentBill
+GenericName=Rental & Billing Manager
+Comment=Manage tenants, utility meter calculations, and rent receipts
+Exec=${INSTALL_BIN_DIR}/${APP_NAME}${bin_args}
+Icon=${INSTALL_ICON_DIR}/${APP_NAME}.svg
+Terminal=false
+Type=Application
+Categories=Office;Finance;Utility;
+Keywords=rent;bill;tenant;property;finance;
+StartupNotify=true
+Path=${INSTALL_DATA_DIR}
+EOF
+
+    chmod +x "${desktop_file}"
+    update-desktop-database "${INSTALL_APP_DIR}" 2>/dev/null || true
+    echo -e "${GREEN}✓ Desktop launcher ready: ${desktop_file}${NC}"
+}
+
 do_install() {
     ensure_binary
+    install_desktop_entry
+
     echo -e "${YELLOW}⚙️  Configuring user systemd service...${NC}"
     mkdir -p "${USER_SYSTEMD_DIR}"
     mkdir -p "${INSTALL_DATA_DIR}"
 
-    # Install binary and icons to standard Linux directories
-    install_binary_and_assets
-
     # Stop any conflicting standalone foreground process before starting service
     pkill -x "${APP_NAME}" 2>/dev/null || true
 
-    local exec_args
-    exec_args=$(get_server_args)
+    local exec_args="-server -port ${PORT}"
     if [ "$SHARE" = true ]; then
+        exec_args="${exec_args} -share"
         echo -e "${GREEN}📡 Local Network (Wi-Fi) sharing enabled in service (Port ${PORT})${NC}"
     fi
 
@@ -296,6 +322,7 @@ EOF
 
     echo ""
     echo -e "${GREEN}✅ RentBill installed and running successfully!${NC}"
+    echo "  • Launcher: Desktop menu (Rofi / Wofi / GNOME / KDE)"
     echo "  • Binary:   ${INSTALL_BIN_DIR}/${APP_NAME}"
     echo "  • Database: ${DEFAULT_DB}"
     echo "  • Service:  ${SERVICE_FILE}"
@@ -310,78 +337,27 @@ EOF
     fi
 }
 
-do_server() {
+do_run() {
     ensure_binary
-    local exec_args
-    exec_args=$(get_server_args)
+    local args="-port ${PORT}"
+    if [ "$SERVER_MODE" = true ]; then
+        args="-server ${args}"
+    fi
     if [ "$SHARE" = true ]; then
+        args="${args} -share"
         echo -e "${GREEN}📡 Local Network (Wi-Fi) sharing enabled (Port ${PORT})${NC}"
     fi
-    echo -e "${GREEN}🚀 Starting RentBill server...${NC}"
-    exec "${SCRIPT_DIR}/${APP_NAME}" ${exec_args}
-}
 
-do_desktop() {
-    ensure_binary
-    echo -e "${YELLOW}🖥️  Installing Linux desktop application launcher...${NC}"
-    mkdir -p "${INSTALL_APP_DIR}"
-    install_binary_and_assets
-
-    local bin_args=""
-    if [ "$SHARE" = true ]; then
-        bin_args=" -share"
-        echo -e "${GREEN}📡 Wi-Fi sharing will be active when launched from desktop menu${NC}"
-    fi
-
-    local desktop_file="${INSTALL_APP_DIR}/rentbill.desktop"
-    cat <<EOF > "${desktop_file}"
-[Desktop Entry]
-Name=RentBill
-GenericName=Rental & Billing Manager
-Comment=Manage tenants, utility meter calculations, and rent receipts
-Exec=${INSTALL_BIN_DIR}/${APP_NAME}${bin_args}
-Icon=${INSTALL_ICON_DIR}/${APP_NAME}.svg
-Terminal=false
-Type=Application
-Categories=Office;Finance;Utility;
-Keywords=rent;bill;tenant;property;finance;
-StartupNotify=true
-Path=${INSTALL_DATA_DIR}
-EOF
-
-    chmod +x "${desktop_file}"
-    update-desktop-database "${INSTALL_APP_DIR}" 2>/dev/null || true
-    echo -e "${GREEN}✅ Desktop launcher created: ${desktop_file}${NC}"
-    echo "   You can now launch RentBill directly from your application launcher (Rofi, Wofi, GNOME, etc.)"
-    echo "   • Binary:   ${INSTALL_BIN_DIR}/${APP_NAME}"
-    echo "   • Database: ${DEFAULT_DB}"
-}
-
-do_update() {
-    echo -e "${YELLOW}🔄 Updating RentBill...${NC}"
-    do_build
-
-    if [ -f "${INSTALL_BIN_DIR}/${APP_NAME}" ]; then
-        echo "📦 Updating installed binary in '${INSTALL_BIN_DIR}/${APP_NAME}'..."
-        install_binary_and_assets
-    fi
-
-    if [ "$SHARE" = true ]; then
-        do_install
-        return
-    fi
-
-    if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
-        echo "🔁 Restarting background service..."
-        systemctl --user restart "${SERVICE_NAME}"
-        echo -e "${GREEN}✅ Service restarted with the updated binary!${NC}"
+    if [ "$SERVER_MODE" = true ]; then
+        echo -e "${GREEN}🚀 Starting RentBill server in foreground...${NC}"
     else
-        echo -e "${YELLOW}⚠️  Service is not currently running. Run '$0 install' to start it.${NC}"
+        echo -e "${GREEN}🚀 Launching RentBill...${NC}"
     fi
+    exec "${SCRIPT_DIR}/${APP_NAME}" ${args}
 }
 
-do_remove() {
-    echo -e "${YELLOW}🗑️  Removing RentBill service and installation...${NC}"
+do_uninstall() {
+    echo -e "${YELLOW}🗑️  Uninstalling RentBill service and desktop launcher...${NC}"
 
     if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
         echo "🛑 Stopping service..."
@@ -413,7 +389,7 @@ do_remove() {
     systemctl --user reset-failed 2>/dev/null || true
 
     echo ""
-    echo -e "${GREEN}✅ RentBill service and application removed successfully!${NC}"
+    echo -e "${GREEN}✅ RentBill uninstalled successfully!${NC}"
     echo "   (Your persistent database in '${INSTALL_DATA_DIR}/' was kept safe)"
 }
 
@@ -425,6 +401,29 @@ do_logs() {
     journalctl --user -u "${SERVICE_NAME}" -f
 }
 
+do_update() {
+    echo -e "${YELLOW}🔄 Updating RentBill...${NC}"
+    do_build
+
+    if [ -f "${INSTALL_BIN_DIR}/${APP_NAME}" ]; then
+        echo "📦 Updating installed binary in '${INSTALL_BIN_DIR}/${APP_NAME}'..."
+        install_binary_and_assets
+    fi
+
+    if [ "$SHARE" = true ]; then
+        do_install
+        return
+    fi
+
+    if systemctl --user is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
+        echo "🔁 Restarting background service..."
+        systemctl --user restart "${SERVICE_NAME}"
+        echo -e "${GREEN}✅ Service restarted with the updated binary!${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Service is not currently running. Run '$0 install' to start it.${NC}"
+    fi
+}
+
 # ==============================================================================
 # Global CLI Argument Parsing & Command Normalization
 # Supports both: ./rentbill.sh <cmd> and ./rentbill.sh --<cmd> with flags in any order
@@ -432,6 +431,7 @@ do_logs() {
 ACTION=""
 SHARE=false
 PORT="8080"
+SERVER_MODE=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -447,43 +447,64 @@ while [[ $# -gt 0 ]]; do
             PORT="${1#*=}"
             shift
             ;;
-        --build|build)
-            ACTION="build"
+        --server|-server|--headless|-headless)
+            SERVER_MODE=true
             shift
             ;;
-        --setup|setup|--deps|deps)
-            ACTION="setup"
-            shift
-            ;;
-        --server|server|--run-server|run-server)
-            ACTION="server"
-            shift
-            ;;
-        --install|install|--server-install|server-install|--install-server)
+        install|--install|--server-install|server-install|--install-server)
             ACTION="install"
             shift
             ;;
-        --desktop|desktop)
-            ACTION="desktop"
+        run|--run)
+            ACTION="run"
             shift
             ;;
-        --update|update)
-            ACTION="update"
-            shift
-            ;;
-        --remove|remove|--uninstall|uninstall)
-            ACTION="remove"
-            shift
-            ;;
-        --status|status)
+        status|--status)
             ACTION="status"
             shift
             ;;
-        --logs|logs)
+        logs|--logs)
             ACTION="logs"
             shift
             ;;
-        --help|-h|help|"")
+        uninstall|--uninstall|remove|--remove)
+            ACTION="uninstall"
+            shift
+            ;;
+        start|--start)
+            ACTION="start"
+            shift
+            ;;
+        stop|--stop)
+            ACTION="stop"
+            shift
+            ;;
+        restart|--restart)
+            ACTION="restart"
+            shift
+            ;;
+        server|--run-server|run-server)
+            ACTION="run"
+            SERVER_MODE=true
+            shift
+            ;;
+        desktop|--desktop)
+            ACTION="desktop"
+            shift
+            ;;
+        build|--build)
+            ACTION="build"
+            shift
+            ;;
+        update|--update)
+            ACTION="update"
+            shift
+            ;;
+        setup|--setup|deps|--deps)
+            ACTION="setup"
+            shift
+            ;;
+        help|--help|-h|"")
             ACTION="help"
             shift
             ;;
@@ -501,33 +522,45 @@ if [ "${ACTION}" != "help" ] && [ -n "${ACTION}" ]; then
 fi
 
 case "${ACTION}" in
-    build)
-        do_build
-        ;;
-    setup)
-        setup_dependencies
-        echo -e "${GREEN}✅ All dependent resources successfully verified and ready!${NC}"
-        ;;
     install)
         do_install
         ;;
-    server)
-        do_server
-        ;;
-    desktop)
-        do_desktop
-        ;;
-    update)
-        do_update
-        ;;
-    remove)
-        do_remove
+    run)
+        do_run
         ;;
     status)
         do_status
         ;;
     logs)
         do_logs
+        ;;
+    uninstall)
+        do_uninstall
+        ;;
+    start)
+        systemctl --user start "${SERVICE_NAME}"
+        echo -e "${GREEN}✅ RentBill service started.${NC}"
+        ;;
+    stop)
+        systemctl --user stop "${SERVICE_NAME}"
+        echo -e "${YELLOW}🛑 RentBill service stopped.${NC}"
+        ;;
+    restart)
+        systemctl --user restart "${SERVICE_NAME}"
+        echo -e "${GREEN}🔄 RentBill service restarted.${NC}"
+        ;;
+    build)
+        do_build
+        ;;
+    desktop)
+        install_desktop_entry
+        ;;
+    update)
+        do_update
+        ;;
+    setup)
+        setup_dependencies
+        echo -e "${GREEN}✅ All dependent resources successfully verified and ready!${NC}"
         ;;
     help|"")
         usage
