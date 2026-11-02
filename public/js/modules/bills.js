@@ -660,6 +660,20 @@ export const Bills = {
     }
   },
 
+  async openPaymentForTenant(tenantId) {
+    try {
+      const allBills = await API.getBills();
+      const unpaid = (allBills || []).filter(b => b.tenant_id == tenantId && (b.balance_amount > 0 || b.status !== 'PAID'));
+      if (unpaid.length > 0) {
+        this.openPaymentModal(unpaid[0].id);
+      } else {
+        this.openTenantLedger(tenantId);
+      }
+    } catch (e) {
+      this.openTenantLedger(tenantId);
+    }
+  },
+
   openBillModalForTenant(tenantId) {
     this.openBillModal();
     const sel = document.getElementById('bill-tenant-select');

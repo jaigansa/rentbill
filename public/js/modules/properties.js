@@ -70,14 +70,16 @@ export const Properties = {
     }
 
     container.innerHTML = filtered.map(p => `
-      <div class="app-card">
-        <div class="card-top">
-          <div>
-            <div class="card-title">${p.name}</div>
-            <div class="card-subtitle">${p.unit_type} • ${p.address || 'No address'}</div>
+      <div class="app-card property-card property-compact-card">
+        <div class="prop-compact-header">
+          <div class="prop-compact-title-box">
+            <div class="prop-compact-name">${p.name}</div>
+            <div class="prop-compact-sub">${p.unit_type}${p.address ? ` • ${p.address}` : ''}</div>
           </div>
-          <div class="card-top-right">
-            <span class="badge ${p.tenant_count > 0 ? 'badge-paid' : 'badge-date'}">${p.tenant_count || 0} Tenant${p.tenant_count === 1 ? '' : 's'}</span>
+          <div class="prop-compact-header-right">
+            <span class="badge ${p.tenant_count > 0 ? 'badge-paid' : 'badge-date'} badge-sm">
+              ${p.tenant_count > 0 ? `${p.tenant_count} Occupied` : 'Vacant'}
+            </span>
             <div class="card-dropdown">
               <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="More options">
                 <i data-lucide="more-vertical"></i>
@@ -99,21 +101,18 @@ export const Properties = {
             </div>
           </div>
         </div>
-        <div class="card-middle">
-          <span class="card-amount-label">Base Rent</span>
-          <span class="card-amount-val" title="${this.formatFullMoney(p.default_rent)}">${this.formatMoney(p.default_rent, true)}</span>
+
+        <div class="prop-compact-meta-strip">
+          <span class="prop-rate-tag"><strong>${curr}${this.formatMoney(p.default_rent, true)}</strong>/mo</span>
+          <span class="prop-rate-dot">•</span>
+          <span class="prop-rate-sub"><i data-lucide="zap" style="width:12px; height:12px; color:var(--warning);"></i> ${curr}${p.electricity_rate}</span>
+          <span class="prop-rate-dot">•</span>
+          <span class="prop-rate-sub"><i data-lucide="droplet" style="width:12px; height:12px; color:var(--primary);"></i> ${p.water_billing_type === 'METER' ? `${curr}${p.water_rate}/u` : `${curr}${p.water_charge}`}</span>
+          ${(p.expense_count > 0 || p.total_expenses > 0) ? `
+            <span class="prop-rate-dot">•</span>
+            <span class="prop-rate-sub text-danger"><i data-lucide="wrench" style="width:12px; height:12px;"></i> ${curr}${this.formatMoney(p.total_expenses || 0, true)}</span>
+          ` : ''}
         </div>
-        <div style="font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-          <span><i data-lucide="zap" style="width:14px; height:14px; vertical-align:-2px; color:var(--warning);"></i> Elec: ${curr}${p.electricity_rate}/unit</span>
-          <span><i data-lucide="droplet" style="width:14px; height:14px; vertical-align:-2px; color:var(--primary);"></i> Water: ${p.water_billing_type === 'METER' ? `${curr}${p.water_rate}/unit (Meter)` : `${curr}${p.water_charge} (Fixed)`}</span>
-          <span><i data-lucide="wrench" style="width:14px; height:14px; vertical-align:-2px;"></i> Maint: ${curr}${p.maintenance_charge}</span>
-        </div>
-        ${(p.expense_count > 0 || p.total_expenses > 0) ? `
-          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:5px 8px; border-radius:var(--radius-sm); margin-top:8px;">
-            <span><i data-lucide="wrench" style="width:13px; height:13px; color:var(--danger); vertical-align:-2px;"></i> Expenses: <strong style="color:var(--danger);" title="${this.formatFullMoney(p.total_expenses || 0)}">${this.formatMoney(p.total_expenses || 0, true)}</strong> (${p.expense_count || 0})</span>
-            <span>Net Profit: <strong style="color:${(p.net_profit || 0) >= 0 ? 'var(--success)' : 'var(--danger)'};" title="${this.formatFullMoney(p.net_profit || 0)}">${this.formatMoney(p.net_profit || 0, true)}</strong></span>
-          </div>
-        ` : ''}
       </div>
     `).join('');
     this.refreshIcons();

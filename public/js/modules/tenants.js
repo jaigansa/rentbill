@@ -315,20 +315,34 @@ export const Tenants = {
       const email = (t.email || '').trim();
 
       return `
-      <div class="app-card tenant-card" id="tenant-card-${t.id}" data-tenant-id="${t.id}">
-        <!-- Google Contacts Header: Avatar + Name/Unit + 3-Dot Actions -->
-        <div class="tenant-contact-header">
-          ${this.getTenantAvatarHtml(t, 48)}
-          <div class="tenant-contact-info">
-            <div class="tenant-contact-name-row">
-              <span class="tenant-contact-name" title="${t.name}">${t.name}</span>
+      <div class="app-card tenant-card tenant-compact-card" id="tenant-card-${t.id}" data-tenant-id="${t.id}">
+        <!-- Row 1: Header (Avatar 36px + Info + Micro Contact Icons + 3-Dot Menu) -->
+        <div class="tenant-compact-header">
+          ${this.getTenantAvatarHtml(t, 36)}
+          <div class="tenant-compact-info">
+            <div class="tenant-compact-name-row">
+              <span class="tenant-compact-name" title="${t.name}">${t.name}</span>
+              <span class="badge ${t.is_active ? 'badge-paid' : 'badge-date'} badge-sm">${t.is_active ? 'Active' : 'Past'}</span>
             </div>
-            <div class="tenant-contact-sub">
-              <span class="tenant-contact-unit">${t.property_name || 'Unassigned'}</span>
+            <div class="tenant-compact-sub">
+              <span class="tenant-compact-unit">${t.property_name || 'Unassigned'}</span>
+              ${cleanPhone ? `<span class="meta-dot">•</span><span class="tenant-compact-phone">${t.phone}</span>` : ''}
             </div>
           </div>
-          <div class="tenant-contact-header-right">
-            <span class="badge ${t.is_active ? 'badge-paid' : 'badge-date'}">${t.is_active ? 'Active' : 'Past'}</span>
+
+          <!-- Micro Quick Contact Icons (Direct 1-Tap) & 3-Dot Actions -->
+          <div class="tenant-compact-actions">
+            ${cleanPhone ? `
+              <a href="tel:${cleanPhone}" class="micro-action-btn" title="Call ${t.name}">
+                <i data-lucide="phone"></i>
+              </a>
+              <a href="sms:${cleanPhone}" class="micro-action-btn" title="SMS ${t.name}">
+                <i data-lucide="message-square"></i>
+              </a>
+              <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="micro-action-btn micro-wa" title="WhatsApp ${t.name}">
+                <i data-lucide="message-circle"></i>
+              </a>
+            ` : ''}
             <div class="card-dropdown">
               <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="More options">
                 <i data-lucide="more-vertical"></i>
@@ -338,7 +352,7 @@ export const Tenants = {
                   <i data-lucide="plus"></i> Generate Bill
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.openTenantLedger(${t.id})">
-                  <i data-lucide="receipt"></i> View Bills
+                  <i data-lucide="receipt"></i> View Bills & Ledger
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
                   <i data-lucide="edit-3"></i> Edit Tenant
@@ -363,31 +377,22 @@ export const Tenants = {
           </div>
         </div>
 
-        <!-- Google Contacts Quick Action Buttons (3 Columns: Call, SMS, Email) -->
-        <div class="tenant-quick-actions">
-          <a href="${cleanPhone ? `tel:${cleanPhone}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-call ${cleanPhone ? '' : 'disabled'}" title="${cleanPhone ? `Call ${t.name}` : 'No phone number'}">
-            <i data-lucide="phone"></i>
-            <span>Call</span>
-          </a>
-          <a href="${cleanPhone ? `sms:${cleanPhone}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-sms ${cleanPhone ? '' : 'disabled'}" title="${cleanPhone ? `SMS / Text ${t.name}` : 'No phone number'}">
-            <i data-lucide="message-square"></i>
-            <span>SMS</span>
-          </a>
-          <a href="${email ? `mailto:${email}` : 'javascript:void(0)'}" class="tenant-action-btn btn-action-email ${email ? '' : 'disabled'}" title="${email ? `Email ${t.name} (${email})` : 'No email added'}">
-            <i data-lucide="mail"></i>
-            <span>Email</span>
-          </a>
-        </div>
-
-        <!-- Financial Status Bar (Tap to view bills ledger) -->
-        <div class="tenant-financial-bar" onclick="App.openTenantLedger(${t.id})" title="Tap to view bills & ledger">
-          <div class="financial-chip chip-paid">
-            <span class="chip-label">Total Paid</span>
-            <span class="chip-val" title="${this.formatFullMoney(totalPaid)}">${this.formatMoney(totalPaid, true)}</span>
+        <!-- Row 2: Financial Chips & Direct 1-Tap Action Buttons -->
+        <div class="tenant-compact-mid">
+          <div class="tenant-compact-finance" onclick="App.openTenantLedger(${t.id})" title="Tap to view bills ledger">
+            <span class="compact-chip chip-paid">Paid: ${this.formatMoney(totalPaid, true)}</span>
+            <span class="compact-chip ${totalDue > 0 ? 'chip-due' : 'chip-cleared'}">Due: ${this.formatMoney(totalDue, true)}</span>
           </div>
-          <div class="financial-chip ${totalDue > 0 ? 'chip-due' : 'chip-cleared'}">
-            <span class="chip-label">Total Due</span>
-            <span class="chip-val" title="${this.formatFullMoney(totalDue)}">${this.formatMoney(totalDue, true)}</span>
+          <div class="tenant-compact-btn-strip">
+            <button type="button" class="btn btn-xs btn-primary-light" onclick="App.openBillModalForTenant(${t.id})" title="Generate Bill">
+              <i data-lucide="file-plus-2"></i> Bill
+            </button>
+            <button type="button" class="btn btn-xs btn-success" onclick="App.openPaymentForTenant(${t.id})" title="Record Payment">
+              <i data-lucide="arrow-down-left"></i> Pay
+            </button>
+            <button type="button" class="btn btn-xs btn-ghost btn-details-toggle" onclick="App.toggleTenantCardExpand(${t.id})" title="Toggle Details">
+              <i data-lucide="chevron-down" id="tenant-expand-icon-${t.id}"></i>
+            </button>
           </div>
         </div>
 
@@ -472,11 +477,6 @@ export const Tenants = {
             </div>
             ` : ''}
           </div>
-        </div>
-
-        <div class="tenant-card-footer-hint" onclick="App.toggleTenantCardExpand(${t.id})">
-          <span>Tap or long-press to toggle details</span>
-          <i data-lucide="chevron-down" style="width:12px; height:12px;"></i>
         </div>
       </div>
     `;

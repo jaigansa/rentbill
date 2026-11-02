@@ -49,7 +49,6 @@
       <span class="brand-icon"><i data-lucide="home"></i></span>
       <div class="brand-text">
         <h1>RentBill</h1>
-        <p class="brand-subtitle">Smart Rental Management</p>
       </div>
     </div>
     <div class="top-actions">
@@ -80,78 +79,64 @@
         <span class="badge badge-date" id="current-date-badge"></span>
       </div>
 
-      <!-- Module 1: Month Selector & Collection Target Progress -->
-      <div class="dash-month-card">
-        <div class="dash-month-bar">
-          <div class="dash-month-selector">
-            <button type="button" class="btn-month-nav" id="btn-month-prev" title="Previous Month">
-              <i data-lucide="chevron-left"></i>
-            </button>
-            <div class="month-select-wrapper">
-              <select id="dash-month-select" class="month-select-dropdown">
-                <!-- Dynamically populated via JS -->
-              </select>
-            </div>
-            <button type="button" class="btn-month-nav" id="btn-month-next" title="Next Month">
-              <i data-lucide="chevron-right"></i>
-            </button>
+      <!-- Module 1: Month Selector & Progress Strip -->
+      <div class="dash-month-bar">
+        <div class="dash-month-selector">
+          <button type="button" class="btn-month-nav" id="btn-month-prev" title="Previous Month">
+            <i data-lucide="chevron-left"></i>
+          </button>
+          <div class="month-select-wrapper">
+            <select id="dash-month-select" class="month-select-dropdown">
+              <!-- Dynamically populated via JS -->
+            </select>
           </div>
+          <button type="button" class="btn-month-nav" id="btn-month-next" title="Next Month">
+            <i data-lucide="chevron-right"></i>
+          </button>
         </div>
-
-        <div class="collection-progress-card">
-          <div class="progress-info">
-            <span class="progress-title"><i data-lucide="pie-chart" style="width:14px; height:14px; vertical-align:-2px; color:var(--primary);"></i> Collection Target</span>
-            <strong id="dash-collection-pct" class="progress-percentage">0%</strong>
-          </div>
-          <div class="progress-bar-bg">
-            <div id="dash-collection-bar" class="progress-bar-fill" style="width: 0%;"></div>
-          </div>
-          <div class="progress-subtext" id="dash-collection-subtext">₹0.00 collected of ₹0.00 billed</div>
+        <div class="dash-collection-chip">
+          <i data-lucide="pie-chart" style="width:13px; height:13px; color:var(--primary);"></i>
+          <span id="dash-collection-pct" class="progress-percentage">0%</span>
+          <span style="font-size:0.72rem; color:var(--text-muted); font-weight:600;">Target</span>
         </div>
       </div>
 
-      <!-- Quick Summary Cards -->
-      <div class="stats-grid">
-        <div class="stat-card stat-billed">
-          <div class="stat-icon"><i data-lucide="receipt"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Total Billed</span>
-            <span class="stat-value" id="dash-total-billed">₹0</span>
+      <!-- Hero Cashflow Card (All 6 core financial indicators condensed into 1 sleek hero card) -->
+      <div class="hero-cashflow-card">
+        <div class="cashflow-row-top">
+          <div class="cashflow-primary">
+            <span class="cashflow-label">Collected</span>
+            <div class="cashflow-value text-success" id="dash-total-collected">₹0</div>
+          </div>
+          <div class="cashflow-split">
+            <div class="cashflow-stat-mini">
+              <span class="mini-lbl">Billed:</span>
+              <strong id="dash-total-billed">₹0</strong>
+            </div>
+            <div class="cashflow-stat-mini">
+              <span class="mini-lbl">Pending:</span>
+              <strong id="dash-total-pending" class="text-warning">₹0</strong>
+            </div>
           </div>
         </div>
-        <div class="stat-card stat-collected">
-          <div class="stat-icon"><i data-lucide="circle-check"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Collected</span>
-            <span class="stat-value" id="dash-total-collected">₹0</span>
-          </div>
+
+        <div class="cashflow-progress-track">
+          <div id="dash-collection-bar" class="cashflow-progress-fill" style="width: 0%;"></div>
         </div>
-        <div class="stat-card stat-pending">
-          <div class="stat-icon"><i data-lucide="clock"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Pending Dues</span>
-            <span class="stat-value" id="dash-total-pending">₹0</span>
+        <div class="progress-subtext" id="dash-collection-subtext" style="display:none;"></div>
+
+        <div class="cashflow-row-bottom">
+          <div class="cashflow-stat-mini">
+            <span class="mini-lbl">Expenses:</span>
+            <strong id="dash-total-expenses">₹0</strong>
           </div>
-        </div>
-        <div class="stat-card stat-overdue">
-          <div class="stat-icon"><i data-lucide="alert-triangle"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Overdue</span>
-            <span class="stat-value" id="dash-total-overdue">₹0</span>
+          <div class="cashflow-stat-mini">
+            <span class="mini-lbl">Net Profit:</span>
+            <strong id="dash-net-profit" class="text-success">₹0</strong>
           </div>
-        </div>
-        <div class="stat-card stat-expenses">
-          <div class="stat-icon"><i data-lucide="wrench"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Total Expenses</span>
-            <span class="stat-value" id="dash-total-expenses">₹0</span>
-          </div>
-        </div>
-        <div class="stat-card stat-net-profit">
-          <div class="stat-icon"><i data-lucide="trending-up"></i></div>
-          <div class="stat-info">
-            <span class="stat-label">Net Profit</span>
-            <span class="stat-value" id="dash-net-profit">₹0</span>
+          <div class="cashflow-stat-mini">
+            <span class="mini-lbl">Overdue:</span>
+            <strong id="dash-total-overdue" class="text-danger">₹0</strong>
           </div>
         </div>
       </div>
