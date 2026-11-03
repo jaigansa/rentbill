@@ -1,5 +1,9 @@
 package database
 
+import (
+	"fmt"
+)
+
 func (db *DB) CreateProperty(p *Property) (int64, error) {
 	if p.WaterBillingType == "" {
 		p.WaterBillingType = "FIXED"
@@ -74,6 +78,21 @@ func (db *DB) UpdateProperty(p *Property) error {
 }
 
 func (db *DB) DeleteProperty(id int64) error {
+	var tenantCount, expenseCount, billCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM tenants WHERE property_id = ?", id).Scan(&tenantCount); err != nil {
+		return err
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM expenses WHERE property_id = ?", id).Scan(&expenseCount); err != nil {
+		return err
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM bills WHERE property_id = ?", id).Scan(&billCount); err != nil {
+		return err
+	}
+
+	if tenantCount > 0 || expenseCount > 0 || billCount > 0 {
+		return fmt.Errorf("remove tenants & expenses first to delete property")
+	}
+
 	_, err := db.Exec("DELETE FROM properties WHERE id = ?", id)
 	return err
 }

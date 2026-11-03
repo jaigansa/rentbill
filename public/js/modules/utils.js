@@ -186,5 +186,29 @@ export const Utils = {
       <path d="M8 10h.01"/><path d="M16 10h.01"/>
       <path d="M8 14h.01"/><path d="M16 14h.01"/>
     </svg>`;
+  },
+
+  // Client-side CSV/Excel spreadsheet generator with UTF-8 BOM
+  downloadCSV(filename, headers, rows) {
+    if (!headers || !headers.length) return;
+    const escapeCol = (val) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const headerLine = headers.map(escapeCol).join(',');
+    const dataLines = (rows || []).map(row => row.map(escapeCol).join(','));
+    const csvContent = '\uFEFF' + [headerLine, ...dataLines].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename.endsWith('.csv') ? filename : `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 };

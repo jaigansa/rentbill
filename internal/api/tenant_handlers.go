@@ -82,7 +82,7 @@ func (s *Server) HandleTenantDetail(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodDelete:
 		if err := s.db.DeleteTenant(id); err != nil {
-			sendError(w, http.StatusInternalServerError, err.Error())
+			sendError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		sendJSON(w, http.StatusOK, map[string]string{"message": "Deleted successfully"})

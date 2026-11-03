@@ -178,19 +178,32 @@ export const Bills = {
         prevElecMeter.value = pElecVal;
         prevWaterMeter.value = pWaterVal;
 
-        // Auto carry over previous unpaid arrears (only for new bills)
+        // Auto carry over previous unpaid arrears or advance credits (only for new bills)
         if (!document.getElementById('bill-id').value && prevBalance) {
-          prevBalance.value = pendingArrear > 0 ? pendingArrear.toFixed(2) : 0;
+          prevBalance.value = pendingArrear !== 0 ? pendingArrear.toFixed(2) : 0;
         }
 
         const badgeBalance = document.getElementById('badge-prev-balance');
         const hintBalance = document.getElementById('hint-prev-balance');
         if (pendingArrear > 0) {
-          if (badgeBalance) badgeBalance.style.display = 'inline-block';
+          if (badgeBalance) {
+            badgeBalance.style.display = 'inline-block';
+            badgeBalance.className = 'badge badge-overdue';
+            badgeBalance.textContent = 'Auto Carried Over';
+          }
           if (hintBalance) {
             hintBalance.textContent = lastBill.has_prior_bill
               ? `Carried forward from ${this.formatMonth(lastBill.billing_month) || 'previous bill'}: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`
               : `Carried forward from opening arrears: ${window.APP_CURRENCY || '₹'}${pendingArrear.toFixed(2)}`;
+          }
+        } else if (pendingArrear < 0) {
+          if (badgeBalance) {
+            badgeBalance.style.display = 'inline-block';
+            badgeBalance.className = 'badge badge-paid';
+            badgeBalance.textContent = 'Advance Credit Applied';
+          }
+          if (hintBalance) {
+            hintBalance.textContent = `Carried forward from previous overpayment: -${window.APP_CURRENCY || '₹'}${Math.abs(pendingArrear).toFixed(2)} (reduces bill)`;
           }
         } else {
           if (badgeBalance) badgeBalance.style.display = 'none';
@@ -329,7 +342,7 @@ export const Bills = {
                 <button type="button" class="dropdown-item btn-action-edit" data-bill-id="${b.id}">
                   <i data-lucide="edit-3"></i> Edit Bill
                 </button>
-                ${b.status !== 'PAID' ? `
+                ${(b.status !== 'PAID' && (b.balance_amount === undefined || b.balance_amount > 0)) ? `
                   <button type="button" class="dropdown-item dropdown-item-success btn-action-pay" data-bill-id="${b.id}">
                     <i data-lucide="credit-card"></i> Record Payment
                   </button>
@@ -432,10 +445,13 @@ export const Bills = {
         const curr = window.APP_CURRENCY || '₹';
         const amount = bill ? `${curr}${bill.total_amount.toFixed(2)}` : '';
 
-        let warningHtml = `Are you sure you want to delete invoice <strong>${billNo}</strong> for <strong>${tenantName}</strong> (${month})?`;
+        // Strict Order Protection: Check payments first
         if (bill && bill.paid_amount > 0) {
-          warningHtml += `<br><br><span style="color:var(--danger); font-weight:600;"><i data-lucide="alert-triangle" style="width:14px; height:14px; vertical-align:-2px;"></i> Payment Warning:</span> This bill has <strong>${curr}${bill.paid_amount.toFixed(2)}</strong> in recorded payments. Deleting this bill will also remove these payment records.`;
+          this.toast('Delete payments first to remove this bill', 'warning');
+          return;
         }
+
+        let warningHtml = `Are you sure you want to delete invoice <strong>${billNo}</strong> for <strong>${tenantName}</strong> (${month})?`;
 
         this.confirmDelete({
           title: 'Delete Bill',
@@ -602,6 +618,75 @@ export const Bills = {
           ${(b.paid_amount > 0 && b.balance_amount > 0) ? `<br><small><strong>Balance in Words:</strong> ${Share.amountInWords(b.balance_amount)}</small>` : ''}
         </div>
 
+        <!-- Recorded Payment History (Receipts) -->
+        ${(b.payments && b.payments.length > 0) ? `
+          <div class="inv-payments-history">
+            <div class="inv-payments-header">
+              <div style="font-weight:750; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="receipt" style="width:15px; height:15px; color:var(--primary);"></i>
+                <span>Payment Records &amp; Receipts (${b.payments.length})</span>
+              </div>
+              ${b.balance_amount > 0 ? `
+                <button type="button" class="btn btn-sm btn-primary no-print btn-add-payment-on-inv" data-bill-id="${b.id}" style="font-size:0.75rem; padding:3px 8px;">
+                  <i data-lucide="plus" style="width:12px; height:12px; vertical-align:-1px;"></i> Add Payment
+                </button>
+              ` : `
+                <span class="badge badge-paid no-print" style="font-size:0.72rem; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                  <i data-lucide="check-circle-2" style="width:12px; height:12px;"></i> Fully Settled
+                </span>
+              `}
+            </div>
+            <div class="inv-payments-table-wrap">
+              <table class="inv-payments-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Mode</th>
+                    <th>Reference / Notes</th>
+                    <th style="text-align:right;">Amount</th>
+                    <th class="no-print" style="text-align:right; width:70px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${b.payments.map(p => `
+                    <tr>
+                      <td style="white-space:nowrap; font-weight:600;">${p.payment_date || '-'}</td>
+                      <td><span class="badge badge-paid" style="font-size:0.68rem; padding:2px 6px;">${p.payment_method || 'Payment'}</span></td>
+                      <td style="font-size:0.8rem; color:var(--text-muted);">
+                        ${p.reference_no ? `<span class="mono-val" style="font-size:0.75rem; color:var(--text-main);">Ref: ${p.reference_no}</span> ` : ''}
+                        ${p.notes ? `<span>${p.notes}</span>` : ''}
+                        ${(!p.reference_no && !p.notes) ? '-' : ''}
+                      </td>
+                      <td style="text-align:right; font-weight:750; color:var(--success);">${curr}${numFmt(p.amount)}</td>
+                      <td class="no-print" style="text-align:right; white-space:nowrap;">
+                        <button type="button" class="btn-icon-subtle btn-edit-pay" data-payment-id="${p.id}" title="Edit payment">
+                          <i data-lucide="pencil" style="width:13px; height:13px;"></i>
+                        </button>
+                        <button type="button" class="btn-icon-subtle text-danger btn-delete-pay" data-payment-id="${p.id}" data-bill-id="${b.id}" data-amount="${p.amount}" title="Delete payment">
+                          <i data-lucide="trash-2" style="width:13px; height:13px;"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ` : `
+          <div class="inv-payments-empty no-print" style="margin: 10px 0; padding: 10px 14px; background: var(--surface-alt); border: 1px dashed var(--border); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size:0.8rem; color:var(--text-muted);">${b.balance_amount <= 0 ? 'This bill is fully settled.' : 'No payments recorded yet for this bill.'}</span>
+            ${b.balance_amount > 0 ? `
+              <button type="button" class="btn btn-sm btn-primary btn-add-payment-on-inv" data-bill-id="${b.id}" style="font-size:0.75rem; padding:3px 8px;">
+                <i data-lucide="credit-card" style="width:12px; height:12px; vertical-align:-1px;"></i> Record Payment
+              </button>
+            ` : `
+              <span class="badge badge-paid" style="font-size:0.72rem; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                <i data-lucide="check-circle-2" style="width:12px; height:12px;"></i> Fully Settled
+              </span>
+            `}
+          </div>
+        `}
+
         ${(b.payment_upi || b.payment_bank_name) ? `
           <div class="payment-details-box ${b.payment_upi ? 'has-upi-qr' : ''}">
             <div class="payment-details-info">
@@ -659,6 +744,34 @@ export const Bills = {
         const upiUri = Share.buildUpiUri(b);
         Share.renderUpiQrCode('invoice-upi-qrcode', upiUri, 104);
       }
+
+      // Attach listeners for payment actions inside the invoice
+      document.querySelectorAll('#invoice-printable .btn-add-payment-on-inv').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bid = parseInt(btn.getAttribute('data-bill-id'), 10);
+          this.openPaymentModal(bid);
+        });
+      });
+
+      document.querySelectorAll('#invoice-printable .btn-edit-pay').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pid = parseInt(btn.getAttribute('data-payment-id'), 10);
+          this.openEditPaymentModal(pid);
+        });
+      });
+
+      document.querySelectorAll('#invoice-printable .btn-delete-pay').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const pid = parseInt(btn.getAttribute('data-payment-id'), 10);
+          const bid = parseInt(btn.getAttribute('data-bill-id'), 10);
+          const amt = btn.getAttribute('data-amount');
+          this.deletePaymentRecord(pid, bid, amt);
+        });
+      });
+
       this.openModal('modal-invoice');
       this.refreshIcons();
     } catch (e) {
@@ -818,6 +931,50 @@ export const Bills = {
       this.refreshIcons();
     } catch (e) {
       this.toast('Error: ' + e.message, 'error');
+    }
+  },
+
+  async openEditPaymentModal(paymentId) {
+    try {
+      const p = await API.getPayment(paymentId);
+      document.getElementById('edit-pay-id').value = p.id;
+      document.getElementById('edit-pay-bill-id').value = p.bill_id;
+      document.getElementById('edit-pay-amount').value = p.amount;
+      document.getElementById('edit-pay-date').value = p.payment_date;
+      document.getElementById('edit-pay-method').value = p.payment_method || 'UPI';
+      document.getElementById('edit-pay-ref').value = p.reference_no || '';
+      document.getElementById('edit-pay-notes').value = p.notes || '';
+
+      const billInfoEl = document.getElementById('edit-pay-bill-info');
+      if (billInfoEl) {
+        billInfoEl.textContent = `Bill #${p.bill_number || p.bill_id} • Resident: ${p.tenant_name || 'Tenant'}`;
+      }
+
+      this.openModal('modal-edit-payment');
+      this.refreshIcons();
+    } catch (e) {
+      this.toast('Error: ' + e.message, 'error');
+    }
+  },
+
+  async deletePaymentRecord(paymentId, billId, amount) {
+    const curr = window.APP_CURRENCY || '₹';
+    const msg = `Are you sure you want to delete this payment${amount ? ` of ${curr}${amount}` : ''}?\n\nThis will subtract it from the bill and recalculate outstanding dues.`;
+    if (!confirm(msg)) return;
+
+    try {
+      await API.deletePayment(paymentId);
+      this.closeModal('modal-edit-payment');
+      this.toast('Payment record deleted');
+      await this.refreshAll();
+      if (billId && document.getElementById('modal-invoice')?.classList.contains('active')) {
+        this.showInvoice(billId);
+      }
+      if (this.currentLedgerTenantId && document.getElementById('modal-ledger')?.classList.contains('active')) {
+        this.renderTenantLedger(this.currentLedgerTenantId);
+      }
+    } catch (err) {
+      this.toast('Error: ' + err.message, 'error');
     }
   }
 };

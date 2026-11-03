@@ -43,31 +43,41 @@ type CoOccupant struct {
 	Phone string `json:"phone"`
 }
 
+type TenantDocument struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`      // AGREEMENT, ID_PROOF, POLICE_VERIFICATION, OTHER
+	FileType   string `json:"file_type"` // application/pdf, image/jpeg, image/png
+	Data       string `json:"data"`      // Base64 data URL
+	UploadedAt string `json:"uploaded_at"`
+}
+
 type Tenant struct {
-	ID                int64        `json:"id"`
-	Name              string       `json:"name"`
-	Phone             string       `json:"phone"`
-	Email             string       `json:"email"`
-	PropertyID        *int64       `json:"property_id"`
-	PropertyName      string       `json:"property_name,omitempty"`
-	SecurityDeposit   float64      `json:"security_deposit"`
-	OpeningArrear     float64      `json:"opening_arrear"`
-	MoveInDate        string       `json:"move_in_date"`
-	PaymentUPI        string       `json:"payment_upi"`
-	PaymentBankName   string       `json:"payment_bank_name"`
-	PaymentAccountNo  string       `json:"payment_account_no"`
-	PaymentIFSC       string       `json:"payment_ifsc"`
-	InitialElecMeter  float64      `json:"initial_elec_meter"`
-	InitialWaterMeter float64      `json:"initial_water_meter"`
-	PreferredChannel  string       `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
-	CoOccupants       []CoOccupant `json:"co_occupants"`
-	CoOccupantName    string       `json:"co_occupant_name"`
-	CoOccupantPhone   string       `json:"co_occupant_phone"`
-	IsActive          bool         `json:"is_active"`
-	Photo             string       `json:"photo"`
-	TotalPaid         float64      `json:"total_paid"`
-	TotalDue          float64      `json:"total_due"`
-	CreatedAt         string       `json:"created_at"`
+	ID                int64            `json:"id"`
+	Name              string           `json:"name"`
+	Phone             string           `json:"phone"`
+	Email             string           `json:"email"`
+	PropertyID        *int64           `json:"property_id"`
+	PropertyName      string           `json:"property_name,omitempty"`
+	SecurityDeposit   float64          `json:"security_deposit"`
+	OpeningArrear     float64          `json:"opening_arrear"`
+	MoveInDate        string           `json:"move_in_date"`
+	PaymentUPI        string           `json:"payment_upi"`
+	PaymentBankName   string           `json:"payment_bank_name"`
+	PaymentAccountNo  string           `json:"payment_account_no"`
+	PaymentIFSC       string           `json:"payment_ifsc"`
+	InitialElecMeter  float64          `json:"initial_elec_meter"`
+	InitialWaterMeter float64          `json:"initial_water_meter"`
+	PreferredChannel  string           `json:"preferred_channel"` // SMS_RCS, WHATSAPP, BOTH
+	CoOccupants       []CoOccupant     `json:"co_occupants"`
+	CoOccupantName    string           `json:"co_occupant_name"`
+	CoOccupantPhone   string           `json:"co_occupant_phone"`
+	IsActive          bool             `json:"is_active"`
+	Photo             string           `json:"photo"`
+	Documents         []TenantDocument `json:"documents,omitempty"`
+	TotalPaid         float64          `json:"total_paid"`
+	TotalDue          float64          `json:"total_due"`
+	CreatedAt         string           `json:"created_at"`
 }
 
 type Bill struct {
@@ -110,6 +120,7 @@ type Bill struct {
 	Status               string  `json:"status"`
 	Notes                string  `json:"notes"`
 	CreatedAt            string  `json:"created_at"`
+	Payments             []Payment `json:"payments,omitempty"`
 }
 
 type Payment struct {
@@ -117,6 +128,7 @@ type Payment struct {
 	BillID        int64   `json:"bill_id"`
 	BillNumber    string  `json:"bill_number,omitempty"`
 	TenantName    string  `json:"tenant_name,omitempty"`
+	PropertyName  string  `json:"property_name,omitempty"`
 	Amount        float64 `json:"amount"`
 	PaymentDate   string  `json:"payment_date"`
 	PaymentMethod string  `json:"payment_method"`
@@ -149,25 +161,50 @@ type TenantLedger struct {
 	Entries        []LedgerEntry `json:"entries"`
 }
 
+type BatchBillEntry struct {
+	TenantID             int64    `json:"tenant_id"`
+	CurrElectricityMeter *float64 `json:"curr_electricity_meter,omitempty"`
+	CurrWaterMeter       *float64 `json:"curr_water_meter,omitempty"`
+}
+
+type BatchBillPreviewItem struct {
+	TenantID             int64   `json:"tenant_id"`
+	TenantName           string  `json:"tenant_name"`
+	TenantPhone          string  `json:"tenant_phone"`
+	PropertyID           int64   `json:"property_id"`
+	PropertyName         string  `json:"property_name"`
+	DefaultRent          float64 `json:"default_rent"`
+	ElectricityRate      float64 `json:"electricity_rate"`
+	PrevElectricityMeter float64 `json:"prev_electricity_meter"`
+	WaterBillingType     string  `json:"water_billing_type"`
+	WaterCharge          float64 `json:"water_charge"`
+	WaterRate            float64 `json:"water_rate"`
+	PrevWaterMeter       float64 `json:"prev_water_meter"`
+	MaintenanceCharge    float64 `json:"maintenance_charge"`
+	PreviousBalance      float64 `json:"previous_balance"`
+}
+
 type DashboardAlerts struct {
 	OverdueBills    []Bill   `json:"overdue_bills"`
 	UnbilledTenants []Tenant `json:"unbilled_tenants"`
 }
 
 type DashboardSummary struct {
-	TotalProperties int64           `json:"total_properties"`
-	TotalBilled     float64         `json:"total_billed"`
-	TotalCollected  float64         `json:"total_collected"`
-	TotalPending    float64         `json:"total_pending"`
-	TotalOverdue    float64         `json:"total_overdue"`
-	TotalExpenses   float64         `json:"total_expenses"`
-	NetProfit       float64         `json:"net_profit"`
-	CollectionRate  float64         `json:"collection_rate"`
-	ActionRequired  DashboardAlerts `json:"action_required"`
-	AvailableMonths []string        `json:"available_months"`
-	SelectedMonth   string          `json:"selected_month"`
+	TotalProperties   int64           `json:"total_properties"`
+	TotalBilled       float64         `json:"total_billed"`
+	TotalCollected    float64         `json:"total_collected"`
+	TotalPending      float64         `json:"total_pending"`
+	TotalOverdue      float64         `json:"total_overdue"`
+	TotalExpenses     float64         `json:"total_expenses"`
+	NetProfit         float64         `json:"net_profit"`
+	CollectionRate    float64         `json:"collection_rate"`
+	TotalDepositsHeld float64         `json:"total_deposits_held"`
+	ActiveTenantsCount int            `json:"active_tenants_count"`
+	ActionRequired    DashboardAlerts `json:"action_required"`
+	AvailableMonths   []string        `json:"available_months"`
+	SelectedMonth     string          `json:"selected_month"`
 }
 
 func GenerateBillNumber() string {
-	return fmt.Sprintf("RB-%s-%04d", time.Now().Format("200601"), time.Now().Unix()%10000)
+	return fmt.Sprintf("RB-%s-%06d", time.Now().Format("200601"), time.Now().UnixNano()%1000000)
 }

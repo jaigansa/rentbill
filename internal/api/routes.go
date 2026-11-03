@@ -182,9 +182,13 @@ func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
 	mux.HandleFunc("/api/tenants/{id}", server.AuthMiddleware(server.HandleTenantDetail))
 
 	mux.HandleFunc("/api/bills", server.AuthMiddleware(server.HandleBills))
+	mux.HandleFunc("GET /api/bills/batch/preview", server.AuthMiddleware(server.HandleBatchPreview))
+	mux.HandleFunc("POST /api/bills/batch", server.AuthMiddleware(server.HandleBatchCreateBills))
 	mux.HandleFunc("/api/bills/{id}", server.AuthMiddleware(server.HandleBillDetail))
 
 	mux.HandleFunc("/api/payments", server.AuthMiddleware(server.HandlePayments))
+	mux.HandleFunc("/api/payments/{id}", server.AuthMiddleware(server.HandlePaymentDetail))
+	mux.HandleFunc("GET /api/bills/{id}/payments", server.AuthMiddleware(server.HandleBillPayments))
 	mux.HandleFunc("/api/settings", server.AuthMiddleware(server.HandleSettings))
 
 	// Database Import & Export (Protected)

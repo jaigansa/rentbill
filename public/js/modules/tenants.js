@@ -202,6 +202,240 @@ export const Tenants = {
       removeBtn.style.display = 'none';
     });
   },
+
+  bindTenantPaymentUX() {
+    const fields = ['tenant-payment-upi', 'tenant-payment-bank-name', 'tenant-payment-account-no', 'tenant-payment-ifsc'];
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        if (id === 'tenant-payment-ifsc') {
+          el.value = el.value.toUpperCase();
+        }
+        this.updatePaymentBadge();
+      });
+    });
+  },
+
+  bindTenantDocumentUpload() {
+    const triggerBtn = document.getElementById('btn-trigger-tenant-doc');
+    const fileInput = document.getElementById('tenant-doc-file-input');
+    if (triggerBtn && fileInput) {
+      triggerBtn.onclick = () => fileInput.click();
+
+      fileInput.onchange = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        this.currentTenantDocuments = this.currentTenantDocuments || [];
+
+        for (const file of files) {
+          if (file.size > 8 * 1024 * 1024) {
+            this.toast(`File "${file.name}" exceeds 8MB limit.`, 'warning');
+            continue;
+          }
+
+          const fileType = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
+          const lowerName = file.name.toLowerCase();
+          let guessedType = 'AGREEMENT';
+          if (lowerName.includes('id') || lowerName.includes('aadhaar') || lowerName.includes('pan') || lowerName.includes('voter') || lowerName.includes('passport')) {
+            guessedType = 'ID_PROOF';
+          } else if (lowerName.includes('police')) {
+            guessedType = 'POLICE_VERIFICATION';
+          } else if (lowerName.includes('receipt')) {
+            guessedType = 'RECEIPT';
+          }
+
+          try {
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+
+            this.currentTenantDocuments.push({
+              id: 'doc_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+              name: file.name,
+              type: guessedType,
+              file_type: fileType,
+              data: dataUrl,
+              uploaded_at: new Date().toISOString().split('T')[0]
+            });
+          } catch (err) {
+            this.toast(`Failed to read file ${file.name}: ${err.message}`, 'error');
+          }
+        }
+
+        fileInput.value = '';
+        this.renderTenantFormDocsList();
+      };
+    }
+  },
+
+  renderTenantFormDocsList() {
+    const container = document.getElementById('tenant-form-docs-list');
+    if (!container) return;
+
+    const docs = this.currentTenantDocuments || [];
+    if (docs.length === 0) {
+      container.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); font-style:italic; padding:4px 0;">No documents attached yet.</div>`;
+      return;
+    }
+
+    container.innerHTML = docs.map((doc, idx) => {
+      const isPdf = doc.file_type === 'application/pdf' || (doc.data && doc.data.startsWith('data:application/pdf'));
+      const icon = isPdf ? 'file-text' : 'image';
+      return `
+        <div class="tenant-form-doc-item">
+          <div class="tenant-form-doc-meta" title="${doc.name}">
+            <i data-lucide="${icon}" style="width:16px; height:16px; color:var(--primary); flex-shrink:0;"></i>
+            <span class="tenant-form-doc-name">${doc.name}</span>
+          </div>
+          <div class="tenant-form-doc-controls">
+            <select class="tenant-form-doc-type-select" onchange="App.updateTenantFormDocType(${idx}, this.value)">
+              <option value="AGREEMENT" ${doc.type === 'AGREEMENT' ? 'selected' : ''}>Agreement</option>
+              <option value="ID_PROOF" ${doc.type === 'ID_PROOF' ? 'selected' : ''}>ID Proof</option>
+              <option value="POLICE_VERIFICATION" ${doc.type === 'POLICE_VERIFICATION' ? 'selected' : ''}>Police Verif</option>
+              <option value="RECEIPT" ${doc.type === 'RECEIPT' ? 'selected' : ''}>Receipt</option>
+              <option value="OTHER" ${doc.type === 'OTHER' ? 'selected' : ''}>Other</option>
+            </select>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="App.previewTenantDocumentDirect(${idx})" title="Preview Document">
+              <i data-lucide="eye" style="width:14px; height:14px;"></i>
+            </button>
+            <button type="button" class="btn btn-ghost btn-xs text-danger" onclick="App.removeTenantFormDoc(${idx})" title="Remove Document">
+              <i data-lucide="trash-2" style="width:14px; height:14px;"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    this.refreshIcons();
+  },
+
+  updateTenantFormDocType(idx, newType) {
+    if (this.currentTenantDocuments && this.currentTenantDocuments[idx]) {
+      this.currentTenantDocuments[idx].type = newType;
+    }
+  },
+
+  removeTenantFormDoc(idx) {
+    if (this.currentTenantDocuments && this.currentTenantDocuments[idx] !== undefined) {
+      this.currentTenantDocuments.splice(idx, 1);
+      this.renderTenantFormDocsList();
+    }
+  },
+
+  previewTenantDocumentDirect(idx) {
+    if (this.currentTenantDocuments && this.currentTenantDocuments[idx]) {
+      this.previewTenantDocumentObject(this.currentTenantDocuments[idx]);
+    }
+  },
+
+  previewTenantDocument(tenantId, docId) {
+    const tenant = (this.tenants || []).find(t => t.id == tenantId);
+    if (!tenant || !tenant.documents) {
+      this.toast('Document not found', 'error');
+      return;
+    }
+    const doc = tenant.documents.find(d => d.id == docId);
+    if (!doc) {
+      this.toast('Document not found', 'error');
+      return;
+    }
+    this.previewTenantDocumentObject(doc);
+  },
+
+  previewTenantDocumentObject(doc) {
+    if (!doc || !doc.data) {
+      this.toast('Document data unavailable', 'error');
+      return;
+    }
+
+    const titleEl = document.getElementById('doc-preview-title');
+    const metaEl = document.getElementById('doc-preview-meta');
+    const frameEl = document.getElementById('doc-preview-frame');
+    const imgEl = document.getElementById('doc-preview-img');
+    const dlBtn = document.getElementById('btn-doc-download');
+
+    if (titleEl) titleEl.textContent = doc.name || 'Document Preview';
+    if (metaEl) metaEl.textContent = `Type: ${doc.type || 'Document'} • ${doc.uploaded_at ? 'Uploaded ' + doc.uploaded_at : ''}`;
+
+    const isPdf = doc.file_type === 'application/pdf' || doc.data.startsWith('data:application/pdf');
+
+    if (isPdf) {
+      if (frameEl) {
+        frameEl.src = doc.data;
+        frameEl.style.display = 'block';
+      }
+      if (imgEl) {
+        imgEl.src = '';
+        imgEl.style.display = 'none';
+      }
+    } else {
+      if (imgEl) {
+        imgEl.src = doc.data;
+        imgEl.style.display = 'block';
+      }
+      if (frameEl) {
+        frameEl.src = '';
+        frameEl.style.display = 'none';
+      }
+    }
+
+    if (dlBtn) {
+      dlBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = doc.data;
+        a.download = doc.name || 'document';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+    }
+
+    this.openModal('modal-doc-preview');
+    this.refreshIcons();
+  },
+
+  openTenantDocuments(tenantId) {
+    const tenant = (this.tenants || []).find(t => t.id == tenantId);
+    if (!tenant) return;
+    const docs = tenant.documents || [];
+    if (docs.length === 0) {
+      this.toast(`No documents attached for ${tenant.name}. Edit tenant to add documents.`, 'info');
+      this.editTenant(tenantId);
+      return;
+    }
+    if (docs.length === 1) {
+      this.previewTenantDocument(tenantId, docs[0].id);
+      return;
+    }
+    const detailsEl = document.getElementById(`tenant-details-${tenantId}`);
+    if (detailsEl) {
+      detailsEl.style.display = 'block';
+      const icon = document.getElementById(`tenant-expand-icon-${tenantId}`);
+      if (icon) icon.style.transform = 'rotate(180deg)';
+      detailsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  },
+
+  updatePaymentBadge() {
+    const upi = document.getElementById('tenant-payment-upi')?.value.trim();
+    const bank = document.getElementById('tenant-payment-bank-name')?.value.trim();
+    const acc = document.getElementById('tenant-payment-account-no')?.value.trim();
+    const ifsc = document.getElementById('tenant-payment-ifsc')?.value.trim();
+    const badge = document.getElementById('tenant-payment-badge');
+    if (!badge) return;
+    if (upi || bank || acc || ifsc) {
+      badge.textContent = 'Configured';
+      badge.classList.add('is-configured');
+    } else {
+      badge.textContent = 'Optional';
+      badge.classList.remove('is-configured');
+    }
+  },
   renderCoOccupantRow(name = '', phone = '') {
     const div = document.createElement('div');
     div.className = 'co-occupant-row';
@@ -326,7 +560,6 @@ export const Tenants = {
             </div>
             <div class="tenant-compact-sub">
               <span class="tenant-compact-unit">${t.property_name || 'Unassigned'}</span>
-              ${cleanPhone ? `<span class="meta-dot">•</span><span class="tenant-compact-phone">${t.phone}</span>` : ''}
             </div>
           </div>
 
@@ -351,11 +584,11 @@ export const Tenants = {
                 <button type="button" class="dropdown-item" onclick="App.openBillModalForTenant(${t.id})">
                   <i data-lucide="plus"></i> Generate Bill
                 </button>
-                <button type="button" class="dropdown-item" onclick="App.openPaymentForTenant(${t.id})">
-                  <i data-lucide="arrow-down-left"></i> Record Payment
-                </button>
                 <button type="button" class="dropdown-item" onclick="App.openTenantLedger(${t.id})">
-                  <i data-lucide="receipt"></i> View Bills
+                  <i data-lucide="receipt"></i> View Bills &amp; Ledger
+                </button>
+                <button type="button" class="dropdown-item" onclick="App.openTenantDocuments(${t.id})">
+                  <i data-lucide="paperclip"></i> Documents (${(t.documents || []).length})
                 </button>
                 <button type="button" class="dropdown-item" onclick="App.editTenant(${t.id})">
                   <i data-lucide="edit-3"></i> Edit Tenant
@@ -471,6 +704,20 @@ export const Tenants = {
                 ${t.payment_bank_name ? `<span>Bank: <strong>${t.payment_bank_name}</strong> ${t.payment_account_no ? `(A/C: ${t.payment_account_no})` : ''}</span>` : ''}
                 ${t.payment_ifsc ? `<span>IFSC: <strong>${t.payment_ifsc}</strong></span>` : ''}
               </span>
+            </div>
+            ` : ''}
+            ${(t.documents && t.documents.length > 0) ? `
+            <div class="tenant-detail-item" style="grid-column: span 2;">
+              <span class="detail-label">Attached Documents (${t.documents.length})</span>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+                ${t.documents.map((doc) => `
+                  <button type="button" class="btn btn-outline btn-xs btn-tenant-doc-chip" onclick="App.previewTenantDocument(${t.id}, '${doc.id}')" title="Preview ${doc.name}">
+                    <i data-lucide="${(doc.file_type === 'application/pdf' || (doc.data && doc.data.startsWith('data:application/pdf'))) ? 'file-text' : 'image'}" style="width:12px;height:12px;"></i>
+                    <span>${doc.name}</span>
+                    <span class="badge badge-subtle" style="font-size:0.65rem; padding:1px 4px;">${doc.type || 'DOC'}</span>
+                  </button>
+                `).join('')}
+              </div>
             </div>
             ` : ''}
           </div>
@@ -618,6 +865,14 @@ export const Tenants = {
       phoneHint.textContent = '';
     }
 
+    const paymentCard = document.getElementById('tenant-payment-card');
+    if (paymentCard) paymentCard.open = true;
+    this.updatePaymentBadge?.();
+
+    // Reset documents
+    this.currentTenantDocuments = [];
+    this.renderTenantFormDocsList();
+
     document.getElementById('modal-tenant-title').textContent = 'Add Tenant';
     this.openModal('modal-tenant');
     this.refreshIcons();
@@ -701,6 +956,14 @@ export const Tenants = {
         statusSelect.value = t.is_active ? '1' : '0';
       }
 
+      const paymentCard = document.getElementById('tenant-payment-card');
+      if (paymentCard) paymentCard.open = true;
+      this.updatePaymentBadge?.();
+
+      // Populate documents
+      this.currentTenantDocuments = Array.isArray(t.documents) ? JSON.parse(JSON.stringify(t.documents)) : [];
+      this.renderTenantFormDocsList();
+
       this.openModal('modal-tenant');
       this.refreshIcons();
     } catch (err) {
@@ -712,6 +975,13 @@ export const Tenants = {
     const tenant = this.tenants.find(t => t.id == id);
     const tenantName = tenant ? tenant.name : 'this tenant';
     const unitName = tenant && tenant.property_name ? tenant.property_name : 'No Unit';
+
+    // Strict Order Protection: Check if tenant has existing bills
+    const tenantBills = (this.bills || []).filter(b => b.tenant_id == id);
+    if (tenantBills.length > 0) {
+      this.toast('Delete bills first to remove this tenant', 'warning');
+      return;
+    }
 
     let warningHtml = `Are you sure you want to delete <strong>${tenantName}</strong> (${unitName})?`;
     warningHtml += `<br><br><span style="color:var(--danger); font-weight:600;"><i data-lucide="alert-triangle" style="width:14px; height:14px; vertical-align:-2px;"></i> Permanent Action:</span> Deleting this tenant will permanently erase all associated bills, meter history, and payment transactions. This cannot be undone.`;
@@ -756,21 +1026,178 @@ export const Tenants = {
 
   async openTenantLedger(tenantId) {
     this.currentLedgerTenantId = tenantId;
+    this.ledgerViewMode = this.ledgerViewMode || 'bills';
+    this.openModal('modal-ledger');
+    await this.renderTenantLedger(tenantId);
+  },
+
+  exportCurrentLedgerCSV() {
+    const entries = this.currentLedgerData?.entries || [];
+    if (!entries.length) {
+      this.toast('No ledger entries available to export', 'warning');
+      return;
+    }
+    const tenant = this.tenants.find(t => t.id == this.currentLedgerTenantId);
+    const tenantName = tenant ? (tenant.name || 'tenant').replace(/[^a-zA-Z0-9_-]/g, '_') : 'tenant';
+    const headers = ['Date', 'Type', 'Description / Details', 'Debit (Billed)', 'Credit (Paid)', 'Balance Due'];
+    const rows = entries.map(e => [
+      e.date || '',
+      e.type || '',
+      e.description || '',
+      e.debit || 0,
+      e.credit || 0,
+      e.balance || 0
+    ]);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    this.downloadCSV(`ledger_${tenantName}_${dateStr}.csv`, headers, rows);
+    this.toast(`Exported ${entries.length} ledger records successfully!`, 'success');
+  },
+
+  printTenantLedger() {
+    this.renderTenantLedgerPrintSheet();
+    setTimeout(() => {
+      window.print();
+    }, 40);
+  },
+
+  renderTenantLedgerPrintSheet() {
+    const container = document.getElementById('tenant-ledger-printable');
+    if (!container) return;
+
+    const tenant = this.tenants.find(t => t.id == this.currentLedgerTenantId) || {};
+    const curr = window.APP_CURRENCY || '₹';
+    const ledger = this.currentLedgerData;
+    const entries = ledger?.entries || [];
+
+    const totalBilled = ledger ? ledger.total_billed : 0;
+    const totalPaid = ledger ? ledger.total_paid : 0;
+    const currentBalance = ledger ? ledger.current_balance : 0;
+
+    const todayStr = new Date().toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+
+    let paymentInfoHtml = '';
+    if (tenant.payment_upi || tenant.payment_bank_name) {
+      paymentInfoHtml = `
+        <div class="prop-print-summary-box" style="margin-top:10px; margin-bottom:12px; background:#f8fafc; font-size:0.78rem;">
+          <div style="flex:1; text-align:left;">
+            <strong>Payment Coordinates:</strong>
+            ${tenant.payment_upi ? `<span style="margin-left:6px;">UPI: <code>${tenant.payment_upi}</code></span>` : ''}
+            ${tenant.payment_bank_name ? `<span style="margin-left:10px;">Bank: ${tenant.payment_bank_name} (A/C: ${tenant.payment_account_no || 'N/A'}, IFSC: ${tenant.payment_ifsc || 'N/A'})</span>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    let rowsHtml = '';
+    if (entries.length === 0) {
+      rowsHtml = `<tr><td colspan="6" style="text-align:center; padding:16px; color:#6b7280;">No passbook ledger records found.</td></tr>`;
+    } else {
+      rowsHtml = entries.map(e => {
+        const isBill = e.type === 'BILL';
+        const typeBadge = isBill
+          ? `<span style="font-weight:700; color:#1e40af;">BILL</span>`
+          : `<span style="font-weight:700; color:#15803d;">PAYMENT</span>`;
+        const debitText = e.debit > 0 ? `${curr}${Number(e.debit).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+        const creditText = e.credit > 0 ? `${curr}${Number(e.credit).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+        const balText = `${curr}${Number(e.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        return `
+          <tr>
+            <td style="font-weight:600; white-space:nowrap;">${e.date || '-'}</td>
+            <td>${typeBadge}</td>
+            <td>${e.description || '-'}</td>
+            <td class="num">${debitText}</td>
+            <td class="num" style="color:#15803d; font-weight:600;">${creditText}</td>
+            <td class="num" style="font-weight:700;">${balText}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    container.innerHTML = `
+      <div class="prop-print-header">
+        <div>
+          <div class="prop-print-title">TENANT FINANCIAL STATEMENT</div>
+          <div class="prop-print-subtitle">Tenant: <strong>${tenant.name || 'Tenant'}</strong> • Unit: <strong>${tenant.property_name || 'Unassigned'}</strong></div>
+          <div class="prop-print-meta">Phone: ${tenant.phone || 'N/A'} • Move-in: ${tenant.move_in_date || 'N/A'} • Deposit Held: ${curr}${(tenant.security_deposit || 0).toLocaleString('en-IN')}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.95rem; font-weight:800; color:#111827;">${window.APP_NAME || 'RentBill'}</div>
+          <div style="font-size:0.75rem; color:#6b7280; margin-top:2px;">Statement Date: ${todayStr}</div>
+        </div>
+      </div>
+
+      <div class="prop-print-summary-box">
+        <div class="prop-print-summary-col">
+          <div class="prop-print-summary-lbl">Total Billed</div>
+          <div class="prop-print-summary-val">${curr}${Number(totalBilled).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="prop-print-summary-col">
+          <div class="prop-print-summary-lbl">Total Paid</div>
+          <div class="prop-print-summary-val" style="color:#15803d;">${curr}${Number(totalPaid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        </div>
+        <div class="prop-print-summary-col">
+          <div class="prop-print-summary-lbl">Current Balance Due</div>
+          <div class="prop-print-summary-val" style="color:${currentBalance > 0 ? '#b91c1c' : '#15803d'};">
+            ${curr}${Number(currentBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+      </div>
+
+      ${paymentInfoHtml}
+
+      <table class="prop-print-table">
+        <thead>
+          <tr>
+            <th style="width:13%;">Date</th>
+            <th style="width:12%;">Type</th>
+            <th style="width:35%;">Description / Reference</th>
+            <th class="num" style="width:13%;">Billed (Debit)</th>
+            <th class="num" style="width:13%;">Paid (Credit)</th>
+            <th class="num" style="width:14%;">Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px; font-size:0.72rem; color:#6b7280; display:flex; justify-content:space-between; border-top:1px dashed #d1d5db; padding-top:8px;">
+        <span>Certified Tenant Financial Statement Passbook • ${tenant.name || 'Tenant'}</span>
+        <span>Generated via RentBill</span>
+      </div>
+    `;
+  },
+
+  switchLedgerTab(mode) {
+    if (mode === 'statement') mode = 'ledger';
+    this.ledgerViewMode = mode;
+    ['bills', 'payments', 'ledger'].forEach(tab => {
+      const btn = document.getElementById(`btn-ledger-tab-${tab}`);
+      if (btn) {
+        btn.classList.toggle('active', tab === mode);
+      }
+    });
+    this.renderTenantLedgerContent();
+  },
+
+  async renderTenantLedger(tenantId) {
+    this.currentLedgerTenantId = tenantId;
     const container = document.getElementById('ledger-bills-container');
     if (container) {
-      container.innerHTML = `<div class="empty-state">Loading bills...</div>`;
+      container.innerHTML = `<div class="empty-state">Loading tenant records...</div>`;
     }
 
     const tenant = this.tenants.find(t => t.id == tenantId);
     if (tenant) {
-      document.getElementById('modal-ledger-tenant-name').textContent = `${tenant.name} - Bills`;
+      document.getElementById('modal-ledger-tenant-name').textContent = `${tenant.name} - Ledger & Bills`;
       document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tenant.property_name || 'Unassigned'} • Phone: ${tenant.phone}`;
     } else {
-      document.getElementById('modal-ledger-tenant-name').textContent = 'Tenant Bills';
+      document.getElementById('modal-ledger-tenant-name').textContent = 'Tenant Ledger';
       document.getElementById('modal-ledger-unit-info').textContent = '';
     }
-
-    this.openModal('modal-ledger');
 
     try {
       const [tDetails, bills, ledgerData] = await Promise.all([
@@ -780,12 +1207,13 @@ export const Tenants = {
       ]);
 
       this.currentLedgerData = ledgerData;
+      this.currentLedgerBills = bills || [];
 
       if (tDetails) {
         let paymentInfoText = '';
         if (tDetails.payment_upi) paymentInfoText += ` • Pay UPI: ${tDetails.payment_upi}`;
         if (tDetails.payment_bank_name) paymentInfoText += ` • Bank: ${tDetails.payment_bank_name} (${tDetails.payment_account_no || ''})`;
-        document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Bills`;
+        document.getElementById('modal-ledger-tenant-name').textContent = `${tDetails.name} - Ledger & Bills`;
         document.getElementById('modal-ledger-unit-info').textContent = `Unit: ${tDetails.property_name || 'Unassigned'} • Phone: ${tDetails.phone}${paymentInfoText}`;
       }
 
@@ -798,27 +1226,258 @@ export const Tenants = {
       document.getElementById('ledger-total-paid').textContent = `${curr}${totalPaid.toFixed(2)}`;
       document.getElementById('ledger-total-balance').textContent = `${curr}${totalBalance.toFixed(2)}`;
 
-      // Render Bills Cards
-      if (container) {
-        if (!bills || bills.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state">
-              <i data-lucide="receipt" style="width:36px; height:36px;"></i>
-              <div>No bills found for this tenant.</div>
-            </div>
-          `;
-        } else {
-          container.innerHTML = bills.map(b => this.renderBillCardHtml(b)).join('');
-          this.attachBillActionListeners(container);
-        }
-      }
+      // Update badge counts on tab buttons
+      const countBillsEl = document.getElementById('ledger-count-bills');
+      if (countBillsEl) countBillsEl.textContent = (this.currentLedgerBills || []).length;
 
-      this.refreshIcons();
+      const paymentCount = (ledgerData?.entries || []).filter(e => e.type === 'PAYMENT').length;
+      const countPayEl = document.getElementById('ledger-count-payments');
+      if (countPayEl) countPayEl.textContent = paymentCount;
+
+      // Update tab active state
+      const currentMode = this.ledgerViewMode || 'bills';
+      ['bills', 'payments', 'ledger'].forEach(tab => {
+        const btn = document.getElementById(`btn-ledger-tab-${tab}`);
+        if (btn) btn.classList.toggle('active', tab === currentMode);
+      });
+
+      this.renderTenantLedgerContent();
     } catch (err) {
       console.error(err);
       if (container) {
-        container.innerHTML = `<div class="empty-state text-danger">Failed to load bills: ${err.message}</div>`;
+        container.innerHTML = `<div class="empty-state text-danger">Failed to load ledger: ${err.message}</div>`;
       }
     }
+  },
+
+  renderTenantLedgerContent() {
+    const container = document.getElementById('ledger-bills-container');
+    if (!container) return;
+
+    let mode = this.ledgerViewMode || 'bills';
+    if (mode === 'statement') mode = 'ledger';
+    const curr = window.APP_CURRENCY || '₹';
+
+    // 1. BILLS TAB
+    if (mode === 'bills') {
+      const bills = this.currentLedgerBills || [];
+      if (bills.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="receipt" style="width:36px; height:36px;"></i>
+            <div>No bills found for this tenant.</div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = bills.map(b => this.renderBillCardHtml(b)).join('');
+        this.attachBillActionListeners(container);
+      }
+      this.refreshIcons();
+      return;
+    }
+
+    // 2. PAYMENTS TAB
+    if (mode === 'payments') {
+      const payments = (this.currentLedgerData?.entries || []).filter(e => e.type === 'PAYMENT');
+      if (payments.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i data-lucide="credit-card" style="width:36px; height:36px;"></i>
+            <div>No payment records found for this tenant.</div>
+          </div>
+        `;
+        this.refreshIcons();
+        return;
+      }
+
+      let html = `<div class="ledger-statement-list">`;
+      for (const p of payments) {
+        html += `
+          <div class="ledger-entry-card entry-payment">
+            <div class="ledger-entry-header">
+              <div class="ledger-entry-type-wrap">
+                <span class="badge badge-paid">${p.payment_method || 'PAYMENT'}</span>
+                <span class="ledger-entry-date">${p.date || ''}</span>
+              </div>
+              <div class="card-dropdown">
+                <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="Payment options">
+                  <i data-lucide="more-vertical"></i>
+                </button>
+                <div class="card-dropdown-menu">
+                  ${p.bill_id ? `
+                    <button type="button" class="dropdown-item btn-action-view-bill" data-bill-id="${p.bill_id}">
+                      <i data-lucide="printer"></i> View Bill (#${p.bill_number || p.bill_id})
+                    </button>
+                  ` : ''}
+                  <button type="button" class="dropdown-item btn-action-edit-pay" data-payment-id="${p.id}">
+                    <i data-lucide="edit-2"></i> Edit Payment
+                  </button>
+                  <button type="button" class="dropdown-item dropdown-item-danger btn-action-del-pay" data-payment-id="${p.id}" data-bill-id="${p.bill_id}" data-amount="${p.credit}">
+                    <i data-lucide="trash-2"></i> Delete Payment
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-middle" style="margin: 4px 0 2px 0; display:flex; justify-content:space-between; align-items:baseline;">
+              <div>
+                <div class="card-amount-label">Payment Amount</div>
+                <div class="card-amount-val text-success" style="font-size:1.2rem; font-weight:800;">
+                  ${curr}${Number(p.credit).toFixed(2)}
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div class="card-amount-label">Applied To</div>
+                <div style="font-size:0.86rem; font-weight:650; color:var(--text-main);">
+                  Bill #${p.bill_number || p.bill_id}
+                </div>
+              </div>
+            </div>
+
+            <div class="ledger-entry-desc" style="font-size:0.8rem; font-weight:500; color:var(--text-muted); margin-top:2px;">
+              ${p.description || ''}
+            </div>
+
+            ${(p.reference_no || p.billing_month) ? `
+              <div class="ledger-entry-footer" style="padding-top:6px; font-size:0.75rem; color:var(--text-muted);">
+                <span>Month: <strong>${p.billing_month ? this.formatMonth(p.billing_month) : 'Rent'}</strong></span>
+                ${p.reference_no ? `<span>Ref: <strong>${p.reference_no}</strong></span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      html += `</div>`;
+      container.innerHTML = html;
+      this.attachLedgerEntryActionListeners(container);
+      this.refreshIcons();
+      return;
+    }
+
+    // 3. LEDGER TAB (Full Passbook Timeline)
+    const entries = this.currentLedgerData?.entries || [];
+    if (entries.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="book-open" style="width:36px; height:36px;"></i>
+          <div>No transactions recorded in this ledger.</div>
+        </div>
+      `;
+      this.refreshIcons();
+      return;
+    }
+
+    let html = `<div class="ledger-statement-list">`;
+    for (const item of entries) {
+      const isPayment = item.type === 'PAYMENT';
+      const isBill = item.type === 'BILL';
+
+      html += `
+        <div class="ledger-entry-card ${isPayment ? 'entry-payment' : 'entry-bill'}">
+          <div class="ledger-entry-header">
+            <div class="ledger-entry-type-wrap">
+              <span class="badge ${isPayment ? 'badge-paid' : 'badge-primary'}">${item.type}</span>
+              <span class="ledger-entry-date">${item.date || ''}</span>
+            </div>
+            <div class="card-dropdown">
+              <button type="button" class="btn-card-more" onclick="App.toggleDropdown(this, event)" aria-label="Entry options">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="card-dropdown-menu">
+                ${isBill && item.bill_id ? `
+                  <button type="button" class="dropdown-item btn-action-view-bill" data-bill-id="${item.bill_id}">
+                    <i data-lucide="printer"></i> View Invoice
+                  </button>
+                  ${(() => {
+                    const targetBill = (this.currentLedgerBills || []).find(b => b.id == item.bill_id);
+                    const isPaid = item.status === 'PAID' || (targetBill && (targetBill.status === 'PAID' || targetBill.balance_amount <= 0));
+                    return !isPaid ? `
+                      <button type="button" class="dropdown-item dropdown-item-success btn-action-pay-bill" data-bill-id="${item.bill_id}">
+                        <i data-lucide="credit-card"></i> Record Payment
+                      </button>
+                    ` : '';
+                  })()}
+                ` : ''}
+                ${isPayment ? `
+                  ${item.bill_id ? `
+                    <button type="button" class="dropdown-item btn-action-view-bill" data-bill-id="${item.bill_id}">
+                      <i data-lucide="printer"></i> View Associated Bill
+                    </button>
+                  ` : ''}
+                  <button type="button" class="dropdown-item btn-action-edit-pay" data-payment-id="${item.id}">
+                    <i data-lucide="edit-2"></i> Edit Payment
+                  </button>
+                  <button type="button" class="dropdown-item dropdown-item-danger btn-action-del-pay" data-payment-id="${item.id}" data-bill-id="${item.bill_id}" data-amount="${item.credit}">
+                    <i data-lucide="trash-2"></i> Delete Payment
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="ledger-entry-desc">${item.description || ''}</div>
+
+          <div class="ledger-entry-footer">
+            <div class="ledger-entry-amount-block">
+              ${isBill ? `
+                <span class="amount-label">Billed:</span>
+                <span class="amount-val text-danger">+${curr}${item.debit.toFixed(2)}</span>
+              ` : `
+                <span class="amount-label">Paid:</span>
+                <span class="amount-val text-success">-${curr}${item.credit.toFixed(2)}</span>
+              `}
+            </div>
+            <div class="ledger-entry-balance-block">
+              <span class="balance-label">Balance:</span>
+              <span class="balance-val ${item.running_balance > 0 ? 'text-danger' : 'text-success'}">${curr}${item.running_balance.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    html += `</div>`;
+    container.innerHTML = html;
+    this.attachLedgerEntryActionListeners(container);
+    this.refreshIcons();
+  },
+
+  attachLedgerEntryActionListeners(container) {
+    container.querySelectorAll('.btn-action-view-bill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const bid = parseInt(btn.getAttribute('data-bill-id'), 10);
+        if (bid) this.showInvoice(bid);
+      });
+    });
+
+    container.querySelectorAll('.btn-action-pay-bill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const bid = parseInt(btn.getAttribute('data-bill-id'), 10);
+        if (bid) this.openPaymentModal(bid);
+      });
+    });
+
+    container.querySelectorAll('.btn-action-edit-pay').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const pid = parseInt(btn.getAttribute('data-payment-id'), 10);
+        if (pid) this.openEditPaymentModal(pid);
+      });
+    });
+
+    container.querySelectorAll('.btn-action-del-pay').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
+        const pid = parseInt(btn.getAttribute('data-payment-id'), 10);
+        const bid = parseInt(btn.getAttribute('data-bill-id'), 10);
+        const amt = btn.getAttribute('data-amount');
+        if (pid) this.deletePaymentRecord(pid, bid, amt);
+      });
+    });
   }
 };

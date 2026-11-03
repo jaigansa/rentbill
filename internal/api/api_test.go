@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"testing/fstest"
 
@@ -339,5 +340,155 @@ func TestDefaultSecurityModeWithoutToken(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("expected 403 Forbidden for external origin without token, got %d", rec.Code)
+	}
+}
+
+func TestPaymentAPIEndpoints(t *testing.T) {
+	_, db, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	propID, _ := db.CreateProperty(&database.Property{Name: "Unit B", UnitType: "Apartment", DefaultRent: 8000})
+	tenantID, _ := db.CreateTenant(&database.Tenant{Name: "Bob", Phone: "9876543210", PropertyID: &propID})
+	billID, _ := db.CreateBill(&database.Bill{TenantID: tenantID, PropertyID: propID, BillingMonth: "2026-11", DueDate: "2099-11-20", BaseRent: 8000})
+
+	// 1. POST /api/payments
+	payBody, _ := json.Marshal(map[string]interface{}{
+		"bill_id":        billID,
+		"amount":         3000,
+		"payment_date":   "2026-11-05",
+		"payment_method": "UPI",
+		"notes":          "GPay first half",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/payments", bytes.NewReader(payBody))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var createdPay database.Payment
+	_ = json.NewDecoder(rec.Body).Decode(&createdPay)
+	if createdPay.ID == 0 || createdPay.Amount != 3000 {
+		t.Fatalf("unexpected created payment: %+v", createdPay)
+	}
+
+	// 2. GET /api/bills/{id}/payments
+	req = httptest.NewRequest(http.MethodGet, "/api/bills/"+strconv.FormatInt(billID, 10)+"/payments", nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from bill payments, got %d", rec.Code)
+	}
+	var payments []database.Payment
+	_ = json.NewDecoder(rec.Body).Decode(&payments)
+	if len(payments) != 1 || payments[0].ID != createdPay.ID {
+		t.Fatalf("expected 1 payment in list, got %+v", payments)
+	}
+
+	// 3. GET /api/payments/{id}
+	req = httptest.NewRequest(http.MethodGet, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment detail, got %d", rec.Code)
+	}
+
+	// 4. PUT /api/payments/{id} (edit amount to 8000)
+	editBody, _ := json.Marshal(map[string]interface{}{
+		"amount":         8000,
+		"payment_date":   "2026-11-06",
+		"payment_method": "Cash",
+		"notes":          "Full settlement",
+	})
+	req = httptest.NewRequest(http.MethodPut, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), bytes.NewReader(editBody))
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment update, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Verify bill is now PAID
+	b, _ := db.GetBillByID(billID)
+	if b.Status != "PAID" || b.PaidAmount != 8000 {
+		t.Fatalf("expected bill to be PAID 8000, got %s, %f", b.Status, b.PaidAmount)
+	}
+
+	// 5. DELETE /api/payments/{id}
+	req = httptest.NewRequest(http.MethodDelete, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment delete, got %d", rec.Code)
+	}
+
+	// Verify bill is now PENDING 0
+	b, _ = db.GetBillByID(billID)
+	if b.Status != "PENDING" || b.PaidAmount != 0 {
+		t.Fatalf("expected bill to be PENDING 0 after delete, got %s, %f", b.Status, b.PaidAmount)
+	}
+}
+
+func TestBatchBillAPIEndpoint(t *testing.T) {
+	_, db, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	propID, err := db.CreateProperty(&database.Property{
+		Name:              "Green Acres 101",
+		DefaultRent:       12000,
+		ElectricityRate:   8.5,
+		WaterBillingType:  "FIXED",
+		WaterCharge:       250,
+		MaintenanceCharge: 400,
+	})
+	if err != nil {
+		t.Fatalf("failed creating property: %v", err)
+	}
+
+	_, err = db.CreateTenant(&database.Tenant{
+		Name:             "Bob Builder",
+		Phone:            "9988776655",
+		PropertyID:       &propID,
+		OpeningArrear:    500,
+		InitialElecMeter: 200,
+		IsActive:         true,
+	})
+	if err != nil {
+		t.Fatalf("failed creating tenant: %v", err)
+	}
+
+	// Test GET /api/bills/batch/preview
+	reqPrev := httptest.NewRequest(http.MethodGet, "/api/bills/batch/preview?month=2026-12", nil)
+	recPrev := httptest.NewRecorder()
+	mux.ServeHTTP(recPrev, reqPrev)
+	if recPrev.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from batch preview API, got %d", recPrev.Code)
+	}
+
+	// POST /api/bills/batch
+	batchBody, _ := json.Marshal(map[string]string{
+		"billing_month": "2026-12",
+		"due_date":      "2026-12-10",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/bills/batch", bytes.NewReader(batchBody))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created from batch bill API, got %d, body=%s", rec.Code, rec.Body.String())
+	}
+
+	var res struct {
+		BillingMonth string          `json:"billing_month"`
+		CreatedCount int             `json:"created_count"`
+		Bills        []database.Bill `json:"bills"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed decoding batch response: %v", err)
+	}
+
+	if res.CreatedCount != 1 || len(res.Bills) != 1 {
+		t.Fatalf("expected 1 bill created in response, got %d", res.CreatedCount)
+	}
+	if res.Bills[0].TotalAmount != (12000 + 250 + 400 + 500) {
+		t.Fatalf("expected total amount 13150, got %f", res.Bills[0].TotalAmount)
 	}
 }

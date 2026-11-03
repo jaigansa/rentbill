@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"math"
 	"time"
 )
@@ -241,6 +242,8 @@ func (db *DB) GetBillByID(id int64) (*Bill, error) {
 	if b.Status != "PAID" && b.DueDate < today {
 		b.Status = "OVERDUE"
 	}
+	payments, _ := db.GetPaymentsByBillID(id)
+	b.Payments = payments
 	return &b, nil
 }
 
@@ -302,7 +305,48 @@ func (db *DB) UpdateBill(b *Bill) error {
 }
 
 func (db *DB) DeleteBill(id int64) error {
-	_, err := db.Exec("DELETE FROM bills WHERE id = ?", id)
+	var paymentCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM payments WHERE bill_id = ?", id).Scan(&paymentCount)
+	if err != nil {
+		return err
+	}
+	if paymentCount > 0 {
+		return fmt.Errorf("delete payments first to remove this bill")
+	}
+
+	_, err = db.Exec("DELETE FROM bills WHERE id = ?", id)
+	return err
+}
+
+func (db *DB) recalcBillStatusInTx(tx *sql.Tx, billID int64) error {
+	var totalPaid float64
+	err := tx.QueryRow("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE bill_id = ?", billID).Scan(&totalPaid)
+	if err != nil {
+		return err
+	}
+
+	var totalAmount float64
+	var dueDate string
+	err = tx.QueryRow("SELECT total_amount, due_date FROM bills WHERE id = ?", billID).Scan(&totalAmount, &dueDate)
+	if err != nil {
+		return err
+	}
+
+	var newStatus string
+	if totalPaid >= totalAmount && totalAmount > 0 {
+		newStatus = "PAID"
+	} else if totalPaid > 0 {
+		newStatus = "PARTIAL"
+	} else {
+		today := time.Now().Format("2006-01-02")
+		if dueDate < today {
+			newStatus = "OVERDUE"
+		} else {
+			newStatus = "PENDING"
+		}
+	}
+
+	_, err = tx.Exec("UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?", totalPaid, newStatus, billID)
 	return err
 }
 
@@ -324,47 +368,41 @@ func (db *DB) RecordPayment(p *Payment) (int64, error) {
 	}
 	paymentID, _ := res.LastInsertId()
 
-	// Update bill paid amount and status
-	var totalAmount, paidAmount float64
-	var dueDate string
-	err = tx.QueryRow("SELECT total_amount, paid_amount, due_date FROM bills WHERE id = ?", p.BillID).Scan(&totalAmount, &paidAmount, &dueDate)
-	if err != nil {
-		return 0, err
-	}
-
-	newPaid := paidAmount + p.Amount
-	var newStatus string
-	if newPaid >= totalAmount {
-		newStatus = "PAID"
-	} else if newPaid > 0 {
-		newStatus = "PARTIAL"
-	} else {
-		today := time.Now().Format("2006-01-02")
-		if dueDate < today {
-			newStatus = "OVERDUE"
-		} else {
-			newStatus = "PENDING"
-		}
-	}
-
-	_, err = tx.Exec("UPDATE bills SET paid_amount = ?, status = ? WHERE id = ?", newPaid, newStatus, p.BillID)
-	if err != nil {
+	if err := db.recalcBillStatusInTx(tx, p.BillID); err != nil {
 		return 0, err
 	}
 
 	return paymentID, tx.Commit()
 }
 
-func (db *DB) GetAllPayments() ([]Payment, error) {
+func (db *DB) GetPaymentByID(id int64) (*Payment, error) {
 	query := `
 	SELECT p.id, p.bill_id, b.bill_number, t.name, p.amount, p.payment_date, p.payment_method, COALESCE(p.reference_no, ''), COALESCE(p.notes, ''), p.created_at
 	FROM payments p
 	JOIN bills b ON p.bill_id = b.id
 	JOIN tenants t ON b.tenant_id = t.id
-	ORDER BY p.id DESC
-	LIMIT 100
+	WHERE p.id = ?
 	`
-	rows, err := db.Query(query)
+	var p Payment
+	err := db.QueryRow(query, id).Scan(
+		&p.ID, &p.BillID, &p.BillNumber, &p.TenantName, &p.Amount, &p.PaymentDate, &p.PaymentMethod, &p.ReferenceNo, &p.Notes, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (db *DB) GetPaymentsByBillID(billID int64) ([]Payment, error) {
+	query := `
+	SELECT p.id, p.bill_id, b.bill_number, t.name, p.amount, p.payment_date, p.payment_method, COALESCE(p.reference_no, ''), COALESCE(p.notes, ''), p.created_at
+	FROM payments p
+	JOIN bills b ON p.bill_id = b.id
+	JOIN tenants t ON b.tenant_id = t.id
+	WHERE p.bill_id = ?
+	ORDER BY p.payment_date DESC, p.id DESC
+	`
+	rows, err := db.Query(query, billID)
 	if err != nil {
 		return nil, err
 	}
@@ -379,5 +417,378 @@ func (db *DB) GetAllPayments() ([]Payment, error) {
 		}
 		payments = append(payments, p)
 	}
+	if payments == nil {
+		payments = []Payment{}
+	}
 	return payments, nil
+}
+
+func (db *DB) UpdatePayment(p *Payment) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var billID int64
+	err = tx.QueryRow("SELECT bill_id FROM payments WHERE id = ?", p.ID).Scan(&billID)
+	if err != nil {
+		return err
+	}
+	p.BillID = billID
+
+	_, err = tx.Exec(`
+		UPDATE payments
+		SET amount = ?, payment_date = ?, payment_method = ?, reference_no = ?, notes = ?
+		WHERE id = ?
+	`, p.Amount, p.PaymentDate, p.PaymentMethod, p.ReferenceNo, p.Notes, p.ID)
+	if err != nil {
+		return err
+	}
+
+	if err := db.recalcBillStatusInTx(tx, billID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (db *DB) DeletePayment(id int64) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var billID int64
+	err = tx.QueryRow("SELECT bill_id FROM payments WHERE id = ?", id).Scan(&billID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM payments WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	if err := db.recalcBillStatusInTx(tx, billID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (db *DB) GetAllPayments() ([]Payment, error) {
+	query := `
+	SELECT p.id, p.bill_id, b.bill_number, t.name, COALESCE(pr.name, 'No Unit'), p.amount, p.payment_date, p.payment_method, COALESCE(p.reference_no, ''), COALESCE(p.notes, ''), p.created_at
+	FROM payments p
+	JOIN bills b ON p.bill_id = b.id
+	JOIN tenants t ON b.tenant_id = t.id
+	LEFT JOIN properties pr ON b.property_id = pr.id
+	ORDER BY p.id DESC
+	`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var payments []Payment
+	for rows.Next() {
+		var p Payment
+		err := rows.Scan(&p.ID, &p.BillID, &p.BillNumber, &p.TenantName, &p.PropertyName, &p.Amount, &p.PaymentDate, &p.PaymentMethod, &p.ReferenceNo, &p.Notes, &p.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		payments = append(payments, p)
+	}
+	if payments == nil {
+		payments = []Payment{}
+	}
+	return payments, nil
+}
+
+// GetBatchBillPreview returns the list of active unbilled tenants for billingMonth with their previous meter readings and arrears.
+func (db *DB) GetBatchBillPreview(billingMonth string) ([]BatchBillPreviewItem, error) {
+	if billingMonth == "" {
+		return nil, fmt.Errorf("billing month is required")
+	}
+
+	query := `
+	SELECT t.id, t.name, t.phone, t.property_id, t.opening_arrear,
+	       t.initial_elec_meter, t.initial_water_meter,
+	       p.name, p.default_rent, p.electricity_rate, p.water_billing_type,
+	       p.water_charge, p.water_rate, p.maintenance_charge
+	FROM tenants t
+	JOIN properties p ON t.property_id = p.id
+	WHERE t.is_active = 1
+	  AND t.property_id IS NOT NULL
+	  AND t.id NOT IN (SELECT tenant_id FROM bills WHERE billing_month = ?)
+	ORDER BY p.name ASC, t.name ASC
+	`
+	rows, err := db.Query(query, billingMonth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type rawPreview struct {
+		it            BatchBillPreviewItem
+		openingArrear float64
+		initElec      float64
+		initWater     float64
+	}
+
+	var rawList []rawPreview
+	for rows.Next() {
+		var rp rawPreview
+		if err := rows.Scan(
+			&rp.it.TenantID, &rp.it.TenantName, &rp.it.TenantPhone, &rp.it.PropertyID, &rp.openingArrear,
+			&rp.initElec, &rp.initWater,
+			&rp.it.PropertyName, &rp.it.DefaultRent, &rp.it.ElectricityRate, &rp.it.WaterBillingType,
+			&rp.it.WaterCharge, &rp.it.WaterRate, &rp.it.MaintenanceCharge,
+		); err != nil {
+			return nil, err
+		}
+		rawList = append(rawList, rp)
+	}
+	rows.Close()
+
+	var items []BatchBillPreviewItem
+	for _, rp := range rawList {
+		it := rp.it
+		var prevElec, prevWater, pendingBal float64
+		err := db.QueryRow(`
+			SELECT curr_electricity_meter, curr_water_meter, (total_amount - paid_amount) as balance_amount
+			FROM bills
+			WHERE tenant_id = ?
+			ORDER BY id DESC
+			LIMIT 1
+		`, it.TenantID).Scan(&prevElec, &prevWater, &pendingBal)
+
+		if err != nil {
+			prevElec = rp.initElec
+			prevWater = rp.initWater
+			pendingBal = rp.openingArrear
+		}
+
+		it.PrevElectricityMeter = prevElec
+		it.PrevWaterMeter = prevWater
+		it.PreviousBalance = pendingBal
+
+		items = append(items, it)
+	}
+
+	if items == nil {
+		items = []BatchBillPreviewItem{}
+	}
+	return items, nil
+}
+
+// BatchCreateMonthlyBills automatically creates monthly bills for all active tenants who do not have a bill for billingMonth.
+// It carries forward previous electricity & water meter readings, allows custom readings via entries, sets base rent & fixed charges, and rolls over any unpaid arrears.
+func (db *DB) BatchCreateMonthlyBills(billingMonth, dueDate string, entries []BatchBillEntry) ([]Bill, error) {
+	if billingMonth == "" {
+		return nil, fmt.Errorf("billing month is required")
+	}
+	if dueDate == "" {
+		dueDate = billingMonth + "-10"
+	}
+
+	entryMap := make(map[int64]BatchBillEntry)
+	for _, e := range entries {
+		entryMap[e.TenantID] = e
+	}
+
+	periodStart := billingMonth + "-01"
+	periodEnd := billingMonth + "-28"
+	if t, err := time.Parse("2006-01", billingMonth); err == nil {
+		nextMonth := t.AddDate(0, 1, 0)
+		lastDay := nextMonth.AddDate(0, 0, -1)
+		periodEnd = lastDay.Format("2006-01-02")
+	}
+
+	// Query active tenants with an assigned property who do not yet have a bill for billingMonth
+	query := `
+	SELECT t.id, t.name, t.phone, t.property_id, t.opening_arrear,
+	       t.initial_elec_meter, t.initial_water_meter,
+	       p.name, p.default_rent, p.electricity_rate, p.water_billing_type,
+	       p.water_charge, p.water_rate, p.maintenance_charge
+	FROM tenants t
+	JOIN properties p ON t.property_id = p.id
+	WHERE t.is_active = 1
+	  AND t.property_id IS NOT NULL
+	  AND t.id NOT IN (SELECT tenant_id FROM bills WHERE billing_month = ?)
+	ORDER BY t.name ASC
+	`
+	rows, err := db.Query(query, billingMonth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type tenantRow struct {
+		tenantID         int64
+		tenantName       string
+		tenantPhone      string
+		propertyID       int64
+		openingArrear    float64
+		initialElec      float64
+		initialWater     float64
+		propertyName     string
+		defaultRent      float64
+		elecRate         float64
+		waterBillingType string
+		waterCharge      float64
+		waterRate        float64
+		maintCharge      float64
+	}
+
+	var list []tenantRow
+	for rows.Next() {
+		var tr tenantRow
+		if err := rows.Scan(
+			&tr.tenantID, &tr.tenantName, &tr.tenantPhone, &tr.propertyID, &tr.openingArrear,
+			&tr.initialElec, &tr.initialWater,
+			&tr.propertyName, &tr.defaultRent, &tr.elecRate, &tr.waterBillingType,
+			&tr.waterCharge, &tr.waterRate, &tr.maintCharge,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, tr)
+	}
+	rows.Close()
+
+	if len(list) == 0 {
+		return []Bill{}, nil
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	insertStmt, err := tx.Prepare(`
+	INSERT INTO bills (
+		bill_number, tenant_id, property_id, billing_month, billing_period_start, billing_period_end,
+		due_date, base_rent, prev_electricity_meter, curr_electricity_meter, electricity_rate,
+		electricity_units, electricity_amount, water_billing_type, prev_water_meter, curr_water_meter,
+		water_rate, water_units, water_amount, maintenance_amount, other_charges,
+		other_charges_desc, discount_amount, discount_reason, previous_balance, total_amount, paid_amount, status, notes
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer insertStmt.Close()
+
+	var createdBills []Bill
+
+	for idx, tr := range list {
+		// Carry over readings & arrears from latest bill
+		var prevElec, prevWater, pendingBal float64
+		var hasPriorBill bool
+		err := tx.QueryRow(`
+			SELECT curr_electricity_meter, curr_water_meter, (total_amount - paid_amount) as balance_amount
+			FROM bills
+			WHERE tenant_id = ?
+			ORDER BY id DESC
+			LIMIT 1
+		`, tr.tenantID).Scan(&prevElec, &prevWater, &pendingBal)
+		if err == nil {
+			hasPriorBill = true
+		}
+
+		if !hasPriorBill {
+			prevElec = tr.initialElec
+			prevWater = tr.initialWater
+			pendingBal = tr.openingArrear
+		}
+
+		// Electricity calculation
+		currElec := prevElec
+		if ent, ok := entryMap[tr.tenantID]; ok && ent.CurrElectricityMeter != nil {
+			currElec = *ent.CurrElectricityMeter
+		}
+		elecUnits := 0.0
+		if currElec >= prevElec {
+			elecUnits = currElec - prevElec
+		}
+		elecAmount := math.Round(elecUnits*tr.elecRate*100) / 100
+
+		// Water calculation
+		currWater := prevWater
+		waterUnits := 0.0
+		waterAmount := 0.0
+		if tr.waterBillingType == "METER" {
+			if ent, ok := entryMap[tr.tenantID]; ok && ent.CurrWaterMeter != nil {
+				currWater = *ent.CurrWaterMeter
+			}
+			if currWater >= prevWater {
+				waterUnits = currWater - prevWater
+			}
+			waterAmount = math.Round(waterUnits*tr.waterRate*100) / 100
+		} else {
+			waterAmount = tr.waterCharge
+		}
+
+		totalAmount := tr.defaultRent + elecAmount + waterAmount + tr.maintCharge + pendingBal
+		if totalAmount < 0 {
+			totalAmount = 0
+		}
+
+		// Unique bill number with index offset
+		billNumber := fmt.Sprintf("RB-%s-%04d%02d", time.Now().Format("200601"), time.Now().UnixNano()%10000, (idx+1)%100)
+
+		res, err := insertStmt.Exec(
+			billNumber, tr.tenantID, tr.propertyID, billingMonth, periodStart, periodEnd,
+			dueDate, tr.defaultRent, prevElec, currElec, tr.elecRate,
+			elecUnits, elecAmount, tr.waterBillingType, prevWater, currWater,
+			tr.waterRate, waterUnits, waterAmount, tr.maintCharge, 0.0,
+			"", 0.0, "", pendingBal, totalAmount, 0.0, "PENDING", "Auto-generated monthly rent roll",
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed creating bill for %s: %w", tr.tenantName, err)
+		}
+
+		lastID, _ := res.LastInsertId()
+		createdBills = append(createdBills, Bill{
+			ID:                   lastID,
+			BillNumber:           billNumber,
+			TenantID:             tr.tenantID,
+			TenantName:           tr.tenantName,
+			TenantPhone:          tr.tenantPhone,
+			PropertyID:           tr.propertyID,
+			PropertyName:         tr.propertyName,
+			BillingMonth:         billingMonth,
+			BillingPeriodStart:   periodStart,
+			BillingPeriodEnd:     periodEnd,
+			DueDate:              dueDate,
+			BaseRent:             tr.defaultRent,
+			PrevElectricityMeter: prevElec,
+			CurrElectricityMeter: currElec,
+			ElectricityRate:      tr.elecRate,
+			ElectricityUnits:     elecUnits,
+			ElectricityAmount:    elecAmount,
+			WaterBillingType:     tr.waterBillingType,
+			PrevWaterMeter:       prevWater,
+			CurrWaterMeter:       currWater,
+			WaterRate:            tr.waterRate,
+			WaterUnits:           waterUnits,
+			WaterAmount:          waterAmount,
+			MaintenanceAmount:    tr.maintCharge,
+			PreviousBalance:      pendingBal,
+			TotalAmount:          totalAmount,
+			PaidAmount:           0,
+			Status:               "PENDING",
+			Notes:                "Auto-generated monthly rent roll",
+		})
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return createdBills, nil
 }

@@ -101,7 +101,7 @@ func (s *Server) HandleBillDetail(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodDelete:
 		if err := s.db.DeleteBill(id); err != nil {
-			sendError(w, http.StatusInternalServerError, err.Error())
+			sendError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		sendJSON(w, http.StatusOK, map[string]string{"message": "Deleted successfully"})
@@ -146,4 +146,128 @@ func (s *Server) HandlePayments(w http.ResponseWriter, r *http.Request) {
 	default:
 		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
+}
+
+// Payment Detail Handler (GET, PUT, DELETE)
+func (s *Server) HandlePaymentDetail(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" && len(r.URL.Path) > len("/api/payments/") {
+		idStr = r.URL.Path[len("/api/payments/"):]
+	}
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid payment ID")
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		p, err := s.db.GetPaymentByID(id)
+		if err != nil {
+			sendError(w, http.StatusNotFound, "Payment record not found")
+			return
+		}
+		sendJSON(w, http.StatusOK, p)
+
+	case http.MethodPut:
+		var p database.Payment
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			sendError(w, http.StatusBadRequest, "Invalid JSON")
+			return
+		}
+		p.ID = id
+		if p.Amount <= 0 || p.PaymentDate == "" {
+			sendError(w, http.StatusBadRequest, "Valid positive Amount and Payment Date are required")
+			return
+		}
+		if err := s.db.UpdatePayment(&p); err != nil {
+			sendError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		sendJSON(w, http.StatusOK, p)
+
+	case http.MethodDelete:
+		if err := s.db.DeletePayment(id); err != nil {
+			sendError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		sendJSON(w, http.StatusOK, map[string]string{"message": "Payment record deleted successfully"})
+
+	default:
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+	}
+}
+
+// Bill Payments List Handler
+func (s *Server) HandleBillPayments(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	billID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid bill ID")
+		return
+	}
+
+	payments, err := s.db.GetPaymentsByBillID(billID)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sendJSON(w, http.StatusOK, payments)
+}
+
+// Batch Monthly Bill Preview Handler (lists unbilled tenants with previous readings)
+func (s *Server) HandleBatchPreview(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		sendError(w, http.StatusBadRequest, "Billing month query parameter is required (e.g. ?month=2026-11)")
+		return
+	}
+
+	items, err := s.db.GetBatchBillPreview(month)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	sendJSON(w, http.StatusOK, items)
+}
+
+// 1-Click Batch Monthly Bill Generator Handler
+func (s *Server) HandleBatchCreateBills(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req struct {
+		BillingMonth string                   `json:"billing_month"`
+		DueDate      string                   `json:"due_date"`
+		Entries      []database.BatchBillEntry `json:"entries"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.BillingMonth == "" {
+		sendError(w, http.StatusBadRequest, "Billing month is required")
+		return
+	}
+
+	bills, err := s.db.BatchCreateMonthlyBills(req.BillingMonth, req.DueDate, req.Entries)
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	sendJSON(w, http.StatusCreated, map[string]interface{}{
+		"billing_month": req.BillingMonth,
+		"created_count": len(bills),
+		"bills":         bills,
+	})
 }

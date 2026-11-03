@@ -87,7 +87,10 @@ const API = {
 
   async deleteProperty(id) {
     const res = await this.fetchWithAuth(`/api/properties/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete property');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete property');
+    }
     return res.json();
   },
 
@@ -138,7 +141,10 @@ const API = {
 
   async deleteTenant(id) {
     const res = await this.fetchWithAuth(`/api/tenants/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete tenant');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete tenant');
+    }
     return res.json();
   },
 
@@ -169,6 +175,25 @@ const API = {
     return res.json();
   },
 
+  async getBatchBillPreview(billingMonth) {
+    const res = await this.fetchWithAuth(`/api/bills/batch/preview?month=${encodeURIComponent(billingMonth)}`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async batchCreateBills(billingMonth, dueDate, entries = []) {
+    const res = await this.fetchWithAuth('/api/bills/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ billing_month: billingMonth, due_date: dueDate, entries })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to batch generate bills' }));
+      throw new Error(err.error || 'Failed to batch generate bills');
+    }
+    return res.json();
+  },
+
   async updateBill(id, data) {
     const res = await this.fetchWithAuth(`/api/bills/${id}`, {
       method: 'PUT',
@@ -184,11 +209,32 @@ const API = {
 
   async deleteBill(id) {
     const res = await this.fetchWithAuth(`/api/bills/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error('Failed to delete bill');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to delete bill');
+    }
     return res.json();
   },
 
   // Payments
+  async getPayments() {
+    const res = await this.fetchWithAuth('/api/payments');
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async getBillPayments(billId) {
+    const res = await this.fetchWithAuth(`/api/bills/${billId}/payments`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  async getPayment(id) {
+    const res = await this.fetchWithAuth(`/api/payments/${id}`);
+    if (!res.ok) throw new Error('Payment record not found');
+    return res.json();
+  },
+
   async recordPayment(data) {
     const res = await this.fetchWithAuth('/api/payments', {
       method: 'POST',
@@ -198,6 +244,28 @@ const API = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Failed to save payment' }));
       throw new Error(err.error || 'Failed to save payment');
+    }
+    return res.json();
+  },
+
+  async updatePayment(id, data) {
+    const res = await this.fetchWithAuth(`/api/payments/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to update payment' }));
+      throw new Error(err.error || 'Failed to update payment');
+    }
+    return res.json();
+  },
+
+  async deletePayment(id) {
+    const res = await this.fetchWithAuth(`/api/payments/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to delete payment' }));
+      throw new Error(err.error || 'Failed to delete payment');
     }
     return res.json();
   },

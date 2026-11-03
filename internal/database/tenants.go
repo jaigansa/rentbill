@@ -27,20 +27,26 @@ func (db *DB) CreateTenant(t *Tenant) (int64, error) {
 		coJSON = "[]"
 	}
 
+	docBytes, _ := json.Marshal(t.Documents)
+	docJSON := string(docBytes)
+	if docJSON == "" || docJSON == "null" {
+		docJSON = "[]"
+	}
+
 	query := `
 	INSERT INTO tenants (
 		name, phone, email, property_id, security_deposit, opening_arrear, move_in_date,
 		payment_upi, payment_bank_name, payment_account_no, payment_ifsc,
 		initial_elec_meter, initial_water_meter, preferred_channel,
-		co_occupants, co_occupant_name, co_occupant_phone, is_active, photo
+		co_occupants, co_occupant_name, co_occupant_phone, is_active, photo, documents
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	res, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
-		coJSON, t.CoOccupantName, t.CoOccupantPhone, 1, t.Photo,
+		coJSON, t.CoOccupantName, t.CoOccupantPhone, 1, t.Photo, docJSON,
 	)
 	if err != nil {
 		return 0, err
@@ -57,7 +63,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
 	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
-	       t.is_active, COALESCE(t.photo, ''), t.created_at,
+	       t.is_active, COALESCE(t.photo, ''), COALESCE(t.documents, '[]'), t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, t.opening_arrear, 0.0) AS total_due
 	FROM tenants t
@@ -82,6 +88,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 		var t Tenant
 		var isActiveInt int
 		var coJSON string
+		var docJSON string
 		err := rows.Scan(
 			&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
 			&t.SecurityDeposit, &t.OpeningArrear, &t.MoveInDate,
@@ -89,7 +96,7 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 			&t.InitialElecMeter, &t.InitialWaterMeter,
 			&t.PreferredChannel,
 			&coJSON, &t.CoOccupantName, &t.CoOccupantPhone,
-			&isActiveInt, &t.Photo, &t.CreatedAt,
+			&isActiveInt, &t.Photo, &docJSON, &t.CreatedAt,
 			&t.TotalPaid, &t.TotalDue,
 		)
 		if err != nil {
@@ -101,6 +108,10 @@ func (db *DB) GetAllTenants() ([]Tenant, error) {
 		}
 		if len(t.CoOccupants) == 0 && (t.CoOccupantName != "" || t.CoOccupantPhone != "") {
 			t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
+		}
+		t.Documents = []TenantDocument{}
+		if docJSON != "" && docJSON != "[]" {
+			_ = json.Unmarshal([]byte(docJSON), &t.Documents)
 		}
 		t.IsActive = (isActiveInt == 1)
 		tenants = append(tenants, t)
@@ -117,7 +128,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	       COALESCE(t.initial_elec_meter, 0.0), COALESCE(t.initial_water_meter, 0.0),
 	       COALESCE(t.preferred_channel, 'SMS_RCS'),
 	       COALESCE(t.co_occupants, '[]'), COALESCE(t.co_occupant_name, ''), COALESCE(t.co_occupant_phone, ''),
-	       t.is_active, COALESCE(t.photo, ''), t.created_at,
+	       t.is_active, COALESCE(t.photo, ''), COALESCE(t.documents, '[]'), t.created_at,
 	       COALESCE(b_stats.total_paid, 0.0) AS total_paid,
 	       COALESCE(b_stats.total_due, t.opening_arrear, 0.0) AS total_due
 	FROM tenants t
@@ -135,6 +146,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	var t Tenant
 	var isActiveInt int
 	var coJSON string
+	var docJSON string
 	err := db.QueryRow(query, id, id).Scan(
 		&t.ID, &t.Name, &t.Phone, &t.Email, &t.PropertyID, &t.PropertyName,
 		&t.SecurityDeposit, &t.OpeningArrear, &t.MoveInDate,
@@ -142,7 +154,7 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 		&t.InitialElecMeter, &t.InitialWaterMeter,
 		&t.PreferredChannel,
 		&coJSON, &t.CoOccupantName, &t.CoOccupantPhone,
-		&isActiveInt, &t.Photo, &t.CreatedAt,
+		&isActiveInt, &t.Photo, &docJSON, &t.CreatedAt,
 		&t.TotalPaid, &t.TotalDue,
 	)
 	if err != nil {
@@ -154,6 +166,10 @@ func (db *DB) GetTenantByID(id int64) (*Tenant, error) {
 	}
 	if len(t.CoOccupants) == 0 && (t.CoOccupantName != "" || t.CoOccupantPhone != "") {
 		t.CoOccupants = []CoOccupant{{Name: t.CoOccupantName, Phone: t.CoOccupantPhone}}
+	}
+	t.Documents = []TenantDocument{}
+	if docJSON != "" && docJSON != "[]" {
+		_ = json.Unmarshal([]byte(docJSON), &t.Documents)
 	}
 	t.IsActive = (isActiveInt == 1)
 	return &t, nil
@@ -183,25 +199,40 @@ func (db *DB) UpdateTenant(t *Tenant) error {
 		coJSON = "[]"
 	}
 
+	docBytes, _ := json.Marshal(t.Documents)
+	docJSON := string(docBytes)
+	if docJSON == "" || docJSON == "null" {
+		docJSON = "[]"
+	}
+
 	query := `
 	UPDATE tenants
 	SET name = ?, phone = ?, email = ?, property_id = ?, security_deposit = ?, opening_arrear = ?, move_in_date = ?,
 	    payment_upi = ?, payment_bank_name = ?, payment_account_no = ?, payment_ifsc = ?,
 	    initial_elec_meter = ?, initial_water_meter = ?, preferred_channel = ?,
-	    co_occupants = ?, co_occupant_name = ?, co_occupant_phone = ?, is_active = ?, photo = ?
+	    co_occupants = ?, co_occupant_name = ?, co_occupant_phone = ?, is_active = ?, photo = ?, documents = ?
 	WHERE id = ?
 	`
 	_, err := db.Exec(query,
 		t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate,
 		t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC,
 		t.InitialElecMeter, t.InitialWaterMeter, t.PreferredChannel,
-		coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.Photo, t.ID,
+		coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.Photo, docJSON, t.ID,
 	)
 	return err
 }
 
 func (db *DB) DeleteTenant(id int64) error {
-	_, err := db.Exec("DELETE FROM tenants WHERE id = ?", id)
+	var billCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM bills WHERE tenant_id = ?", id).Scan(&billCount)
+	if err != nil {
+		return err
+	}
+	if billCount > 0 {
+		return fmt.Errorf("delete bills first to remove this tenant")
+	}
+
+	_, err = db.Exec("DELETE FROM tenants WHERE id = ?", id)
 	return err
 }
 

@@ -145,10 +145,15 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 		if coJSON == "" || coJSON == "null" {
 			coJSON = "[]"
 		}
+		docBytes, _ := json.Marshal(t.Documents)
+		docJSON := string(docBytes)
+		if docJSON == "" || docJSON == "null" {
+			docJSON = "[]"
+		}
 		_, err := tx.Exec(`
-			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, opening_arrear, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, preferred_channel, co_occupants, co_occupant_name, co_occupant_phone, is_active, photo, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, ch, coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.Photo, t.CreatedAt)
+			INSERT INTO tenants (id, name, phone, email, property_id, security_deposit, opening_arrear, move_in_date, payment_upi, payment_bank_name, payment_account_no, payment_ifsc, initial_elec_meter, initial_water_meter, preferred_channel, co_occupants, co_occupant_name, co_occupant_phone, is_active, photo, documents, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, t.ID, t.Name, t.Phone, t.Email, t.PropertyID, t.SecurityDeposit, t.OpeningArrear, t.MoveInDate, t.PaymentUPI, t.PaymentBankName, t.PaymentAccountNo, t.PaymentIFSC, t.InitialElecMeter, t.InitialWaterMeter, ch, coJSON, t.CoOccupantName, t.CoOccupantPhone, activeInt, t.Photo, docJSON, t.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("failed restoring tenant %s: %w", t.Name, err)
 		}

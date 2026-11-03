@@ -59,6 +59,23 @@ export const UI = {
         this.openAddExpenseModal(this.currentExpensesPropertyId);
       }
     });
+    document.getElementById('btn-prop-expenses-print')?.addEventListener('click', () => {
+      this.printPropertyExpenses?.();
+    });
+
+    // Ledger Modal View Switcher (Three Tabs: Bills, Payments, Ledger)
+    document.getElementById('btn-ledger-tab-bills')?.addEventListener('click', () => {
+      this.switchLedgerTab('bills');
+    });
+    document.getElementById('btn-ledger-tab-payments')?.addEventListener('click', () => {
+      this.switchLedgerTab('payments');
+    });
+    document.getElementById('btn-ledger-tab-ledger')?.addEventListener('click', () => {
+      this.switchLedgerTab('ledger');
+    });
+    document.getElementById('btn-ledger-tab-statement')?.addEventListener('click', () => {
+      this.switchLedgerTab('ledger');
+    });
 
     // Co-occupant dynamic rows
     document.getElementById('btn-add-co-occupant')?.addEventListener('click', () => {
@@ -117,6 +134,9 @@ export const UI = {
     document.getElementById('btn-invoice-share')?.addEventListener('click', () => {
       if (this.currentBillForInvoice) Share.shareBill(this.currentBillForInvoice);
     });
+    document.getElementById('btn-ledger-print')?.addEventListener('click', () => {
+      this.printTenantLedger();
+    });
     document.getElementById('btn-ledger-share-statement')?.addEventListener('click', async () => {
       const tenantId = this.currentLedgerTenantId;
       if (!tenantId) return;
@@ -161,6 +181,62 @@ export const UI = {
     });
     document.getElementById('btn-invoice-print')?.addEventListener('click', () => {
       Share.printInvoice();
+    });
+
+    // Tenant Ledger & Expenses CSV Export buttons
+    document.getElementById('btn-ledger-export-csv')?.addEventListener('click', () => {
+      this.exportCurrentLedgerCSV();
+    });
+    document.getElementById('btn-prop-expenses-export-csv')?.addEventListener('click', () => {
+      this.exportCurrentPropertyExpensesCSV();
+    });
+
+    // Settings Tax & Accounting CSV Exports (Unified Dropdown + Common Export Button)
+    document.getElementById('btn-run-csv-export')?.addEventListener('click', () => {
+      const category = document.getElementById('select-export-category')?.value || 'bills';
+      switch (category) {
+        case 'bills':
+          this.exportAllBillsCSV();
+          break;
+        case 'expenses':
+          this.exportAllExpensesCSV();
+          break;
+        case 'payments':
+          this.exportAllPaymentsCSV();
+          break;
+        case 'tenants':
+          this.exportAllTenantsCSV();
+          break;
+        default:
+          this.exportAllBillsCSV();
+      }
+    });
+
+    document.getElementById('btn-export-bills-csv')?.addEventListener('click', () => {
+      this.exportAllBillsCSV();
+    });
+    document.getElementById('btn-export-expenses-csv')?.addEventListener('click', () => {
+      this.exportAllExpensesCSV();
+    });
+    document.getElementById('btn-export-payments-csv')?.addEventListener('click', () => {
+      this.exportAllPaymentsCSV();
+    });
+    document.getElementById('btn-export-tenants-csv')?.addEventListener('click', () => {
+      this.exportAllTenantsCSV();
+    });
+
+    // 1-Click Batch Monthly Bill Generator form submit & month change
+    document.getElementById('batch-billing-month')?.addEventListener('change', (e) => {
+      const month = e.target.value;
+      if (month) {
+        this.loadBatchPreview(month);
+        const dueInput = document.getElementById('batch-due-date');
+        if (dueInput) dueInput.value = `${month}-10`;
+      }
+    });
+
+    document.getElementById('form-batch-bills')?.addEventListener('submit', (e) => {
+      this.handleBatchCreateBills(e);
     });
 
     // Close buttons (delegated so dynamically inserted buttons with data-close also work)
@@ -316,13 +392,13 @@ export const UI = {
       document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
 
       // Extract card title and subtitle for context in the sheet header
-      const card = buttonEl.closest('.app-card');
+      const card = buttonEl.closest('.app-card, .ledger-entry-card');
       let title = 'Options';
       let subtitle = 'Select an action';
 
       if (card) {
-        const titleEl = card.querySelector('.card-title');
-        const subEl = card.querySelector('.card-subtitle');
+        const titleEl = card.querySelector('.card-title, .ledger-entry-desc, .card-amount-val');
+        const subEl = card.querySelector('.card-subtitle, .ledger-entry-date');
         if (titleEl) title = titleEl.textContent.trim();
         if (subEl) subtitle = subEl.textContent.trim();
       }

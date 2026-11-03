@@ -79,76 +79,95 @@
         <span class="badge badge-date" id="current-date-badge"></span>
       </div>
 
-      <!-- Module 1: Month Selector & Progress Strip -->
-      <div class="dash-month-bar">
-        <div class="dash-month-selector">
-          <button type="button" class="btn-month-nav" id="btn-month-prev" title="Previous Month">
-            <i data-lucide="chevron-left"></i>
-          </button>
-          <div class="month-select-wrapper">
-            <select id="dash-month-select" class="month-select-dropdown">
-              <!-- Dynamically populated via JS -->
-            </select>
-          </div>
-          <button type="button" class="btn-month-nav" id="btn-month-next" title="Next Month">
-            <i data-lucide="chevron-right"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Hero Cashflow Card (Executive Financial Overview) -->
-      <div class="hero-cashflow-card">
-        <!-- Top Dual-Hero Row: Collected & Net Profit -->
-        <div class="cashflow-hero-row">
-          <div class="cashflow-hero-panel hero-panel-collected">
-            <div class="hero-panel-header">
-              <span class="hero-panel-icon"><i data-lucide="wallet"></i></span>
-              <span class="hero-panel-label">Collected</span>
+      <!-- Modern Fintech Overview Card (Unified Financial Statement) -->
+      <div class="hero-cashflow-card fintech-card">
+        <!-- Top Row: Card Title / Status & Integrated Month Picker -->
+        <div class="fintech-header">
+          <div class="fintech-title-group">
+            <span class="fintech-icon-badge">
+              <i data-lucide="wallet"></i>
+            </span>
+            <div class="fintech-title-wrap">
+              <span class="fintech-title">Rent Collection</span>
+              <span class="fintech-rate-badge" id="dash-collection-pct">0%</span>
             </div>
-            <div class="hero-panel-value text-success" id="dash-total-collected">₹0</div>
           </div>
 
-          <div class="cashflow-hero-panel hero-panel-profit">
-            <div class="hero-panel-header">
-              <span class="hero-panel-icon"><i data-lucide="trending-up"></i></span>
-              <span class="hero-panel-label">Net Profit</span>
+          <!-- Integrated Month Selector -->
+          <div class="dash-month-selector fintech-month-selector">
+            <button type="button" class="btn-month-nav" id="btn-month-prev" title="Previous Month">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="month-select-wrapper">
+              <select id="dash-month-select" class="month-select-dropdown">
+                <!-- Dynamically populated via JS -->
+              </select>
             </div>
-            <div class="hero-panel-value text-success" id="dash-net-profit">₹0</div>
+            <button type="button" class="btn-month-nav" id="btn-month-next" title="Next Month">
+              <i data-lucide="chevron-right"></i>
+            </button>
           </div>
         </div>
 
-        <!-- Bottom 4-Metric Grid: Billed, Pending, Expenses, Overdue -->
-        <div class="cashflow-metrics-grid">
-          <div class="cashflow-metric-tile tile-billed">
-            <div class="metric-tile-header">
+        <!-- Primary Focal Metric: Total Collected Revenue -->
+        <div class="fintech-hero-body">
+          <div class="fintech-hero-label">Total Collected</div>
+          <div class="fintech-hero-amount" id="dash-total-collected">₹0</div>
+          
+          <div class="fintech-hero-meta">
+            <span class="fintech-status-dot"></span>
+            <span id="dash-collection-subtext">₹0 collected of ₹0 billed</span>
+          </div>
+
+          <!-- Sleek Minimalist Progress Track -->
+          <div class="fintech-progress-track">
+            <div class="fintech-progress-bar" id="dash-collection-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Summary Strip: Clean Columns Separated by Subtle Hairlines -->
+        <div class="fintech-breakdown-grid">
+          <div class="fintech-col">
+            <div class="fintech-col-header">
               <i data-lucide="file-text"></i>
               <span>Billed</span>
             </div>
-            <strong class="metric-tile-val" id="dash-total-billed">₹0</strong>
+            <strong class="fintech-col-value" id="dash-total-billed">₹0</strong>
           </div>
 
-          <div class="cashflow-metric-tile tile-pending">
-            <div class="metric-tile-header">
+          <div class="fintech-col">
+            <div class="fintech-col-header">
               <i data-lucide="clock"></i>
               <span>Pending</span>
             </div>
-            <strong class="metric-tile-val text-warning" id="dash-total-pending">₹0</strong>
+            <strong class="fintech-col-value text-warning" id="dash-total-pending">₹0</strong>
+            <span class="fintech-overdue-sub" id="dash-overdue-wrap" style="display:none;">
+              <span id="dash-total-overdue">₹0</span> overdue
+            </span>
           </div>
 
-          <div class="cashflow-metric-tile tile-expenses">
-            <div class="metric-tile-header">
+          <div class="fintech-col">
+            <div class="fintech-col-header">
               <i data-lucide="receipt"></i>
               <span>Expenses</span>
             </div>
-            <strong class="metric-tile-val" id="dash-total-expenses">₹0</strong>
+            <strong class="fintech-col-value" id="dash-total-expenses">₹0</strong>
           </div>
 
-          <div class="cashflow-metric-tile tile-overdue">
-            <div class="metric-tile-header">
-              <i data-lucide="alert-circle"></i>
-              <span>Overdue</span>
+          <div class="fintech-col fintech-col-profit">
+            <div class="fintech-col-header">
+              <i data-lucide="trending-up"></i>
+              <span>Net Profit</span>
             </div>
-            <strong class="metric-tile-val text-danger" id="dash-total-overdue">₹0</strong>
+            <strong class="fintech-col-value text-success" id="dash-net-profit">₹0</strong>
+          </div>
+
+          <div class="fintech-col">
+            <div class="fintech-col-header">
+              <i data-lucide="shield-check"></i>
+              <span>Deposits Held</span>
+            </div>
+            <strong class="fintech-col-value" id="dash-total-deposits" title="Total security deposits currently held in trust for active tenants">₹0</strong>
           </div>
         </div>
       </div>
@@ -444,31 +463,63 @@
         </div>
 
         <!-- Owner Payment / Receiving Info for this tenant -->
-        <div style="border-top:1px dashed var(--border); padding-top:12px; margin-top:6px; margin-bottom:12px;">
-          <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-            <i data-lucide="credit-card" style="width:16px; height:16px; color:var(--primary);"></i>
-            Owner Payment Details (For Rent Collection)
-          </div>
-          <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">
-            Enter UPI and bank account info to include in bills and payment links for this tenant.
-          </p>
-          <div class="form-group">
-            <label for="tenant-payment-upi">Owner UPI ID / VPA</label>
-            <input type="text" id="tenant-payment-upi" placeholder="e.g. landlord@oksbi or 9876543210@paytm">
-          </div>
-          <div class="form-group">
-            <label for="tenant-payment-bank-name">Bank Name</label>
-            <input type="text" id="tenant-payment-bank-name" placeholder="e.g. State Bank of India / HDFC Bank">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="tenant-payment-account-no">Account Number</label>
-              <input type="text" id="tenant-payment-account-no" placeholder="e.g. 123456789012">
+        <details class="owner-payment-card" id="tenant-payment-card" open>
+          <summary class="owner-payment-summary">
+            <div class="owner-payment-summary-title">
+              <i data-lucide="credit-card"></i>
+              <span>Owner Payment Details <span class="owner-payment-sub">(For Rent Collection)</span></span>
             </div>
-            <div class="form-group">
-              <label for="tenant-payment-ifsc">IFSC Code</label>
-              <input type="text" id="tenant-payment-ifsc" placeholder="e.g. SBIN0001234" style="text-transform:uppercase;">
+            <div class="owner-payment-summary-right">
+              <span class="owner-payment-badge" id="tenant-payment-badge">Optional</span>
+              <i data-lucide="chevron-down" class="owner-payment-chevron"></i>
             </div>
+          </summary>
+          <div class="owner-payment-body">
+            <p class="owner-payment-hint">
+              Included in bills &amp; QR code for tenant payments.
+            </p>
+            <div class="owner-payment-grid">
+              <div class="form-group">
+                <label for="tenant-payment-upi">
+                  <i data-lucide="qr-code"></i> UPI ID / VPA
+                </label>
+                <input type="text" id="tenant-payment-upi" placeholder="e.g. landlord@oksbi">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-bank-name">
+                  <i data-lucide="building"></i> Bank Name
+                </label>
+                <input type="text" id="tenant-payment-bank-name" placeholder="e.g. HDFC Bank">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-account-no">
+                  <i data-lucide="hash"></i> Account Number
+                </label>
+                <input type="text" id="tenant-payment-account-no" placeholder="e.g. 123456789012" inputmode="numeric">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-ifsc">
+                  <i data-lucide="shield-check"></i> IFSC Code
+                </label>
+                <input type="text" id="tenant-payment-ifsc" placeholder="e.g. SBIN0001234" style="text-transform:uppercase;">
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Tenant Documents & Lease Agreements Section -->
+        <div class="form-divider" style="margin-top:14px;">Documents &amp; Agreements</div>
+        <div class="tenant-docs-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:0.78rem; color:var(--text-muted);">Rental agreements &amp; ID proofs (PDF or Images).</span>
+            <input type="file" id="tenant-doc-file-input" accept=".pdf,image/png,image/jpeg,image/webp" style="display:none;" multiple>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-trigger-tenant-doc" style="white-space:nowrap;">
+              <i data-lucide="paperclip" style="width:14px;height:14px;"></i> Attach File
+            </button>
+          </div>
+
+          <div id="tenant-form-docs-list" class="tenant-form-docs-list" style="display:flex; flex-direction:column; gap:6px;">
+            <!-- Dynamic attached documents pills/cards -->
           </div>
         </div>
 
@@ -477,6 +528,29 @@
           <button type="submit" class="btn btn-primary">Save Tenant</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Document & Agreement Viewer (PDF / Image) -->
+  <div class="modal" id="modal-doc-preview">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="doc-preview-title" style="margin-bottom:2px;">Document Preview</h3>
+          <span id="doc-preview-meta" style="font-size:0.8rem; color:var(--text-muted);"></span>
+        </div>
+        <button class="modal-close" data-close="modal-doc-preview">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px; min-height:420px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <iframe id="doc-preview-frame" style="width:100%; height:540px; border:1px solid var(--border); border-radius:var(--radius-sm); display:none;"></iframe>
+        <img id="doc-preview-img" style="max-width:100%; max-height:540px; object-fit:contain; border-radius:var(--radius-sm); display:none;" alt="Document">
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-primary" id="btn-doc-download">
+          <i data-lucide="download" style="width:14px;height:14px;"></i> Download Document
+        </button>
+        <button type="button" class="btn btn-secondary" data-close="modal-doc-preview">Close</button>
+      </div>
     </div>
   </div>
 
@@ -782,6 +856,24 @@
         </div>
       </div>
 
+      <!-- Ledger View Switcher (Three Tabs: Bills, Payments, Ledger) -->
+      <div class="ledger-tab-bar no-print">
+        <button type="button" class="ledger-tab-btn active" id="btn-ledger-tab-bills" data-tab="bills">
+          <i data-lucide="receipt"></i>
+          <span>Bills</span>
+          <span class="ledger-tab-count" id="ledger-count-bills">0</span>
+        </button>
+        <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-payments" data-tab="payments">
+          <i data-lucide="credit-card"></i>
+          <span>Payments</span>
+          <span class="ledger-tab-count" id="ledger-count-payments">0</span>
+        </button>
+        <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-ledger" data-tab="ledger">
+          <i data-lucide="book-open"></i>
+          <span>Ledger</span>
+        </button>
+      </div>
+
       <!-- Ledger Bills List -->
       <div id="ledger-bills-container" class="bills-list">
         <div class="empty-state">
@@ -790,11 +882,21 @@
         </div>
       </div>
 
+      <!-- Printable Tenant Statement (Rendered via JS for Clean Print/PDF) -->
+      <div id="tenant-ledger-printable" class="tenant-ledger-print-container">
+        <!-- Rendered dynamically via Tenants.renderTenantLedgerPrintSheet() -->
+      </div>
+
       <!-- Modal Footer -->
       <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <button type="button" class="btn btn-outline" id="btn-ledger-share-statement" title="Share full financial statement with tenant">
-          <i data-lucide="share-2" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Share Statement
-        </button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-outline" id="btn-ledger-print" title="Print preview tenant financial statement">
+            <i data-lucide="printer" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Print Preview
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-ledger-export-csv" title="Export tenant ledger to CSV spreadsheet">
+            <i data-lucide="download" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Export CSV
+          </button>
+        </div>
         <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
       </div>
     </div>
@@ -828,11 +930,41 @@
       </div>
 
       <!-- Expenses Action Bar -->
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; margin-top:8px;">
-        <h4 style="font-size:0.95rem; font-weight:700;">Expense History</h4>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <h4 style="font-size:0.95rem; font-weight:700; margin:0;">Expense History</h4>
+          <span class="badge badge-date" id="expense-count-badge" style="font-size:0.7rem; font-weight:700; padding:1px 7px;">0</span>
+        </div>
         <button type="button" class="btn btn-primary btn-sm" id="btn-prop-add-expense">
           <i data-lucide="plus"></i> Add Expense
         </button>
+      </div>
+
+      <!-- Expenses Search & Filter Bar -->
+      <div class="expense-filter-bar no-print">
+        <div class="search-input-box expense-search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="expense-search-input" placeholder="Search title, paid to, notes..." autocomplete="off">
+          <button type="button" id="expense-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
+        </div>
+        <div class="expense-filter-dropdowns">
+          <select id="expense-filter-category" class="expense-filter-select" title="Filter by Category">
+            <option value="all">All Categories</option>
+            <option value="Repairs & Maintenance">Repairs & Maintenance</option>
+            <option value="Owner Takeout">Owner Takeout</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Painting / Renovation">Painting / Renovation</option>
+            <option value="Property Tax / Municipal">Property Tax / Municipal</option>
+            <option value="Cleaning & Sanitation">Cleaning & Sanitation</option>
+            <option value="Carpentry">Carpentry</option>
+            <option value="Appliances">Appliances</option>
+            <option value="Other">Other</option>
+          </select>
+          <select id="expense-filter-month" class="expense-filter-select" title="Filter by Month">
+            <option value="all">All Months</option>
+          </select>
+        </div>
       </div>
 
       <!-- Expenses List Container -->
@@ -843,7 +975,20 @@
         </div>
       </div>
 
-      <div class="modal-footer">
+      <!-- Printable Property Expenses Statement (Rendered via JS for Clean Print/PDF) -->
+      <div id="property-expenses-printable" class="prop-expenses-print-container">
+        <!-- Rendered dynamically via App.renderPropertyExpensesPrintSheet() -->
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-outline" id="btn-prop-expenses-print" title="Print preview property expenses statement">
+            <i data-lucide="printer" style="width:15px; height:15px; vertical-align:-2px; margin-right:4px;"></i> Print Preview
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-prop-expenses-export-csv" title="Export expenses to CSV spreadsheet">
+            <i data-lucide="download" style="width:15px; height:15px; vertical-align:-2px; margin-right:4px;"></i> Export CSV
+          </button>
+        </div>
         <button type="button" class="btn btn-secondary" data-close="modal-property-expenses">Close</button>
       </div>
     </div>
@@ -1126,7 +1271,7 @@
             </label>
             <span id="badge-prev-balance" class="badge badge-overdue" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
           </div>
-          <input type="number" id="bill-prev-balance" step="any" min="0" value="0">
+          <input type="number" id="bill-prev-balance" step="any" value="0">
           <small id="hint-prev-balance" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">Carried forward from previous unpaid bill</small>
         </div>
 
@@ -1143,6 +1288,63 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close="modal-bill">Cancel</button>
           <button type="submit" class="btn btn-primary">Generate & Save Bill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: 1-Click Batch Monthly Bill Generator -->
+  <div class="modal" id="modal-batch-bills">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin-bottom:2px;"><i data-lucide="layers" style="vertical-align:-2px; margin-right:6px; color:var(--primary);"></i> Batch Generate Monthly Bills</h3>
+          <span style="font-size:0.8rem; color:var(--text-muted);">Enter EB readings &amp; generate all monthly bills in one shot</span>
+        </div>
+        <button class="modal-close" data-close="modal-batch-bills">&times;</button>
+      </div>
+      <form id="form-batch-bills">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="batch-billing-month">Billing Month *</label>
+            <input type="month" id="batch-billing-month" required>
+          </div>
+          <div class="form-group">
+            <label for="batch-due-date">Due Date *</label>
+            <input type="date" id="batch-due-date" required>
+          </div>
+        </div>
+
+        <!-- Meter Reading Entry Roll -->
+        <div class="batch-meter-section" style="margin-top:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+            <div>
+              <strong style="font-size:0.92rem;"><i data-lucide="gauge" style="width:16px;height:16px;vertical-align:-2px;color:var(--primary);margin-right:4px;"></i>Electricity (EB) &amp; Meter Readings</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Enter the latest meter reading for each tenant. Units &amp; amounts calculate in real-time.</div>
+            </div>
+            <span class="badge badge-date" id="batch-meter-count-badge">0 Tenants</span>
+          </div>
+
+          <div id="batch-meter-entries-container" style="max-height:380px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); padding:8px;">
+            <!-- Populated dynamically via JS -->
+            <div class="empty-state">Loading active tenants &amp; previous readings...</div>
+          </div>
+        </div>
+
+        <!-- Real-time Roll Summary Strip -->
+        <div class="batch-roll-summary" id="batch-roll-summary" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-top:12px;">
+          <div>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Total Estimated Billing:</span>
+            <strong style="font-size:1.05rem; margin-left:6px; color:var(--primary);" id="batch-total-roll-amount">₹0.00</strong>
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="batch-total-units-summary">0 EB units</span>
+        </div>
+
+        <div class="modal-footer" style="padding-bottom:0; padding-inline:0;">
+          <button type="button" class="btn btn-secondary" data-close="modal-batch-bills">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-batch-bills">
+            <i data-lucide="zap"></i> Generate Bills (<span id="batch-submit-count">0</span>)
+          </button>
         </div>
       </form>
     </div>
@@ -1188,6 +1390,59 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close="modal-payment">Cancel</button>
           <button type="submit" class="btn btn-success"><i data-lucide="check" style="width:16px; height:16px; vertical-align:-2px; margin-right:4px;"></i> Save Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit / Delete Payment Record -->
+  <div class="modal" id="modal-edit-payment">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin-bottom:2px;">Edit Payment Record</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="edit-pay-bill-info">Payment Details</span>
+        </div>
+        <button class="modal-close" data-close="modal-edit-payment">&times;</button>
+      </div>
+      <form id="form-edit-payment">
+        <input type="hidden" id="edit-pay-id">
+        <input type="hidden" id="edit-pay-bill-id">
+        <div class="form-group">
+          <label for="edit-pay-amount">Payment Amount (₹) *</label>
+          <input type="number" id="edit-pay-amount" step="any" min="0.01" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-pay-date">Payment Date *</label>
+            <input type="date" id="edit-pay-date" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-pay-method">Payment Mode</label>
+            <select id="edit-pay-method">
+              <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer (NEFT / IMPS)</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-pay-ref">Transaction ID / Reference (Optional)</label>
+          <input type="text" id="edit-pay-ref" placeholder="UPI Ref / Bank Ref Number">
+        </div>
+        <div class="form-group">
+          <label for="edit-pay-notes">Payment Notes</label>
+          <input type="text" id="edit-pay-notes" placeholder="e.g. Received via GPay">
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <button type="button" class="btn btn-outline" id="btn-delete-payment-record" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.4);">
+            <i data-lucide="trash-2" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Delete Payment
+          </button>
+          <div style="display:flex; gap:8px; margin-left:auto;">
+            <button type="button" class="btn btn-secondary" data-close="modal-edit-payment">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i data-lucide="check" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Save Changes</button>
+          </div>
         </div>
       </form>
     </div>
@@ -1583,6 +1838,24 @@
             </button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-disable-pin" style="display:none; color:var(--danger); border-color:rgba(239,68,68,0.3);">
               <i data-lucide="unlock"></i> Turn Off PIN
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4><i data-lucide="file-spreadsheet" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Tax &amp; Accounting CSV Exports</h4>
+          <p class="settings-desc">Download clean Excel/CSV spreadsheets for annual tax filing, CA accounting, and property financial audits.</p>
+          <div class="export-csv-control-group" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:220px;">
+              <select id="select-export-category" class="form-control" style="width:100%; height:40px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 12px; background:var(--surface); color:var(--text-main); font-size:0.9rem;">
+                <option value="bills">Rent Bills (Monthly Invoices &amp; Balances)</option>
+                <option value="expenses">Property Expenses (Maintenance &amp; Utilities)</option>
+                <option value="payments">Payment Receipts (UPI, Cash &amp; Bank)</option>
+                <option value="tenants">Tenants &amp; Security Deposits Held</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-run-csv-export" style="display:flex; align-items:center; justify-content:center; gap:8px; height:40px; padding:0 20px; white-space:nowrap; font-weight:600;">
+              <i data-lucide="download"></i> Export CSV
             </button>
           </div>
         </div>

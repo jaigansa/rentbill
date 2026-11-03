@@ -105,6 +105,12 @@ func (db *DB) GetDashboardSummary(month string) (*DashboardSummary, error) {
 	}
 	summary.NetProfit = summary.TotalCollected - summary.TotalExpenses
 
+	// 2.5 Security deposits liability held in trust across active tenants
+	_ = db.QueryRow("SELECT COALESCE(SUM(security_deposit), 0), COUNT(*) FROM tenants WHERE is_active = 1").Scan(
+		&summary.TotalDepositsHeld,
+		&summary.ActiveTenantsCount,
+	)
+
 	// 3. Action Feed - Overdue Bills
 	var overdueQuery string
 	var overdueArgs []interface{}

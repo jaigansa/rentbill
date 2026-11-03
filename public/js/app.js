@@ -39,6 +39,10 @@ const App = {
   tenantFilter: 'all',
   propertySearchQuery: '',
   propertyFilter: 'all',
+  expenseSearchQuery: '',
+  expenseCategoryFilter: 'all',
+  expenseMonthFilter: 'all',
+  currentPropertyExpenses: [],
   properties: [],
   tenants: [],
   bills: [],
@@ -68,6 +72,8 @@ const App = {
 
   bindForms() {
     this.bindTenantPhotoUpload?.();
+    this.bindTenantPaymentUX?.();
+    this.bindTenantDocumentUpload?.();
 
     // Live tenant phone format validation
     const phoneInput = document.getElementById('tenant-phone');
@@ -172,6 +178,7 @@ const App = {
         co_occupants: coOccupants,
         co_occupant_name: coOccupants[0]?.name || '',
         co_occupant_phone: coOccupants[0]?.phone || '',
+        documents: this.currentTenantDocuments || [],
         is_active: isActiveVal
       };
 
@@ -185,6 +192,8 @@ const App = {
         }
         this.closeModal('modal-tenant');
         e.target.reset();
+        this.currentTenantDocuments = [];
+        this.renderTenantFormDocsList?.();
         const coListEl = document.getElementById('co-occupants-list');
         if (coListEl) coListEl.innerHTML = '';
         await this.refreshAll();
@@ -290,6 +299,43 @@ const App = {
       } catch (err) {
         this.toast('Error: ' + err.message, 'error');
       }
+    });
+
+    // Edit Payment Form (Update / Delete)
+    document.getElementById('form-edit-payment')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = parseInt(document.getElementById('edit-pay-id').value, 10);
+      const billId = parseInt(document.getElementById('edit-pay-bill-id').value, 10);
+      const payData = {
+        amount: parseFloat(document.getElementById('edit-pay-amount').value) || 0,
+        payment_date: document.getElementById('edit-pay-date').value,
+        payment_method: document.getElementById('edit-pay-method').value,
+        reference_no: document.getElementById('edit-pay-ref').value.trim(),
+        notes: document.getElementById('edit-pay-notes').value.trim()
+      };
+
+      try {
+        await API.updatePayment(id, payData);
+        this.closeModal('modal-edit-payment');
+        this.toast('Payment record updated successfully');
+        await this.refreshAll();
+        if (billId && document.getElementById('modal-invoice')?.classList.contains('active')) {
+          this.showInvoice(billId);
+        }
+        if (this.currentLedgerTenantId && document.getElementById('modal-ledger')?.classList.contains('active')) {
+          this.renderTenantLedger(this.currentLedgerTenantId);
+        }
+      } catch (err) {
+        this.toast('Error: ' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('btn-delete-payment-record')?.addEventListener('click', async () => {
+      const id = parseInt(document.getElementById('edit-pay-id').value, 10);
+      const billId = parseInt(document.getElementById('edit-pay-bill-id').value, 10);
+      const amount = document.getElementById('edit-pay-amount').value;
+      if (!id) return;
+      await this.deletePaymentRecord(id, billId, amount);
     });
 
     // Expense Form (Create / Edit)
@@ -438,6 +484,11 @@ const App = {
       setStatCard('dash-total-pending', data.total_pending);
       setStatCard('dash-total-overdue', data.total_overdue);
 
+      const overdueWrap = document.getElementById('dash-overdue-wrap');
+      if (overdueWrap) {
+        overdueWrap.style.display = (data.total_overdue && data.total_overdue > 0) ? 'block' : 'none';
+      }
+
       const expEl = document.getElementById('dash-total-expenses');
       if (expEl) {
         expEl.textContent = this.formatMoney(data.total_expenses || 0, true);
@@ -449,6 +500,12 @@ const App = {
         netProfitEl.textContent = this.formatMoney(np, true);
         netProfitEl.title = this.formatFullMoney(np);
         netProfitEl.style.color = np >= 0 ? 'var(--success)' : 'var(--danger)';
+      }
+
+      const depositsEl = document.getElementById('dash-total-deposits');
+      if (depositsEl) {
+        depositsEl.textContent = this.formatMoney(data.total_deposits_held || 0, true);
+        depositsEl.title = `Total security deposits held in trust across ${data.active_tenants_count || 0} active tenants: ${this.formatFullMoney(data.total_deposits_held || 0)}`;
       }
 
       // 4. Action Required Feed
@@ -507,6 +564,23 @@ const App = {
           });
 
           // Unbilled Tenants
+          if (unbilledList.length > 0 && data.selected_month !== 'ALL') {
+            html += `
+              <div class="batch-bill-banner">
+                <div class="batch-bill-info">
+                  <div class="batch-bill-title">
+                    <i data-lucide="zap" style="width:16px;height:16px;"></i>
+                    <span>${unbilledList.length} Tenant(s) Not Billed for ${this.formatMonth(data.selected_month) || data.selected_month}</span>
+                  </div>
+                  <div class="batch-bill-desc">Auto-generate base rent, utilities & arrears in 1 click.</div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" onclick="App.openBatchBillsModal('${data.selected_month}', ${unbilledList.length})">
+                  <i data-lucide="layers" style="width:14px;height:14px;"></i> Generate All Bills (${unbilledList.length})
+                </button>
+              </div>
+            `;
+          }
+
           unbilledList.forEach(t => {
             html += `
               <div class="action-card card-unbilled">
@@ -604,10 +678,422 @@ const App = {
         this.renderPropertiesList();
       });
     });
+
+    // Expense History Search & Filters
+    this.bindExpenseFilters?.();
   },
 
   openSettingsModal() {
     this.openModal('modal-settings');
+  },
+
+  // 1-Click Batch Monthly Bill Generator with EB Reading Entry Roll
+  async openBatchBillsModal(month, count) {
+    const targetMonth = month || this.selectedDashboardMonth || new Date().toISOString().slice(0, 7);
+    const monthInput = document.getElementById('batch-billing-month');
+    if (monthInput) {
+      monthInput.value = targetMonth;
+    }
+    const dueInput = document.getElementById('batch-due-date');
+    if (dueInput) {
+      dueInput.value = `${targetMonth}-10`;
+    }
+
+    this.openModal('modal-batch-bills');
+    await this.loadBatchPreview(targetMonth);
+  },
+
+  async loadBatchPreview(month) {
+    const container = document.getElementById('batch-meter-entries-container');
+    const badgeCount = document.getElementById('batch-meter-count-badge');
+    const submitCount = document.getElementById('batch-submit-count');
+
+    if (container) {
+      container.innerHTML = `<div class="empty-state"><i data-lucide="loader" style="width:24px;height:24px;animation:spin 1s linear infinite;"></i><div>Loading active unbilled tenants...</div></div>`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    try {
+      const items = await API.getBatchBillPreview(month);
+      this.batchPreviewItems = items || [];
+
+      if (badgeCount) badgeCount.textContent = `${this.batchPreviewItems.length} Tenants`;
+      if (submitCount) submitCount.textContent = this.batchPreviewItems.length;
+
+      this.renderBatchMeterRoll();
+    } catch (err) {
+      if (container) {
+        container.innerHTML = `<div class="empty-state text-danger">Failed loading roll: ${err.message}</div>`;
+      }
+    }
+  },
+
+  renderBatchMeterRoll() {
+    const container = document.getElementById('batch-meter-entries-container');
+    if (!container) return;
+
+    const items = this.batchPreviewItems || [];
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="check-circle-2" style="width:32px;height:32px;color:var(--success);"></i>
+          <div>All active tenants already have bills generated for this month.</div>
+        </div>
+      `;
+      this.updateBatchRollSummary();
+      this.refreshIcons();
+      return;
+    }
+
+    const curr = window.APP_CURRENCY || '₹';
+
+    container.innerHTML = items.map(it => {
+      const isWaterMeter = it.water_billing_type === 'METER';
+      const fixedWaterAmt = isWaterMeter ? 0 : (it.water_charge || 0);
+      const fixedBase = (it.default_rent || 0) + fixedWaterAmt + (it.maintenance_charge || 0) + (it.previous_balance || 0);
+
+      return `
+        <div class="batch-meter-card" data-tenant-id="${it.tenant_id}">
+          <div class="batch-meter-tenant">
+            <span class="batch-meter-name">${it.tenant_name}</span>
+            <span class="batch-meter-unit">Unit: <strong>${it.property_name}</strong> • Rent: ${curr}${it.default_rent}</span>
+            ${it.previous_balance > 0 ? `<span style="font-size:0.72rem; color:var(--danger); font-weight:600;">+ Past Arrear: ${curr}${it.previous_balance.toFixed(2)}</span>` : ''}
+            ${it.previous_balance < 0 ? `<span style="font-size:0.72rem; color:var(--success); font-weight:600;">- Advance Credit: ${curr}${Math.abs(it.previous_balance).toFixed(2)}</span>` : ''}
+          </div>
+
+          <div class="batch-meter-prev">
+            <span style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Prev EB Meter</span>
+            <span class="badge badge-date" style="font-weight:700; font-size:0.8rem;">${it.prev_electricity_meter} units</span>
+            <span style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Rate: ${curr}${it.electricity_rate}/unit</span>
+          </div>
+
+          <div class="batch-meter-input-wrap">
+            <label style="font-size:0.72rem; font-weight:600; color:var(--text-muted); margin-bottom:1px;">New EB Reading</label>
+            <input type="number" step="any" min="${it.prev_electricity_meter}" 
+                   class="batch-meter-input batch-elec-input" 
+                   data-tenant-id="${it.tenant_id}" 
+                   data-prev="${it.prev_electricity_meter}" 
+                   data-rate="${it.electricity_rate}" 
+                   data-fixed="${fixedBase}"
+                   placeholder="Enter reading (e.g. ${it.prev_electricity_meter})"
+                   inputmode="decimal">
+            <div id="batch-elec-calc-${it.tenant_id}" style="font-size:0.72rem; color:var(--text-muted); margin-top:1px;">
+              0 units consumed = ${curr}0.00
+            </div>
+            ${isWaterMeter ? `
+              <label style="font-size:0.72rem; font-weight:600; color:var(--text-muted); margin-top:4px;">New Water Reading (Prev: ${it.prev_water_meter})</label>
+              <input type="number" step="any" min="${it.prev_water_meter}" 
+                     class="batch-meter-input batch-water-input" 
+                     data-tenant-id="${it.tenant_id}" 
+                     data-prev="${it.prev_water_meter}" 
+                     data-rate="${it.water_rate}"
+                     placeholder="${it.prev_water_meter}"
+                     inputmode="decimal">
+            ` : ''}
+          </div>
+
+          <div class="batch-meter-result">
+            <span style="font-size:0.7rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Est. Total</span>
+            <strong id="batch-row-total-${it.tenant_id}" style="font-size:1.05rem; color:var(--text-main); font-weight:800;">
+              ${curr}${fixedBase.toFixed(2)}
+            </strong>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach real-time calculation input listeners
+    container.querySelectorAll('.batch-meter-input').forEach(input => {
+      input.addEventListener('input', () => {
+        this.updateBatchRow(input.getAttribute('data-tenant-id'));
+        this.updateBatchRollSummary();
+      });
+    });
+
+    this.updateBatchRollSummary();
+    this.refreshIcons();
+  },
+
+  updateBatchRow(tenantId) {
+    const item = (this.batchPreviewItems || []).find(t => t.tenant_id == tenantId);
+    if (!item) return;
+
+    const curr = window.APP_CURRENCY || '₹';
+    const elecInput = document.querySelector(`.batch-elec-input[data-tenant-id="${tenantId}"]`);
+    const waterInput = document.querySelector(`.batch-water-input[data-tenant-id="${tenantId}"]`);
+    const calcEl = document.getElementById(`batch-elec-calc-${tenantId}`);
+    const rowTotalEl = document.getElementById(`batch-row-total-${tenantId}`);
+
+    const prevElec = item.prev_electricity_meter || 0;
+    const currElec = elecInput && elecInput.value !== '' ? parseFloat(elecInput.value) : prevElec;
+    const elecRate = item.electricity_rate || 0;
+
+    let elecUnits = 0;
+    if (currElec >= prevElec) {
+      elecUnits = currElec - prevElec;
+    }
+    const elecAmount = Math.round(elecUnits * elecRate * 100) / 100;
+
+    if (calcEl) {
+      if (elecInput && elecInput.value !== '' && currElec < prevElec) {
+        calcEl.innerHTML = `<span style="color:var(--danger);">Reading must be ≥ ${prevElec}</span>`;
+      } else {
+        calcEl.textContent = `${elecUnits.toFixed(1)} units = ${curr}${elecAmount.toFixed(2)}`;
+      }
+    }
+
+    let waterAmount = 0;
+    if (item.water_billing_type === 'METER') {
+      const prevWater = item.prev_water_meter || 0;
+      const currWater = waterInput && waterInput.value !== '' ? parseFloat(waterInput.value) : prevWater;
+      const waterRate = item.water_rate || 0;
+      const waterUnits = currWater >= prevWater ? (currWater - prevWater) : 0;
+      waterAmount = Math.round(waterUnits * waterRate * 100) / 100;
+    } else {
+      waterAmount = item.water_charge || 0;
+    }
+
+    const fixedBase = (item.default_rent || 0) + (item.maintenance_charge || 0) + (item.previous_balance || 0);
+    const total = Math.max(0, fixedBase + elecAmount + waterAmount);
+
+    if (rowTotalEl) {
+      rowTotalEl.textContent = `${curr}${total.toFixed(2)}`;
+    }
+  },
+
+  updateBatchRollSummary() {
+    const curr = window.APP_CURRENCY || '₹';
+    const totalEl = document.getElementById('batch-total-roll-amount');
+    const unitsEl = document.getElementById('batch-total-units-summary');
+    const items = this.batchPreviewItems || [];
+
+    let totalRoll = 0;
+    let totalUnits = 0;
+
+    items.forEach(it => {
+      const elecInput = document.querySelector(`.batch-elec-input[data-tenant-id="${it.tenant_id}"]`);
+      const waterInput = document.querySelector(`.batch-water-input[data-tenant-id="${it.tenant_id}"]`);
+
+      const prevElec = it.prev_electricity_meter || 0;
+      const currElec = elecInput && elecInput.value !== '' ? parseFloat(elecInput.value) : prevElec;
+      const elecUnits = currElec >= prevElec ? (currElec - prevElec) : 0;
+      const elecAmount = Math.round(elecUnits * (it.electricity_rate || 0) * 100) / 100;
+
+      let waterAmount = 0;
+      if (it.water_billing_type === 'METER') {
+        const prevWater = it.prev_water_meter || 0;
+        const currWater = waterInput && waterInput.value !== '' ? parseFloat(waterInput.value) : prevWater;
+        const waterUnits = currWater >= prevWater ? (currWater - prevWater) : 0;
+        waterAmount = Math.round(waterUnits * (it.water_rate || 0) * 100) / 100;
+      } else {
+        waterAmount = it.water_charge || 0;
+      }
+
+      const fixed = (it.default_rent || 0) + (it.maintenance_charge || 0) + (it.previous_balance || 0);
+      totalRoll += (fixed + elecAmount + waterAmount);
+      totalUnits += elecUnits;
+    });
+
+    if (totalEl) totalEl.textContent = `${curr}${totalRoll.toFixed(2)}`;
+    if (unitsEl) unitsEl.textContent = `${totalUnits.toFixed(1)} total EB units across ${items.length} tenants`;
+  },
+
+  async handleBatchCreateBills(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const monthInput = document.getElementById('batch-billing-month');
+    const dueInput = document.getElementById('batch-due-date');
+    const billingMonth = monthInput ? monthInput.value : '';
+    const dueDate = dueInput ? dueInput.value : '';
+
+    if (!billingMonth) {
+      this.toast('Please select a billing month', 'warning');
+      return;
+    }
+
+    const items = this.batchPreviewItems || [];
+    if (items.length === 0) {
+      this.toast('No unbilled tenants available for this month', 'warning');
+      return;
+    }
+
+    // Collect all entered EB and water meter readings
+    const entries = items.map(it => {
+      const elecInput = document.querySelector(`.batch-elec-input[data-tenant-id="${it.tenant_id}"]`);
+      const waterInput = document.querySelector(`.batch-water-input[data-tenant-id="${it.tenant_id}"]`);
+      const currElec = elecInput && elecInput.value !== '' ? parseFloat(elecInput.value) : it.prev_electricity_meter;
+      const currWater = waterInput && waterInput.value !== '' ? parseFloat(waterInput.value) : it.prev_water_meter;
+      return {
+        tenant_id: it.tenant_id,
+        curr_electricity_meter: currElec,
+        curr_water_meter: currWater
+      };
+    });
+
+    const btn = document.getElementById('btn-submit-batch-bills');
+    const origText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader" style="width:14px;height:14px;animation:spin 1s linear infinite;"></i> Generating...`;
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    try {
+      const res = await API.batchCreateBills(billingMonth, dueDate, entries);
+      this.closeModal('modal-batch-bills');
+      this.toast(`Generated ${res.created_count} bills with EB readings for ${this.formatMonth(billingMonth) || billingMonth}!`, 'success');
+      await this.refreshAll();
+    } catch (err) {
+      this.toast(err.message || 'Failed generating batch bills', 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+        if (window.lucide) window.lucide.createIcons();
+      }
+    }
+  },
+
+  // Tax & Accounting CSV Exports
+  async exportAllBillsCSV() {
+    try {
+      this.toast('Preparing rent bills export...', 'info');
+      const bills = await API.getBills();
+      if (!bills || !bills.length) {
+        this.toast('No bills available to export', 'warning');
+        return;
+      }
+      const headers = [
+        'Bill Number', 'Billing Month', 'Due Date', 'Tenant Name', 'Tenant Phone',
+        'Property / Unit', 'Base Rent', 'Electricity Units', 'Electricity Rate',
+        'Electricity Amount', 'Water Type', 'Water Amount', 'Maintenance Amount',
+        'Other Charges', 'Discount Amount', 'Past Arrears', 'Total Amount',
+        'Paid Amount', 'Balance Due', 'Status', 'Bill Created Date'
+      ];
+      const rows = bills.map(b => [
+        b.bill_number || '',
+        b.billing_month || '',
+        b.due_date || '',
+        b.tenant_name || '',
+        b.tenant_phone || '',
+        b.property_name || '',
+        b.base_rent || 0,
+        b.electricity_units || 0,
+        b.electricity_rate || 0,
+        b.electricity_amount || 0,
+        b.water_billing_type || 'FIXED',
+        b.water_amount || 0,
+        b.maintenance_amount || 0,
+        b.other_charges || 0,
+        b.discount_amount || 0,
+        b.previous_balance || 0,
+        b.total_amount || 0,
+        b.paid_amount || 0,
+        (b.total_amount - b.paid_amount) || 0,
+        b.status || '',
+        b.created_at || ''
+      ]);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      this.downloadCSV(`rentbills_collections_${dateStr}.csv`, headers, rows);
+      this.toast(`Exported ${bills.length} rent bills successfully!`, 'success');
+    } catch (err) {
+      this.toast('Failed exporting bills: ' + err.message, 'error');
+    }
+  },
+
+  async exportAllExpensesCSV() {
+    try {
+      this.toast('Preparing expenses journal export...', 'info');
+      const expenses = await API.getExpenses();
+      if (!expenses || !expenses.length) {
+        this.toast('No expenses recorded to export', 'warning');
+        return;
+      }
+      const headers = [
+        'Expense Date', 'Property / Unit', 'Category', 'Expense Title',
+        'Amount', 'Paid To / Vendor', 'Payment Method', 'Notes'
+      ];
+      const rows = expenses.map(e => [
+        e.expense_date || '',
+        e.property_name || 'All Properties',
+        e.category || '',
+        e.title || '',
+        e.amount || 0,
+        e.paid_to || '',
+        e.payment_method || '',
+        e.notes || ''
+      ]);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      this.downloadCSV(`expenses_journal_${dateStr}.csv`, headers, rows);
+      this.toast(`Exported ${expenses.length} expense entries successfully!`, 'success');
+    } catch (err) {
+      this.toast('Failed exporting expenses: ' + err.message, 'error');
+    }
+  },
+
+  async exportAllPaymentsCSV() {
+    try {
+      this.toast('Preparing payments ledger export...', 'info');
+      const payments = await API.getPayments();
+      if (!payments || !payments.length) {
+        this.toast('No payments recorded to export', 'warning');
+        return;
+      }
+      const headers = [
+        'Payment Date', 'Payment ID', 'Bill Number', 'Tenant Name',
+        'Property / Unit', 'Payment Method', 'Reference / Txn ID', 'Amount Received', 'Notes'
+      ];
+      const rows = payments.map(p => [
+        p.payment_date || '',
+        p.id || '',
+        p.bill_number || '',
+        p.tenant_name || '',
+        p.property_name || '',
+        p.payment_method || '',
+        p.reference_no || '',
+        p.amount || 0,
+        p.notes || ''
+      ]);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      this.downloadCSV(`payments_ledger_${dateStr}.csv`, headers, rows);
+      this.toast(`Exported ${payments.length} payment records successfully!`, 'success');
+    } catch (err) {
+      this.toast('Failed exporting payments: ' + err.message, 'error');
+    }
+  },
+
+  async exportAllTenantsCSV() {
+    try {
+      this.toast('Preparing tenants & deposits export...', 'info');
+      const tenants = await API.getTenants();
+      if (!tenants || !tenants.length) {
+        this.toast('No tenants found to export', 'warning');
+        return;
+      }
+      const headers = [
+        'Tenant Name', 'Phone', 'Email', 'Assigned Unit', 'Occupancy Status',
+        'Move-In Date', 'Security Deposit Held', 'Opening Arrears', 'Initial Elec Meter',
+        'Initial Water Meter', 'Total Paid Lifetime', 'Current Due / Balance'
+      ];
+      const rows = tenants.map(t => [
+        t.name || '',
+        t.phone || '',
+        t.email || '',
+        t.property_name || 'Unassigned',
+        t.is_active ? 'ACTIVE' : 'PAST',
+        t.move_in_date || '',
+        t.security_deposit || 0,
+        t.opening_arrear || 0,
+        t.initial_elec_meter || 0,
+        t.initial_water_meter || 0,
+        t.total_paid || 0,
+        t.total_due || 0
+      ]);
+      const dateStr = new Date().toISOString().slice(0, 10);
+      this.downloadCSV(`tenants_and_deposits_${dateStr}.csv`, headers, rows);
+      this.toast(`Exported ${tenants.length} tenant profiles successfully!`, 'success');
+    } catch (err) {
+      this.toast('Failed exporting tenants: ' + err.message, 'error');
+    }
   }
 };
 
