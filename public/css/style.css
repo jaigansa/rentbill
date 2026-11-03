@@ -247,7 +247,7 @@
 
 html {
   scroll-behavior: smooth;
-  scrollbar-gutter: stable;
+  overflow-x: hidden;
 }
 
 body {
@@ -259,6 +259,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* =========================================================
@@ -1816,6 +1818,7 @@ textarea:hover::-webkit-scrollbar-thumb {
   padding: 16px 20px 0 20px;
   max-height: min(90dvh, var(--vvh, 90dvh));
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: var(--shadow-lg);
   animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   scroll-padding-bottom: 74px;
@@ -4634,8 +4637,8 @@ select option {
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   height: 100dvh;
   background: var(--bg);
   z-index: 9999;
