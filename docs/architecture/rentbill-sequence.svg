@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="seq-title seq-desc" id="rentbill-sequence-root">
+        <title id="seq-title">RentBill Zero-Trust Request and Authentication Sequence</title>
+        <desc id="seq-desc">Sequence diagram showing a client API request passing through host and origin middleware, cryptographic token authentication, PIN session verification, and SQLite transaction commit.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #rentbill-sequence-root { --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace; }
+      #rentbill-sequence-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #rentbill-sequence-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#rentbill-sequence-root .diagram-container { overflow-x: visible; }
+}</style>
+          <pattern id="rentbill-sequence-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="#0f172a" fill-opacity="0.08"/>
+          </pattern>
+          <marker id="rentbill-sequence-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+          </marker>
+          <marker id="rentbill-sequence-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+          <marker id="rentbill-sequence-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#rentbill-sequence-dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- LIFELINES (Dashed vertical lines)          -->
+        <!-- ========================================== -->
+        <!-- Actor 1: Client at x=140 -->
+        <line x1="140" y1="108" x2="140" y2="492" stroke="#0f172a" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.20"/>
+        <!-- Actor 2: Security Gate at x=380 -->
+        <line x1="380" y1="108" x2="380" y2="492" stroke="#0f172a" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.20"/>
+        <!-- Actor 3: API Router at x=620 -->
+        <line x1="620" y1="108" x2="620" y2="492" stroke="#0f172a" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.20"/>
+        <!-- Actor 4: SQLite Database at x=860 -->
+        <line x1="860" y1="108" x2="860" y2="492" stroke="#0f172a" stroke-width="1" stroke-dasharray="3,3" stroke-opacity="0.20"/>
+
+        <!-- ========================================== -->
+        <!-- ACTIVATION BARS                            -->
+        <!-- ========================================== -->
+        <!-- Security Gate Activation -->
+        <rect x="376" y="140" width="8" height="70" rx="2" fill="#0f172a" stroke="#475569" stroke-width="0.8" fill-opacity="0.08"/>
+        <!-- API Router Activation -->
+        <rect x="616" y="200" width="8" height="236" rx="2" fill="#2563eb" stroke="#2563eb" stroke-width="0.8" fill-opacity="0.08"/>
+        <!-- SQLite Activation -->
+        <rect x="856" y="270" width="8" height="66" rx="2" fill="#0f172a" stroke="#475569" stroke-width="0.8" fill-opacity="0.08"/>
+
+        <!-- ========================================== -->
+        <!-- MESSAGES & CALLS                           -->
+        <!-- ========================================== -->
+
+        <!-- 1. Client -> Security Gate: API Request -->
+        <line x1="140" y1="144" x2="372" y2="144" stroke="#2563eb" stroke-width="1.2" marker-end="url(#rentbill-sequence-arrow-link)"/>
+        <!-- Label 1 -->
+        <rect x="180" y="132" width="152" height="12" rx="2" fill="#f8fafc"/>
+        <text x="256" y="141" fill="#2563eb" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">POST /api/bills (+Token)</text>
+
+        <!-- 2. Self check on Security Gate: Host/Origin -->
+        <path d="M 384,166 H 414 Q 420,166 420,172 V 182 Q 420,188 414,188 H 388" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#rentbill-sequence-arrow)"/>
+        <!-- Label 2 -->
+        <rect x="424" y="171" width="112" height="12" rx="2" fill="#f8fafc"/>
+        <text x="480" y="180" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Validate Host &amp; Origin</text>
+
+        <!-- 3. Security Gate -> API Router: Valid Ingress -->
+        <line x1="384" y1="204" x2="612" y2="204" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-sequence-arrow)"/>
+        <!-- Label 3 -->
+        <rect x="438" y="192" width="120" height="12" rx="2" fill="#f8fafc"/>
+        <text x="498" y="201" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Security Headers &amp; Next</text>
+
+        <!-- 4. Self check on API Router: PIN Session -->
+        <path d="M 624,228 H 654 Q 660,228 660,234 V 244 Q 660,250 654,250 H 628" fill="none" stroke="#475569" stroke-width="1" marker-end="url(#rentbill-sequence-arrow)"/>
+        <!-- Label 4 -->
+        <rect x="664" y="233" width="108" height="12" rx="2" fill="#f8fafc"/>
+        <text x="718" y="242" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Verify 4-digit PIN</text>
+
+        <!-- 5. API Router -> SQLite: BEGIN & INSERT -->
+        <line x1="624" y1="274" x2="852" y2="274" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-sequence-arrow)"/>
+        <!-- Label 5 -->
+        <rect x="682" y="262" width="112" height="12" rx="2" fill="#f8fafc"/>
+        <text x="738" y="271" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">INSERT INTO bills (TX)</text>
+
+        <!-- 6. SQLite -> API Router: Commit OK (dashed return) -->
+        <line x1="856" y1="324" x2="628" y2="324" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#rentbill-sequence-arrow)"/>
+        <!-- Label 6 -->
+        <rect x="696" y="312" width="88" height="12" rx="2" fill="#f8fafc"/>
+        <text x="740" y="321" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">Commit OK · ID: 42</text>
+
+        <!-- 7. API Router -> Client: 201 Created (FOCAL ACCENT) -->
+        <line x1="616" y1="376" x2="144" y2="376" stroke="#2563eb" stroke-width="1.4" marker-end="url(#rentbill-sequence-arrow-accent)"/>
+        <!-- Label 7 -->
+        <rect x="312" y="364" width="132" height="12" rx="2" fill="#f8fafc"/>
+        <text x="378" y="373" fill="#2563eb" font-size="7.5" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em" font-weight="600">201 Created (JSON Bill)</text>
+
+        <!-- ========================================== -->
+        <!-- ACTOR BOXES (Header row at top)            -->
+        <!-- ========================================== -->
+        <!-- Actor 1: Client -->
+        <g id="actor-client">
+          <rect x="68" y="60" width="144" height="48" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="74" y="66" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="91" y="75" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">CLIENT</text>
+          <text x="140" y="94" fill="#0f172a" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Desktop / Mobile</text>
+        </g>
+
+        <!-- Actor 2: Security Gate (Focal Accent) -->
+        <g id="actor-gate">
+          <rect x="308" y="60" width="144" height="48" rx="6" fill="#2563eb" stroke="#2563eb" stroke-width="1.2" fill-opacity="0.08"/>
+          <rect x="314" y="66" width="32" height="12" rx="2" fill="none" stroke="#2563eb" stroke-width="0.8" stroke-opacity="0.50"/>
+          <text x="330" y="75" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">GATE</text>
+          <text x="380" y="94" fill="#0f172a" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Security Middleware</text>
+        </g>
+
+        <!-- Actor 3: API Router -->
+        <g id="actor-api">
+          <rect x="548" y="60" width="144" height="48" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="554" y="66" width="28" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="568" y="75" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">API</text>
+          <text x="620" y="94" fill="#0f172a" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">API &amp; PIN Router</text>
+        </g>
+
+        <!-- Actor 4: SQLite Database -->
+        <g id="actor-db">
+          <rect x="788" y="60" width="144" height="48" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="794" y="66" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="811" y="75" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">STORE</text>
+          <text x="860" y="94" fill="#0f172a" font-size="11" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">SQLite Engine</text>
+        </g>
+
+      </svg>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="layers-title layers-desc" id="rentbill-security-layers-root">
+        <title id="layers-title">RentBill Zero-Trust Defense-in-Depth Security Layers</title>
+        <desc id="layers-desc">Layer stack showing the five security boundaries defending the pure Go application from localhost attacks, port scans, and malicious web origins.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #rentbill-security-layers-root { --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace; }
+      #rentbill-security-layers-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #rentbill-security-layers-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#rentbill-security-layers-root .diagram-container { overflow-x: visible; }
+}</style>
+          <pattern id="rentbill-security-layers-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="#0f172a" fill-opacity="0.08"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#rentbill-security-layers-dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- DIRECTION COLUMN (Left Margin)             -->
+        <!-- ========================================== -->
+        <text x="60" y="68" fill="#475569" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">INGRESS</text>
+        <line x1="80" y1="80" x2="80" y2="400" stroke="#0f172a" stroke-width="1" stroke-opacity="0.25"/>
+        <polygon points="76,396 84,396 80,404" fill="#475569"/>
+        <text x="60" y="420" fill="#475569" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">STORAGE</text>
+
+        <!-- Container boundaries -->
+        <line x1="120" y1="80" x2="960" y2="80" stroke="#0f172a" stroke-width="1" stroke-opacity="0.12"/>
+        <line x1="120" y1="400" x2="960" y2="400" stroke="#0f172a" stroke-width="1" stroke-opacity="0.12"/>
+
+        <!-- ========================================== -->
+        <!-- LAYER 5: Isolated Native Window            -->
+        <!-- ========================================== -->
+        <rect x="120" y="80" width="840" height="64" fill="#ffffff"/>
+        <line x1="120" y1="144" x2="960" y2="144" stroke="#0f172a" stroke-width="1" stroke-opacity="0.12"/>
+        <text x="140" y="116" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L5</text>
+        <text x="240" y="118" fill="#0f172a" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Native Desktop Window Isolation</text>
+        <text x="940" y="118" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.04em">--app mode · isolated user-data-dir</text>
+
+        <!-- ========================================== -->
+        <!-- LAYER 4: Network Loopback Binding          -->
+        <!-- ========================================== -->
+        <rect x="120" y="144" width="840" height="64" fill="#f8fafc"/>
+        <line x1="120" y1="208" x2="960" y2="208" stroke="#0f172a" stroke-width="1" stroke-opacity="0.12"/>
+        <text x="140" y="180" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L4</text>
+        <text x="240" y="182" fill="#0f172a" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Loopback Binding &amp; Network Quarantine</text>
+        <text x="940" y="182" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.04em">127.0.0.1 default · -share opt-in for LAN</text>
+
+        <!-- ========================================== -->
+        <!-- LAYER 3: DNS & CSRF Filtering              -->
+        <!-- ========================================== -->
+        <rect x="120" y="208" width="840" height="64" fill="#ffffff"/>
+        <line x1="120" y1="272" x2="960" y2="272" stroke="#0f172a" stroke-width="1" stroke-opacity="0.12"/>
+        <text x="140" y="244" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L3</text>
+        <text x="240" y="246" fill="#0f172a" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Anti-DNS-Rebinding &amp; Anti-CSRF Middleware</text>
+        <text x="940" y="246" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.04em">Host, Origin &amp; Referer validation</text>
+
+        <!-- ========================================== -->
+        <!-- LAYER 2: Cryptographic Token Auth (FOCAL)  -->
+        <!-- ========================================== -->
+        <rect x="120" y="272" width="840" height="64" fill="#2563eb" fill-opacity="0.08"/>
+        <rect x="120" y="272" width="840" height="64" fill="none" stroke="#2563eb" stroke-width="1.2"/>
+        <line x1="120" y1="336" x2="960" y2="336" stroke="#2563eb" stroke-width="1"/>
+        <text x="140" y="308" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em" font-weight="600">L2</text>
+        <text x="240" y="310" fill="#0f172a" font-size="15" font-weight="600" font-family="'Geist', sans-serif">256-Bit Cryptographic Startup Token</text>
+        <text x="940" y="310" fill="#2563eb" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.04em" font-weight="600">X-RentBill-Token + 4-digit PIN session</text>
+
+        <!-- ========================================== -->
+        <!-- LAYER 1: Core Headers & Local DB           -->
+        <!-- ========================================== -->
+        <rect x="120" y="336" width="840" height="64" fill="#ffffff"/>
+        <text x="140" y="372" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" letter-spacing="0.14em">L1</text>
+        <text x="240" y="374" fill="#0f172a" font-size="15" font-weight="600" font-family="'Geist', sans-serif">Strict Security Headers &amp; Embedded SQLite</text>
+        <text x="940" y="374" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.04em">CSP, X-Frame-Options: DENY, CGO=0 WAL DB</text>
+
+      </svg>

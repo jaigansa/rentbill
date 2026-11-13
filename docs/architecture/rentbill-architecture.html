@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RentBill · Architecture & Security Topology</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1200px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 960px; display: block; }
+
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Diagram Design</p>
+    <h1>RentBill System Architecture &amp; Security Topology</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="rentbill-arch-title rentbill-arch-desc">
+        <title id="rentbill-arch-title">RentBill System Architecture and Security Topology</title>
+        <desc id="rentbill-arch-desc">Architecture diagram of the pure Go RentBill desktop application showing native desktop and mobile LAN clients connecting through a zero-trust security gate to embedded assets, API handlers, and the embedded SQLite database.</desc>
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(15,23,42,0.08)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+          </marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+          <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+        </defs>
+
+        <!-- Canvas Background -->
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- ZONES (Groupings drawn before arrows/nodes) -->
+        <!-- ========================================== -->
+
+        <!-- Zone 1: Client Interfaces -->
+        <rect x="40" y="112" width="200" height="428" rx="8"
+              fill="rgba(15,23,42,0.02)" stroke="rgba(15,23,42,0.10)" stroke-width="0.8"/>
+        <rect x="94" y="116" width="92" height="12" rx="2" fill="#f8fafc"/>
+        <text x="140" y="125" fill="#64748b" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">CLIENT TIER</text>
+
+        <!-- Zone 2: Pure Go Runtime & Security Boundary -->
+        <rect x="276" y="112" width="412" height="428" rx="8"
+              fill="rgba(15,23,42,0.02)" stroke="rgba(15,23,42,0.10)" stroke-width="0.8"/>
+        <rect x="382" y="116" width="200" height="12" rx="2" fill="#f8fafc"/>
+        <text x="482" y="125" fill="#64748b" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">ZERO-TRUST GO CORE RUNTIME</text>
+
+        <!-- Zone 3: Storage & Persistence -->
+        <rect x="716" y="112" width="204" height="428" rx="8"
+              fill="rgba(15,23,42,0.02)" stroke="rgba(15,23,42,0.10)" stroke-width="0.8"/>
+        <rect x="770" y="116" width="96" height="12" rx="2" fill="#f8fafc"/>
+        <text x="818" y="125" fill="#64748b" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.14em">STORAGE TIER</text>
+
+        <!-- ========================================== -->
+        <!-- ARROWS & CONNECTORS (Drawn behind boxes)   -->
+        <!-- ========================================== -->
+
+        <!-- 1. Desktop Client (220, 206) -> Security Gate (300, 280) -->
+        <path d="M 220,206 H 252 Q 260,206 260,214 V 272 Q 260,280 268,280 H 300"
+              fill="none" stroke="#2563eb" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+        <!-- 2. Mobile LAN Client (220, 416) -> Security Gate (300, 320) [Conditional: dashed] -->
+        <path d="M 220,416 H 252 Q 260,416 260,408 V 328 Q 260,320 268,320 H 300"
+              fill="none" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- 3. Security Gate (460, 270) -> Embedded Assets (520, 206) -->
+        <path d="M 460,270 H 482 Q 490,270 490,262 V 214 Q 490,206 498,206 H 520"
+              fill="none" stroke="#475569" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- 4. Security Gate (460, 330) -> REST API Router (520, 382) -->
+        <path d="M 460,330 H 482 Q 490,330 490,338 V 374 Q 490,382 498,382 H 520"
+              fill="none" stroke="#2563eb" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- 5. REST API Router (664, 362) -> SQLite DB (734, 270) -->
+        <path d="M 664,362 H 691 Q 699,362 699,354 V 278 Q 699,270 707,270 H 734"
+              fill="none" stroke="#2563eb" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+
+        <!-- 6. REST API Router (664, 406) -> Automated Backups (734, 406) [Straight line] -->
+        <line x1="664" y1="406" x2="734" y2="406" stroke="#475569" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- 7. SQLite DB (818, 310) -> Automated Backups (818, 370) [Straight vertical line, dashed] -->
+        <line x1="818" y1="310" x2="818" y2="370" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+
+        <!-- ========================================== -->
+        <!-- ARROW LABELS & MASKS                       -->
+        <!-- ========================================== -->
+
+        <!-- Label 1: LOOPBACK on vertical segment at x=260, y=243 -->
+        <rect x="232" y="237" width="56" height="12" rx="2" fill="#f8fafc"/>
+        <text x="260" y="246" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">LOOPBACK</text>
+
+        <!-- Label 2: WI-FI SHARE on vertical segment at x=260, y=368 -->
+        <rect x="227" y="362" width="66" height="12" rx="2" fill="#f8fafc"/>
+        <text x="260" y="371" fill="#475569" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">WI-FI LAN</text>
+
+        <!-- Label 3: UI REQ on vertical segment at x=490, y=238 -->
+        <rect x="468" y="232" width="44" height="12" rx="2" fill="#f8fafc"/>
+        <text x="490" y="241" fill="#475569" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">UI REQ</text>
+
+        <!-- Label 4: AUTH OK on vertical segment at x=490, y=356 -->
+        <rect x="466" y="350" width="48" height="12" rx="2" fill="#f8fafc"/>
+        <text x="490" y="359" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">AUTH OK</text>
+
+        <!-- Label 5: SQL / WAL on vertical segment at x=699, y=316 -->
+        <rect x="675" y="310" width="48" height="12" rx="2" fill="#f8fafc"/>
+        <text x="699" y="319" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">SQL/WAL</text>
+
+        <!-- Label 6: EXPORT on horizontal segment at x=699, y=406 -->
+        <rect x="677" y="394" width="44" height="12" rx="2" fill="#f8fafc"/>
+        <text x="699" y="403" fill="#475569" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">EXPORT</text>
+
+        <!-- Label 7: SNAPSHOT on vertical line at x=818, y=340 -->
+        <rect x="792" y="334" width="52" height="12" rx="2" fill="#f8fafc"/>
+        <text x="818" y="343" fill="#475569" font-size="7" font-family="'Geist Mono', monospace"
+              text-anchor="middle" letter-spacing="0.08em">SNAPSHOT</text>
+
+        <!-- ========================================== -->
+        <!-- NODES                                      -->
+        <!-- ========================================== -->
+
+        <!-- Node 1: Native Desktop Window -->
+        <rect x="60" y="170" width="160" height="72" rx="6" fill="#f8fafc"/>
+        <rect x="60" y="170" width="160" height="72" rx="6" fill="rgba(15,23,42,0.03)" stroke="rgba(15,23,42,0.25)" stroke-width="1"/>
+        <rect x="68" y="178" width="32" height="12" rx="2" fill="transparent" stroke="rgba(15,23,42,0.25)" stroke-width="0.8"/>
+        <text x="84" y="187" fill="#64748b" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DESK</text>
+        <text x="140" y="206" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Native Desktop App</text>
+        <text x="140" y="222" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Chromium · --app mode</text>
+
+        <!-- Node 2: Mobile LAN Client -->
+        <rect x="60" y="380" width="160" height="72" rx="6" fill="#f8fafc"/>
+        <rect x="60" y="380" width="160" height="72" rx="6" fill="rgba(15,23,42,0.03)" stroke="rgba(15,23,42,0.25)" stroke-width="1"/>
+        <rect x="68" y="388" width="28" height="12" rx="2" fill="transparent" stroke="rgba(15,23,42,0.25)" stroke-width="0.8"/>
+        <text x="82" y="397" fill="#64748b" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">LAN</text>
+        <text x="140" y="416" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Mobile Web Client</text>
+        <text x="140" y="432" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Wi-Fi · Static Port 8080</text>
+
+        <!-- Node 3: Zero-Trust Security Gate (FOCAL ACCENT 1) -->
+        <rect x="300" y="240" width="160" height="112" rx="6" fill="#f8fafc"/>
+        <rect x="300" y="240" width="160" height="112" rx="6" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.2"/>
+        <rect x="308" y="248" width="32" height="12" rx="2" fill="transparent" stroke="rgba(37,99,235,0.50)" stroke-width="0.8"/>
+        <text x="324" y="257" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GATE</text>
+        <text x="452" y="342" fill="rgba(37,99,235,0.12)" font-size="28" font-weight="600" font-family="'Geist Mono', monospace" text-anchor="end">01</text>
+        <text x="380" y="278" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Zero-Trust Gate</text>
+        <text x="380" y="296" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">256-bit Token Auth</text>
+        <text x="380" y="310" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Anti-CSRF &amp; Rebind</text>
+        <text x="380" y="324" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CSP · X-Frame-Options</text>
+
+        <!-- Node 4: Embedded Assets -->
+        <rect x="520" y="170" width="144" height="72" rx="6" fill="#f8fafc"/>
+        <rect x="520" y="170" width="144" height="72" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+        <rect x="528" y="178" width="36" height="12" rx="2" fill="transparent" stroke="rgba(15,23,42,0.40)" stroke-width="0.8"/>
+        <text x="546" y="187" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">EMBED</text>
+        <text x="592" y="206" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Embedded Assets</text>
+        <text x="592" y="222" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">embed.FS · Pure HTML/CSS</text>
+
+        <!-- Node 5: REST API Router -->
+        <rect x="520" y="340" width="144" height="84" rx="6" fill="#f8fafc"/>
+        <rect x="520" y="340" width="144" height="84" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+        <rect x="528" y="348" width="28" height="12" rx="2" fill="transparent" stroke="rgba(15,23,42,0.40)" stroke-width="0.8"/>
+        <text x="542" y="357" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">API</text>
+        <text x="592" y="374" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">REST API Router</text>
+        <text x="592" y="392" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Bills · Tenants · Expenses</text>
+        <text x="592" y="406" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Auth PIN · Dashboard</text>
+
+        <!-- Node 6: Pure Go SQLite Engine (FOCAL ACCENT 2) -->
+        <rect x="734" y="230" width="168" height="80" rx="6" fill="#f8fafc"/>
+        <rect x="734" y="230" width="168" height="80" rx="6" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.2"/>
+        <rect x="742" y="238" width="36" height="12" rx="2" fill="transparent" stroke="rgba(37,99,235,0.50)" stroke-width="0.8"/>
+        <text x="760" y="247" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STORE</text>
+        <text x="894" y="302" fill="rgba(37,99,235,0.12)" font-size="28" font-weight="600" font-family="'Geist Mono', monospace" text-anchor="end">02</text>
+        <text x="818" y="266" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Pure Go SQLite</text>
+        <text x="818" y="284" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">modernc.org/sqlite</text>
+        <text x="818" y="298" fill="#475569" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">CGO=0 · Single File DB</text>
+
+        <!-- Node 7: Automated Backups -->
+        <rect x="734" y="370" width="168" height="72" rx="6" fill="#f8fafc"/>
+        <rect x="734" y="370" width="168" height="72" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+        <rect x="742" y="378" width="38" height="12" rx="2" fill="transparent" stroke="rgba(15,23,42,0.40)" stroke-width="0.8"/>
+        <text x="761" y="387" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BACKUP</text>
+        <text x="818" y="406" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Automated Backups</text>
+        <text x="818" y="422" fill="#475569" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">JSON &amp; SQL Snapshots</text>
+
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

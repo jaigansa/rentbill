@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RentBill · End-to-End User Workflow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1280px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 1280px; display: block; }
+
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Steps · Diagram Design</p>
+    <h1>RentBill End-to-End User Workflow &amp; Operations</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="workflow-title workflow-desc">
+        <title id="workflow-title">RentBill End-to-End User Workflow</title>
+        <desc id="workflow-desc">Six ordered stages illustrate the complete user lifecycle from application launch and unit setup through tenant onboarding, focal monthly meter billing, WhatsApp collection, and ledger reconciliation.</desc>
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(15,23,42,0.08)"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- RAIL SEGMENTS (6 stages, alternating fills) -->
+        <!-- ========================================== -->
+        <g aria-hidden="true">
+          <!-- Step 01: Auth -->
+          <rect x="88" y="240" width="184" height="48" fill="rgba(15,23,42,0.04)" data-role="rail" data-step="auth" data-index="1"/>
+          <!-- Step 02: Units -->
+          <rect x="272" y="240" width="184" height="48" fill="rgba(15,23,42,0.08)" data-role="rail" data-step="units" data-index="2"/>
+          <!-- Step 03: Tenant -->
+          <rect x="456" y="240" width="184" height="48" fill="rgba(15,23,42,0.04)" data-role="rail" data-step="tenant" data-index="3"/>
+          <!-- Step 04: Billing (Focal) -->
+          <rect x="640" y="240" width="184" height="48" fill="rgba(37,99,235,0.08)" data-role="rail" data-step="billing" data-index="4" data-focal="true"/>
+          <line x1="640" y1="240" x2="824" y2="240" stroke="#2563eb" stroke-width="1"/>
+          <line x1="640" y1="288" x2="824" y2="288" stroke="#2563eb" stroke-width="1"/>
+          <!-- Step 05: Share & Collect -->
+          <rect x="824" y="240" width="184" height="48" fill="rgba(15,23,42,0.08)" data-role="rail" data-step="collect" data-index="5"/>
+          <!-- Step 06: Ledger -->
+          <rect x="1008" y="240" width="184" height="48" fill="rgba(15,23,42,0.04)" data-role="rail" data-step="ledger" data-index="6"/>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- STAGE NUMBERS & VERTICAL POINTER RULES     -->
+        <!-- ========================================== -->
+        <g font-family="'Geist Mono', monospace" font-size="9" font-weight="600" letter-spacing="0.14em" text-anchor="middle">
+          <text x="180" y="164" fill="#475569" data-role="number" data-step="auth">01</text>
+          <line x1="180" y1="184" x2="180" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+
+          <text x="364" y="164" fill="#475569" data-role="number" data-step="units">02</text>
+          <line x1="364" y1="184" x2="364" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+
+          <text x="548" y="164" fill="#475569" data-role="number" data-step="tenant">03</text>
+          <line x1="548" y1="184" x2="548" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+
+          <text x="732" y="164" fill="#2563eb" data-role="number" data-step="billing">04</text>
+          <line x1="732" y1="184" x2="732" y2="220" stroke="#2563eb" stroke-width="1.2"/>
+
+          <text x="916" y="164" fill="#475569" data-role="number" data-step="collect">05</text>
+          <line x1="916" y1="184" x2="916" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+
+          <text x="1100" y="164" fill="#475569" data-role="number" data-step="ledger">06</text>
+          <line x1="1100" y1="184" x2="1100" y2="220" stroke="#cbd5e1" stroke-width="1"/>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- MEDALLIONS (Circular Badges on the Rail)   -->
+        <!-- ========================================== -->
+        <g aria-hidden="true" fill="#f8fafc" stroke-width="1.2">
+          <!-- Step 01 Medallion -->
+          <circle cx="180" cy="264" r="36" stroke="#0f172a" data-role="medallion" data-step="auth"/>
+          <!-- Step 02 Medallion -->
+          <circle cx="364" cy="264" r="36" stroke="#0f172a" data-role="medallion" data-step="units"/>
+          <!-- Step 03 Medallion -->
+          <circle cx="548" cy="264" r="36" stroke="#0f172a" data-role="medallion" data-step="tenant"/>
+
+          <!-- Step 04 Medallion (Focal Accent) -->
+          <circle cx="732" cy="264" r="36" fill="#f8fafc" stroke="none"/>
+          <circle cx="732" cy="264" r="36" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.4" data-role="medallion" data-step="billing" data-focal="true"/>
+
+          <!-- Step 05 Medallion -->
+          <circle cx="916" cy="264" r="36" stroke="#0f172a" data-role="medallion" data-step="collect"/>
+          <!-- Step 06 Medallion -->
+          <circle cx="1100" cy="264" r="36" stroke="#0f172a" data-role="medallion" data-step="ledger"/>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- ICONS (24x24 Tabler MIT primitives)       -->
+        <!-- ========================================== -->
+        <g aria-hidden="true" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- 01: Lock -->
+          <g transform="translate(168 252)" stroke="#0f172a">
+            <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/>
+            <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/>
+            <path d="M8 11v-4a4 4 0 1 1 8 0v4"/>
+          </g>
+
+          <!-- 02: Modular Unit / Property -->
+          <g transform="translate(352 252)" stroke="#0f172a">
+            <path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/>
+            <path d="M12 12l8 -4.5"/>
+            <path d="M12 12l0 9"/>
+            <path d="M12 12l-8 -4.5"/>
+            <path d="M16 5.25l-8 4.5"/>
+          </g>
+
+          <!-- 03: Tenant / User -->
+          <g transform="translate(536 252)" stroke="#0f172a">
+            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/>
+            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/>
+          </g>
+
+          <!-- 04: Bill Document (Focal Accent) -->
+          <g transform="translate(720 252)" stroke="#2563eb">
+            <path d="M14 3v4a1 1 0 0 0 1 1h4"/>
+            <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/>
+            <path d="M9 13h6"/>
+            <path d="M9 17h4"/>
+          </g>
+
+          <!-- 05: Mobile Phone / WhatsApp -->
+          <g transform="translate(904 252)" stroke="#0f172a">
+            <path d="M6 5a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-14"/>
+            <path d="M11 4h2"/>
+            <path d="M12 17v.01"/>
+          </g>
+
+          <!-- 06: Ledger Database -->
+          <g transform="translate(1088 252)" stroke="#0f172a">
+            <path d="M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0"/>
+            <path d="M4 6v6a8 3 0 0 0 16 0v-6"/>
+            <path d="M4 12v6a8 3 0 0 0 16 0v-6"/>
+          </g>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- TITLES & DESCRIPTIONS                      -->
+        <!-- ========================================== -->
+        <g text-anchor="middle">
+          <!-- Step 01 -->
+          <text x="180" y="360" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Authenticate</text>
+          <text x="180" y="388" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Launch desktop or LAN</text>
+          <text x="180" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Unlock with 4-digit PIN</text>
+
+          <!-- Step 02 -->
+          <text x="364" y="360" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Configure Units</text>
+          <text x="364" y="388" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Create property building</text>
+          <text x="364" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Set rooms &amp; base rent</text>
+
+          <!-- Step 03 -->
+          <text x="548" y="360" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Onboard Tenant</text>
+          <text x="548" y="388" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Assign tenant to room</text>
+          <text x="548" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Log deposit &amp; start meter</text>
+
+          <!-- Step 04 (Focal Accent) -->
+          <text x="732" y="360" fill="#2563eb" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Generate Bill</text>
+          <text x="732" y="388" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace">Input EB sub-meter units</text>
+          <text x="732" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Auto-calculate charges</text>
+
+          <!-- Step 05 -->
+          <text x="916" y="360" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Share &amp; Collect</text>
+          <text x="916" y="388" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Send WhatsApp receipt</text>
+          <text x="916" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Record UPI or cash pay</text>
+
+          <!-- Step 06 -->
+          <text x="1100" y="360" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Reconcile Ledger</text>
+          <text x="1100" y="388" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Update tenant balance</text>
+          <text x="1100" y="408" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace">Track profit &amp; export DB</text>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- LEGEND & ANNOTATION BAR                    -->
+        <!-- ========================================== -->
+        <line x1="88" y1="580" x2="1192" y2="580" stroke="rgba(15,23,42,0.12)" stroke-width="0.8"/>
+
+        <g font-family="'Geist Mono', monospace" font-size="8" letter-spacing="0.14em">
+          <text x="88" y="608" fill="#475569">LEGEND</text>
+        </g>
+
+        <circle cx="100" cy="632" r="8" fill="#f8fafc" stroke="#0f172a" stroke-width="1.2"/>
+        <text x="116" y="636" fill="#475569" font-size="9" font-family="'Geist', sans-serif">Standard operational stage</text>
+
+        <circle cx="316" cy="632" r="8" fill="rgba(37,99,235,0.08)" stroke="#2563eb" stroke-width="1.4"/>
+        <text x="332" y="636" fill="#2563eb" font-size="9" font-family="'Geist', sans-serif" font-weight="500">Focal transformation (Monthly billing engine)</text>
+
+        <text x="640" y="636" fill="#64748b" font-size="9" font-family="'Geist', sans-serif" font-style="italic">Contiguous rail expresses end-to-end execution order without duplicate connectors.</text>
+
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

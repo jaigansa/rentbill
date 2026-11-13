@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="state-title state-desc" id="rentbill-state-root">
+        <title id="state-title">RentBill Lifecycle and Payment Settlement State Machine</title>
+        <desc id="state-desc">State machine diagram tracking rental bills through generation, pending payment, partial payment, overdue escalation, and final paid settlement.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #rentbill-state-root { --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace; }
+      #rentbill-state-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #rentbill-state-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#rentbill-state-root .diagram-container { overflow-x: visible; }
+}</style>
+          <pattern id="rentbill-state-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="#0f172a" fill-opacity="0.08"/>
+          </pattern>
+          <marker id="rentbill-state-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+          </marker>
+          <marker id="rentbill-state-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#rentbill-state-dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- TRANSITIONS (Drawn first behind states)   -->
+        <!-- ========================================== -->
+
+        <!-- 1. Start Dot -> Generated (56, 200 to 100, 200) -->
+        <line x1="56" y1="200" x2="100" y2="200" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 2. Generated -> Pending (250, 200 to 320, 200) -->
+        <line x1="250" y1="200" x2="320" y2="200" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 3. Pending -> Paid (Happy Path - FOCAL ACCENT) (470, 200 to 570, 200) -->
+        <line x1="470" y1="200" x2="570" y2="200" stroke="#2563eb" stroke-width="1.4" marker-end="url(#rentbill-state-arrow-accent)"/>
+
+        <!-- 4. Pending -> Partial (Vertical down: 395, 240 to 395, 340) -->
+        <line x1="395" y1="240" x2="395" y2="340" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 5. Partial -> Paid (Elbow: 470, 380 -> 570, 224) -->
+        <path d="M 470,380 H 512 Q 520,380 520,372 V 232 Q 520,224 528,224 H 570"
+              fill="none" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 6. Pending -> Overdue (Elbow: 450, 240 down into 570, 360) -->
+        <path d="M 450,240 V 312 Q 450,320 458,320 H 542 Q 550,320 550,328 V 360 H 570"
+              fill="none" stroke="#475569" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 7. Overdue -> Paid (Vertical up: 650, 340 to 650, 240) -->
+        <line x1="650" y1="340" x2="650" y2="240" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- 8. Paid -> End Ring (730, 200 to 836, 200) -->
+        <line x1="730" y1="200" x2="836" y2="200" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-state-arrow)"/>
+
+        <!-- ========================================== -->
+        <!-- TRANSITION LABELS & MASKS                  -->
+        <!-- ========================================== -->
+
+        <!-- Label 2: ISSUE BILL -->
+        <rect x="257" y="186" width="56" height="12" rx="2" fill="#f8fafc"/>
+        <text x="285" y="195" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">ISSUE</text>
+
+        <!-- Label 3: FULL PAYMENT (Focal Accent) -->
+        <rect x="478" y="186" width="84" height="12" rx="2" fill="#f8fafc"/>
+        <text x="520" y="195" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">FULL PAYMENT</text>
+
+        <!-- Label 4: PARTIAL PAY -->
+        <rect x="360" y="280" width="70" height="12" rx="2" fill="#f8fafc"/>
+        <text x="395" y="289" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">PARTIAL PAY</text>
+
+        <!-- Label 5: SETTLE REMAINDER -->
+        <rect x="485" y="360" width="70" height="12" rx="2" fill="#f8fafc"/>
+        <text x="520" y="369" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">BALANCE PAID</text>
+
+        <!-- Label 7: LATE SETTLE -->
+        <rect x="615" y="280" width="70" height="12" rx="2" fill="#f8fafc"/>
+        <text x="650" y="289" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">LATE SETTLE</text>
+
+        <!-- Label 8: RECONCILE -->
+        <rect x="750" y="186" width="66" height="12" rx="2" fill="#f8fafc"/>
+        <text x="783" y="195" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">RECONCILE</text>
+
+        <!-- ========================================== -->
+        <!-- START & END MARKERS                        -->
+        <!-- ========================================== -->
+        <!-- Start dot: filled ink r=6 at (50, 200) -->
+        <circle cx="50" cy="200" r="6" fill="#0f172a"/>
+
+        <!-- End ringed dot: outer r=8, inner r=5 at (844, 200) -->
+        <circle cx="844" cy="200" r="8" fill="#f8fafc" stroke="#0f172a" stroke-width="1.2"/>
+        <circle cx="844" cy="200" r="5" fill="#0f172a"/>
+
+        <!-- ========================================== -->
+        <!-- STATES                                     -->
+        <!-- ========================================== -->
+
+        <!-- State 1: Generated -->
+        <g id="state-generated">
+          <rect x="100" y="160" width="150" height="80" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="108" y="168" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="125" y="177" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">STATE</text>
+          <text x="175" y="198" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Generated</text>
+          <text x="175" y="216" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Meter readings stored</text>
+          <text x="175" y="228" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Bill # generated</text>
+        </g>
+
+        <!-- State 2: Pending / Unpaid -->
+        <g id="state-pending">
+          <rect x="320" y="160" width="150" height="80" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="328" y="168" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="345" y="177" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">STATE</text>
+          <text x="395" y="198" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Pending</text>
+          <text x="395" y="216" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Awaiting payment</text>
+          <text x="395" y="228" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Due date active</text>
+        </g>
+
+        <!-- State 3: Partial -->
+        <g id="state-partial">
+          <rect x="320" y="340" width="150" height="80" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="328" y="348" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="345" y="357" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">STATE</text>
+          <text x="395" y="378" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Partial</text>
+          <text x="395" y="396" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">0 &lt; Paid &lt; Total</text>
+          <text x="395" y="408" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Arrears retained</text>
+        </g>
+
+        <!-- State 4: Paid (FOCAL ACCENT) -->
+        <g id="state-paid">
+          <rect x="570" y="160" width="160" height="80" rx="8" fill="#2563eb" stroke="#2563eb" stroke-width="1.2" fill-opacity="0.08"/>
+          <rect x="578" y="168" width="34" height="12" rx="2" fill="none" stroke="#2563eb" stroke-width="0.8" stroke-opacity="0.50"/>
+          <text x="595" y="177" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">STATE</text>
+          <text x="650" y="198" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Paid (Settled)</text>
+          <text x="650" y="216" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Balance = 0.00</text>
+          <text x="650" y="228" fill="#475569" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Receipt archived</text>
+        </g>
+
+        <!-- State 5: Overdue -->
+        <g id="state-overdue">
+          <rect x="570" y="340" width="160" height="80" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <rect x="578" y="348" width="34" height="12" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="595" y="357" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">STATE</text>
+          <text x="650" y="378" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Overdue</text>
+          <text x="650" y="396" fill="#475569" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="middle">Passed due_date</text>
+          <text x="650" y="408" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">Unsettled debt</text>
+        </g>
+
+      </svg>

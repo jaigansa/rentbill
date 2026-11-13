@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1080 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="schema-title schema-desc" id="rentbill-schema-root">
+        <title id="schema-title">RentBill SQLite Schema and Foreign Key Constraints</title>
+        <desc id="schema-desc">Physical SQLite relational schema diagram showing properties, tenants, bills, payments, and expenses with column types, primary keys, and cascading foreign key rules.</desc>
+        <defs>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Noto+Serif:ital@0;1&amp;family=Noto+Sans+KR:wght@400;500;600&amp;family=Noto+Serif+KR:wght@400&amp;family=Noto+Sans+TC:wght@400;500;600&amp;family=Noto+Serif+TC:wght@400&amp;display=swap');
+      #rentbill-schema-root { --color-paper:   #f8fafc;
+      --color-ink:     #0f172a;
+      --color-muted:   #475569;
+      --color-soft:    #64748b;
+      --color-accent:  #2563eb;
+      --color-accent-tint: rgba(37, 99, 235, 0.08);
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', Georgia, serif;
+      --font-mono:     'Geist Mono', monospace; }
+      #rentbill-schema-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #rentbill-schema-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#rentbill-schema-root .diagram-container { overflow-x: visible; }
+}</style>
+          <pattern id="rentbill-schema-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="#0f172a" fill-opacity="0.08"/>
+          </pattern>
+          <marker id="rentbill-schema-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#475569"/>
+          </marker>
+          <marker id="rentbill-schema-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#2563eb"/>
+          </marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f8fafc"/>
+        <rect width="100%" height="100%" fill="url(#rentbill-schema-dots)" opacity="0.6"/>
+
+        <!-- ========================================== -->
+        <!-- FOREIGN KEY CONNECTORS (Drawn before boxes)-->
+        <!-- ========================================== -->
+
+        <!-- FK 1: tenants.property_id (380, 138) -> properties.id (280, 114) · SET NULL -->
+        <path d="M 380,138 H 338 Q 330,138 330,130 V 122 Q 330,114 322,114 H 280"
+              fill="none" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-schema-arrow)"/>
+
+        <!-- FK 2: bills.tenant_id (720, 162) -> tenants.id (630, 114) · CASCADE (Focal) -->
+        <path d="M 720,162 H 683 Q 675,162 675,154 V 122 Q 675,114 667,114 H 630"
+              fill="none" stroke="#2563eb" stroke-width="1.4" marker-end="url(#rentbill-schema-arrow-accent)"/>
+
+        <!-- FK 3: payments.bill_id (1000, 488) -> bills.id (1000, 114) · CASCADE -->
+        <path d="M 1000,488 H 1032 Q 1040,488 1040,480 V 122 Q 1040,114 1032,114 H 1000"
+              fill="none" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-schema-arrow)"/>
+
+        <!-- FK 4: expenses.property_id (160, 400) -> properties.id (160, 246) · CASCADE -->
+        <line x1="160" y1="400" x2="160" y2="246" stroke="#475569" stroke-width="1.2" marker-end="url(#rentbill-schema-arrow)"/>
+
+        <!-- ========================================== -->
+        <!-- FK LABELS & MASKS                          -->
+        <!-- ========================================== -->
+
+        <!-- Label 1: ON DELETE SET NULL -->
+        <rect x="294" y="94" width="72" height="12" rx="2" fill="#f8fafc"/>
+        <text x="330" y="103" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">SET NULL</text>
+
+        <!-- Label 2: ON DELETE CASCADE (Focal Accent) -->
+        <rect x="635" y="94" width="80" height="12" rx="2" fill="#f8fafc"/>
+        <text x="675" y="103" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">CASCADE</text>
+
+        <!-- Label 3: ON DELETE CASCADE (Payments) on right vertical segment x=1040 -->
+        <rect x="1000" y="294" width="80" height="12" rx="2" fill="#f8fafc"/>
+        <text x="1040" y="303" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">CASCADE</text>
+
+        <!-- Label 4: ON DELETE CASCADE (Expenses) -->
+        <rect x="120" y="318" width="80" height="12" rx="2" fill="#f8fafc"/>
+        <text x="160" y="327" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.04em">CASCADE</text>
+
+        <!-- ========================================== -->
+        <!-- TABLES                                     -->
+        <!-- ========================================== -->
+
+        <!-- Table 1: properties -->
+        <g id="table-properties">
+          <rect x="40" y="70" width="240" height="176" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <!-- Header -->
+          <rect x="40" y="70" width="240" height="32" rx="6" fill="#0f172a" fill-opacity="0.04"/>
+          <line x1="40" y1="102" x2="280" y2="102" stroke="#0f172a" stroke-width="0.8"/>
+          <rect x="48" y="78" width="34" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="65" y="88" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">TABLE</text>
+          <text x="92" y="90" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">properties</text>
+
+          <!-- Rows (24px each) -->
+          <!-- Row 1: id (PK) -->
+          <rect x="40" y="102" width="240" height="24" fill="none"/>
+          <rect x="48" y="107" width="18" height="14" rx="2" fill="#0f172a" fill-opacity="0.06"/>
+          <text x="57" y="117" fill="#0f172a" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">PK</text>
+          <text x="74" y="118" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">id</text>
+          <text x="270" y="118" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 2: name -->
+          <rect x="40" y="126" width="240" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="48" y="142" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">name</text>
+          <text x="270" y="142" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT</text>
+
+          <!-- Row 3: default_rent -->
+          <rect x="40" y="150" width="240" height="24" fill="none"/>
+          <text x="48" y="166" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">default_rent</text>
+          <text x="270" y="166" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Row 4: electricity_rate -->
+          <rect x="40" y="174" width="240" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="48" y="190" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">electricity_rate</text>
+          <text x="270" y="190" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Overflow -->
+          <rect x="40" y="198" width="240" height="24" fill="none"/>
+          <text x="160" y="214" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" font-style="italic">+ 6 more columns (water, maint)</text>
+        </g>
+
+        <!-- Table 2: expenses -->
+        <g id="table-expenses">
+          <rect x="40" y="400" width="240" height="152" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <!-- Header -->
+          <rect x="40" y="400" width="240" height="32" rx="6" fill="#0f172a" fill-opacity="0.04"/>
+          <line x1="40" y1="432" x2="280" y2="432" stroke="#0f172a" stroke-width="0.8"/>
+          <rect x="48" y="408" width="34" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="65" y="418" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">TABLE</text>
+          <text x="92" y="420" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">expenses</text>
+
+          <!-- Row 1: id (PK) -->
+          <rect x="40" y="432" width="240" height="24" fill="none"/>
+          <rect x="48" y="437" width="18" height="14" rx="2" fill="#0f172a" fill-opacity="0.06"/>
+          <text x="57" y="447" fill="#0f172a" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">PK</text>
+          <text x="74" y="448" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">id</text>
+          <text x="270" y="448" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 2: property_id (FK) -->
+          <rect x="40" y="456" width="240" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <rect x="48" y="461" width="18" height="14" rx="2" fill="#4f5d75" fill-opacity="0.12"/>
+          <text x="57" y="471" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">FK</text>
+          <text x="74" y="472" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">property_id</text>
+          <text x="270" y="472" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 3: title & amount -->
+          <rect x="40" y="480" width="240" height="24" fill="none"/>
+          <text x="48" y="496" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">title</text>
+          <text x="270" y="496" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT</text>
+
+          <rect x="40" y="504" width="240" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="48" y="520" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">amount</text>
+          <text x="270" y="520" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+        </g>
+
+        <!-- Table 3: tenants -->
+        <g id="table-tenants">
+          <rect x="380" y="70" width="250" height="200" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <!-- Header -->
+          <rect x="380" y="70" width="250" height="32" rx="6" fill="#0f172a" fill-opacity="0.04"/>
+          <line x1="380" y1="102" x2="630" y2="102" stroke="#0f172a" stroke-width="0.8"/>
+          <rect x="388" y="78" width="34" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="405" y="88" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">TABLE</text>
+          <text x="432" y="90" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">tenants</text>
+
+          <!-- Row 1: id (PK) -->
+          <rect x="380" y="102" width="250" height="24" fill="none"/>
+          <rect x="388" y="107" width="18" height="14" rx="2" fill="#0f172a" fill-opacity="0.06"/>
+          <text x="397" y="117" fill="#0f172a" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">PK</text>
+          <text x="414" y="118" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">id</text>
+          <text x="620" y="118" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 2: property_id (FK) -->
+          <rect x="380" y="126" width="250" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <rect x="388" y="131" width="18" height="14" rx="2" fill="#4f5d75" fill-opacity="0.12"/>
+          <text x="397" y="141" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">FK</text>
+          <text x="414" y="142" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">property_id</text>
+          <text x="620" y="142" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 3: name -->
+          <rect x="380" y="150" width="250" height="24" fill="none"/>
+          <text x="388" y="166" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">name</text>
+          <text x="620" y="166" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT</text>
+
+          <!-- Row 4: phone -->
+          <rect x="380" y="174" width="250" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="388" y="190" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">phone</text>
+          <text x="620" y="190" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT</text>
+
+          <!-- Row 5: security_deposit -->
+          <rect x="380" y="198" width="250" height="24" fill="none"/>
+          <text x="388" y="214" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">security_deposit</text>
+          <text x="620" y="214" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Overflow -->
+          <rect x="380" y="222" width="250" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="505" y="238" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" font-style="italic">+ 10 more (UPI, meters, active)</text>
+        </g>
+
+        <!-- Table 4: bills (FOCAL ACCENT) -->
+        <g id="table-bills">
+          <rect x="720" y="70" width="280" height="272" rx="6" fill="#ffffff" stroke="#2563eb" stroke-width="1.2"/>
+          <!-- Header with Accent Tint -->
+          <rect x="720" y="70" width="280" height="32" rx="6" fill="#2563eb" fill-opacity="0.08"/>
+          <line x1="720" y1="102" x2="1000" y2="102" stroke="#2563eb" stroke-width="0.8"/>
+          <rect x="728" y="78" width="34" height="14" rx="2" fill="none" stroke="#2563eb" stroke-width="0.8" stroke-opacity="0.50"/>
+          <text x="745" y="88" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">CORE</text>
+          <text x="772" y="90" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">bills</text>
+
+          <!-- Row 1: id (PK) -->
+          <rect x="720" y="102" width="280" height="24" fill="none"/>
+          <rect x="728" y="107" width="18" height="14" rx="2" fill="#2563eb" fill-opacity="0.12"/>
+          <text x="737" y="117" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">PK</text>
+          <text x="754" y="118" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">id</text>
+          <text x="990" y="118" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 2: bill_number (UQ) -->
+          <rect x="720" y="126" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <rect x="728" y="131" width="18" height="14" rx="2" fill="#0f172a" fill-opacity="0.06"/>
+          <text x="737" y="141" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">UQ</text>
+          <text x="754" y="142" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">bill_number</text>
+          <text x="990" y="142" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT</text>
+
+          <!-- Row 3: tenant_id (FK) -->
+          <rect x="720" y="150" width="280" height="24" fill="none"/>
+          <rect x="728" y="155" width="18" height="14" rx="2" fill="#2563eb" fill-opacity="0.15"/>
+          <text x="737" y="165" fill="#2563eb" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">FK</text>
+          <text x="754" y="166" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif" font-weight="600">tenant_id</text>
+          <text x="990" y="166" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 4: property_id (FK) -->
+          <rect x="720" y="174" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <rect x="728" y="179" width="18" height="14" rx="2" fill="#4f5d75" fill-opacity="0.12"/>
+          <text x="737" y="189" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">FK</text>
+          <text x="754" y="190" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">property_id</text>
+          <text x="990" y="190" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 5: total_amount -->
+          <rect x="720" y="198" width="280" height="24" fill="none"/>
+          <text x="728" y="214" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">total_amount</text>
+          <text x="990" y="214" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Row 6: paid_amount -->
+          <rect x="720" y="222" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="728" y="238" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">paid_amount</text>
+          <text x="990" y="238" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Row 7: status -->
+          <rect x="720" y="246" width="280" height="24" fill="none"/>
+          <text x="728" y="262" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">status</text>
+          <text x="990" y="262" fill="#2563eb" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end" font-weight="600">TEXT (PENDING..)</text>
+
+          <!-- Overflow -->
+          <rect x="720" y="270" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="860" y="286" fill="#64748b" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" font-style="italic">+ 12 more (meters, rates, notes)</text>
+        </g>
+
+        <!-- Table 5: payments -->
+        <g id="table-payments">
+          <rect x="720" y="420" width="280" height="152" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>
+          <!-- Header -->
+          <rect x="720" y="420" width="280" height="32" rx="6" fill="#0f172a" fill-opacity="0.04"/>
+          <line x1="720" y1="452" x2="1000" y2="452" stroke="#0f172a" stroke-width="0.8"/>
+          <rect x="728" y="428" width="34" height="14" rx="2" fill="none" stroke="#0f172a" stroke-width="0.8" stroke-opacity="0.30"/>
+          <text x="745" y="438" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle">TABLE</text>
+          <text x="772" y="440" fill="#0f172a" font-size="12" font-weight="600" font-family="'Geist', sans-serif">payments</text>
+
+          <!-- Row 1: id (PK) -->
+          <rect x="720" y="452" width="280" height="24" fill="none"/>
+          <rect x="728" y="457" width="18" height="14" rx="2" fill="#0f172a" fill-opacity="0.06"/>
+          <text x="737" y="467" fill="#0f172a" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">PK</text>
+          <text x="754" y="468" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">id</text>
+          <text x="990" y="468" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 2: bill_id (FK) -->
+          <rect x="720" y="476" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <rect x="728" y="481" width="18" height="14" rx="2" fill="#4f5d75" fill-opacity="0.12"/>
+          <text x="737" y="491" fill="#475569" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" font-weight="600">FK</text>
+          <text x="754" y="492" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">bill_id</text>
+          <text x="990" y="492" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">INTEGER</text>
+
+          <!-- Row 3: amount -->
+          <rect x="720" y="500" width="280" height="24" fill="none"/>
+          <text x="728" y="516" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">amount</text>
+          <text x="990" y="516" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">REAL</text>
+
+          <!-- Row 4: payment_method -->
+          <rect x="720" y="524" width="280" height="24" fill="#0f172a" fill-opacity="0.02"/>
+          <text x="728" y="540" fill="#0f172a" font-size="10" font-family="'Geist', sans-serif">payment_method</text>
+          <text x="990" y="540" fill="#64748b" font-size="8.5" font-family="'Geist Mono', monospace" text-anchor="end">TEXT (UPI..)</text>
+        </g>
+
+      </svg>

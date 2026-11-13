@@ -2,8 +2,8 @@
 dist/
 outputs/
 *.exe
-rentbill
-rentbill-*
+/rentbill
+/rentbill-*
 *.log
 data/
 *.db
