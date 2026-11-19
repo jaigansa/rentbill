@@ -3985,7 +3985,6 @@ select {
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px;
-  background: var(--surface-alt);
 }
 
 .reminder-wa-bubble-only .whatsapp-chat-bubble.wa-sent {
