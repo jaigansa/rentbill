@@ -3988,10 +3988,9 @@ select {
 }
 
 .reminder-wa-bubble-only .whatsapp-chat-bubble.wa-sent {
-  background: var(--primary-gradient);
+  background: #00553b;
   color: #ffffff;
   max-width: 75%;
-  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .reminder-wa-bubble-only .whatsapp-chat-bubble.wa-sent .whatsapp-bubble-text {
