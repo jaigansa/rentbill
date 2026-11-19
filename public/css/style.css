@@ -2302,7 +2302,7 @@ select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
-  height: 34px;
+  height: 42px;
   position: relative;
   display: flex;
   align-items: center;
@@ -2351,7 +2351,7 @@ select {
 }
 
 .expense-filter-select {
-  height: 34px;
+  height: 42px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-main);
@@ -3340,6 +3340,7 @@ select {
 
 .search-input-box input {
   width: 100%;
+  min-height: 42px;
   padding: 8px 32px 8px 34px;
   font-size: 0.88rem;
   background: var(--surface-alt);
