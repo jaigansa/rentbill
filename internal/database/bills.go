@@ -110,7 +110,6 @@ func (db *DB) GetAllBills() ([]Bill, error) {
 	defer rows.Close()
 
 	var bills []Bill
-	today := time.Now().Format("2006-01-02")
 	for rows.Next() {
 		var b Bill
 		err := rows.Scan(
@@ -131,11 +130,6 @@ func (db *DB) GetAllBills() ([]Bill, error) {
 			return nil, err
 		}
 		b.BalanceAmount = b.TotalAmount - b.PaidAmount
-
-		// Auto check overdue if due date passed and not fully paid
-		if b.Status != "PAID" && b.DueDate < today {
-			b.Status = "OVERDUE"
-		}
 		bills = append(bills, b)
 	}
 	return bills, nil
@@ -169,7 +163,6 @@ func (db *DB) GetBillsByTenant(tenantID int64) ([]Bill, error) {
 	defer rows.Close()
 
 	var bills []Bill
-	today := time.Now().Format("2006-01-02")
 	for rows.Next() {
 		var b Bill
 		err := rows.Scan(
@@ -190,10 +183,6 @@ func (db *DB) GetBillsByTenant(tenantID int64) ([]Bill, error) {
 			return nil, err
 		}
 		b.BalanceAmount = b.TotalAmount - b.PaidAmount
-
-		if b.Status != "PAID" && b.DueDate < today {
-			b.Status = "OVERDUE"
-		}
 		bills = append(bills, b)
 	}
 	return bills, nil
@@ -238,10 +227,6 @@ func (db *DB) GetBillByID(id int64) (*Bill, error) {
 		return nil, err
 	}
 	b.BalanceAmount = b.TotalAmount - b.PaidAmount
-	today := time.Now().Format("2006-01-02")
-	if b.Status != "PAID" && b.DueDate < today {
-		b.Status = "OVERDUE"
-	}
 	payments, _ := db.GetPaymentsByBillID(id)
 	b.Payments = payments
 	return &b, nil

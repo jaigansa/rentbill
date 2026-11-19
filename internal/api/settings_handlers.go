@@ -26,7 +26,10 @@ func (s *Server) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		for k, rawVal := range payload {
 			strVal := fmt.Sprintf("%v", rawVal)
-			_ = s.db.SetSetting(k, strVal)
+			if err := s.db.SetSetting(k, strVal); err != nil {
+				sendError(w, http.StatusInternalServerError, "Failed to update settings")
+				return
+			}
 		}
 		sendJSON(w, http.StatusOK, map[string]string{"message": "Settings updated"})
 

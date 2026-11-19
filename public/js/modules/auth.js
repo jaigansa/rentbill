@@ -182,7 +182,7 @@ export const Auth = {
       if (navigator.vibrate) navigator.vibrate(40);
       this.unlockApp();
       this.toast('App Unlocked!');
-    } catch (err) {
+    } catch {
       if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
       const dotsWrapper = document.getElementById('lock-pin-dots');
       const sub = document.getElementById('lock-screen-subtitle');

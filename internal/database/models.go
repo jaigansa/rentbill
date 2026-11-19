@@ -81,45 +81,45 @@ type Tenant struct {
 }
 
 type Bill struct {
-	ID                   int64   `json:"id"`
-	BillNumber           string  `json:"bill_number"`
-	TenantID             int64   `json:"tenant_id"`
-	TenantName           string  `json:"tenant_name,omitempty"`
-	TenantPhone          string  `json:"tenant_phone,omitempty"`
-	PaymentUPI           string  `json:"payment_upi,omitempty"`
-	PaymentBankName      string  `json:"payment_bank_name,omitempty"`
-	PaymentAccountNo     string  `json:"payment_account_no,omitempty"`
-	PaymentIFSC          string  `json:"payment_ifsc,omitempty"`
-	PropertyID           int64   `json:"property_id"`
-	PropertyName         string  `json:"property_name,omitempty"`
-	BillingMonth         string  `json:"billing_month"`
-	BillingPeriodStart   string  `json:"billing_period_start"`
-	BillingPeriodEnd     string  `json:"billing_period_end"`
-	DueDate              string  `json:"due_date"`
-	BaseRent             float64 `json:"base_rent"`
-	PrevElectricityMeter float64 `json:"prev_electricity_meter"`
-	CurrElectricityMeter float64 `json:"curr_electricity_meter"`
-	ElectricityRate      float64 `json:"electricity_rate"`
-	ElectricityUnits     float64 `json:"electricity_units"`
-	ElectricityAmount    float64 `json:"electricity_amount"`
-	WaterBillingType     string  `json:"water_billing_type"` // FIXED or METER
-	PrevWaterMeter       float64 `json:"prev_water_meter"`
-	CurrWaterMeter       float64 `json:"curr_water_meter"`
-	WaterRate            float64 `json:"water_rate"`
-	WaterUnits           float64 `json:"water_units"`
-	WaterAmount          float64 `json:"water_amount"`
-	MaintenanceAmount    float64 `json:"maintenance_amount"`
-	OtherCharges         float64 `json:"other_charges"`
-	OtherChargesDesc     string  `json:"other_charges_desc"`
-	DiscountAmount       float64 `json:"discount_amount"`
-	DiscountReason       string  `json:"discount_reason"`
-	PreviousBalance      float64 `json:"previous_balance"`
-	TotalAmount          float64 `json:"total_amount"`
-	PaidAmount           float64 `json:"paid_amount"`
-	BalanceAmount        float64 `json:"balance_amount"`
-	Status               string  `json:"status"`
-	Notes                string  `json:"notes"`
-	CreatedAt            string  `json:"created_at"`
+	ID                   int64     `json:"id"`
+	BillNumber           string    `json:"bill_number"`
+	TenantID             int64     `json:"tenant_id"`
+	TenantName           string    `json:"tenant_name,omitempty"`
+	TenantPhone          string    `json:"tenant_phone,omitempty"`
+	PaymentUPI           string    `json:"payment_upi,omitempty"`
+	PaymentBankName      string    `json:"payment_bank_name,omitempty"`
+	PaymentAccountNo     string    `json:"payment_account_no,omitempty"`
+	PaymentIFSC          string    `json:"payment_ifsc,omitempty"`
+	PropertyID           int64     `json:"property_id"`
+	PropertyName         string    `json:"property_name,omitempty"`
+	BillingMonth         string    `json:"billing_month"`
+	BillingPeriodStart   string    `json:"billing_period_start"`
+	BillingPeriodEnd     string    `json:"billing_period_end"`
+	DueDate              string    `json:"due_date"`
+	BaseRent             float64   `json:"base_rent"`
+	PrevElectricityMeter float64   `json:"prev_electricity_meter"`
+	CurrElectricityMeter float64   `json:"curr_electricity_meter"`
+	ElectricityRate      float64   `json:"electricity_rate"`
+	ElectricityUnits     float64   `json:"electricity_units"`
+	ElectricityAmount    float64   `json:"electricity_amount"`
+	WaterBillingType     string    `json:"water_billing_type"` // FIXED or METER
+	PrevWaterMeter       float64   `json:"prev_water_meter"`
+	CurrWaterMeter       float64   `json:"curr_water_meter"`
+	WaterRate            float64   `json:"water_rate"`
+	WaterUnits           float64   `json:"water_units"`
+	WaterAmount          float64   `json:"water_amount"`
+	MaintenanceAmount    float64   `json:"maintenance_amount"`
+	OtherCharges         float64   `json:"other_charges"`
+	OtherChargesDesc     string    `json:"other_charges_desc"`
+	DiscountAmount       float64   `json:"discount_amount"`
+	DiscountReason       string    `json:"discount_reason"`
+	PreviousBalance      float64   `json:"previous_balance"`
+	TotalAmount          float64   `json:"total_amount"`
+	PaidAmount           float64   `json:"paid_amount"`
+	BalanceAmount        float64   `json:"balance_amount"`
+	Status               string    `json:"status"`
+	Notes                string    `json:"notes"`
+	CreatedAt            string    `json:"created_at"`
 	Payments             []Payment `json:"payments,omitempty"`
 }
 
@@ -190,19 +190,19 @@ type DashboardAlerts struct {
 }
 
 type DashboardSummary struct {
-	TotalProperties   int64           `json:"total_properties"`
-	TotalBilled       float64         `json:"total_billed"`
-	TotalCollected    float64         `json:"total_collected"`
-	TotalPending      float64         `json:"total_pending"`
-	TotalOverdue      float64         `json:"total_overdue"`
-	TotalExpenses     float64         `json:"total_expenses"`
-	NetProfit         float64         `json:"net_profit"`
-	CollectionRate    float64         `json:"collection_rate"`
-	TotalDepositsHeld float64         `json:"total_deposits_held"`
-	ActiveTenantsCount int            `json:"active_tenants_count"`
-	ActionRequired    DashboardAlerts `json:"action_required"`
-	AvailableMonths   []string        `json:"available_months"`
-	SelectedMonth     string          `json:"selected_month"`
+	TotalProperties    int64           `json:"total_properties"`
+	TotalBilled        float64         `json:"total_billed"`
+	TotalCollected     float64         `json:"total_collected"`
+	TotalPending       float64         `json:"total_pending"`
+	TotalOverdue       float64         `json:"total_overdue"`
+	TotalExpenses      float64         `json:"total_expenses"`
+	NetProfit          float64         `json:"net_profit"`
+	CollectionRate     float64         `json:"collection_rate"`
+	TotalDepositsHeld  float64         `json:"total_deposits_held"`
+	ActiveTenantsCount int             `json:"active_tenants_count"`
+	ActionRequired     DashboardAlerts `json:"action_required"`
+	AvailableMonths    []string        `json:"available_months"`
+	SelectedMonth      string          `json:"selected_month"`
 }
 
 func GenerateBillNumber() string {

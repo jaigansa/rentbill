@@ -223,12 +223,6 @@ const API = {
     return res.json();
   },
 
-  async getBillPayments(billId) {
-    const res = await this.fetchWithAuth(`/api/bills/${billId}/payments`);
-    if (!res.ok) return [];
-    return res.json();
-  },
-
   async getPayment(id) {
     const res = await this.fetchWithAuth(`/api/payments/${id}`);
     if (!res.ok) throw new Error('Payment record not found');
@@ -277,19 +271,16 @@ const API = {
     return res.json();
   },
 
-  async updateSettings(data) {
-    const res = await this.fetchWithAuth('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return res.json();
-  },
-
   // Expenses (Per-Property)
   async getPropertyExpenses(propertyId) {
     const res = await this.fetchWithAuth(`/api/properties/${propertyId}/expenses`);
     if (!res.ok) throw new Error('Failed to load property expenses');
+    return res.json();
+  },
+
+  async getExpenses() {
+    const res = await this.fetchWithAuth('/api/expenses');
+    if (!res.ok) return [];
     return res.json();
   },
 

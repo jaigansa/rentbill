@@ -213,14 +213,6 @@ ensure_binary() {
     fi
 }
 
-get_server_args() {
-    local args="-server -port ${PORT}"
-    if [ "$SHARE" = true ]; then
-        args="${args} -share"
-    fi
-    echo "${args}"
-}
-
 do_build() {
     setup_dependencies
     echo -e "${YELLOW}🔨 Building '${APP_NAME}' pure Go binary (CGO_ENABLED=0)...${NC}"

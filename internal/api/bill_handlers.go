@@ -44,6 +44,15 @@ func (s *Server) HandleBills(w http.ResponseWriter, r *http.Request) {
 			sendError(w, http.StatusBadRequest, "Tenant, Property, Billing Month, and Due Date are required")
 			return
 		}
+		tenant, err := s.db.GetTenantByID(b.TenantID)
+		if err != nil {
+			sendError(w, http.StatusBadRequest, "Tenant not found")
+			return
+		}
+		if tenant.PropertyID == nil || *tenant.PropertyID != b.PropertyID {
+			sendError(w, http.StatusBadRequest, "Tenant is not assigned to this property")
+			return
+		}
 		id, err := s.db.CreateBill(&b)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, err.Error())
@@ -82,12 +91,18 @@ func (s *Server) HandleBillDetail(w http.ResponseWriter, r *http.Request) {
 		sendJSON(w, http.StatusOK, bill)
 
 	case http.MethodPut:
+		existing, err := s.db.GetBillByID(id)
+		if err != nil {
+			sendError(w, http.StatusNotFound, "Bill not found")
+			return
+		}
 		var b database.Bill
 		if err := json.NewDecoder(r.Body).Decode(&b); err != nil {
 			sendError(w, http.StatusBadRequest, "Invalid JSON")
 			return
 		}
 		b.ID = id
+		b.PaidAmount = existing.PaidAmount // Preserve recorded payments
 		if err := s.db.UpdateBill(&b); err != nil {
 			sendError(w, http.StatusInternalServerError, err.Error())
 			return
@@ -245,8 +260,8 @@ func (s *Server) HandleBatchCreateBills(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		BillingMonth string                   `json:"billing_month"`
-		DueDate      string                   `json:"due_date"`
+		BillingMonth string                    `json:"billing_month"`
+		DueDate      string                    `json:"due_date"`
 		Entries      []database.BatchBillEntry `json:"entries"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

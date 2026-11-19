@@ -151,43 +151,6 @@ export const Utils = {
     if (moveInInput) moveInInput.value = today.toISOString().split('T')[0];
   },
 
-  getUnitTypeSvg(type = '') {
-    const t = (type || '').toLowerCase();
-    if (t.includes('house') || t.includes('villa') || t.includes('home')) {
-      // Independent House / Villa
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>`;
-    }
-    if (t.includes('room') || t.includes('bed') || t.includes('pg') || t.includes('single') || t.includes('studio')) {
-      // Room / Bed / PG / Studio
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M2 4v16"/>
-        <path d="M2 8h18a2 2 0 0 1 2 2v10"/>
-        <path d="M2 17h20"/>
-        <path d="M6 8v9"/>
-      </svg>`;
-    }
-    if (t.includes('shop') || t.includes('commercial') || t.includes('store') || t.includes('office')) {
-      // Commercial / Storefront / Shop
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 9l1-5h16l1 5"/>
-        <path d="M3 9v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"/>
-        <path d="M9 22V12h6v10"/>
-        <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>
-      </svg>`;
-    }
-    // Default: Multi-Storey Apartment / Residential Flat
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-      <path d="M9 22v-4h6v4"/>
-      <path d="M8 6h.01"/><path d="M16 6h.01"/>
-      <path d="M8 10h.01"/><path d="M16 10h.01"/>
-      <path d="M8 14h.01"/><path d="M16 14h.01"/>
-    </svg>`;
-  },
-
   // Client-side CSV/Excel spreadsheet generator with UTF-8 BOM
   downloadCSV(filename, headers, rows) {
     if (!headers || !headers.length) return;

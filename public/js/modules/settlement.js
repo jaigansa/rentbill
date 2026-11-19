@@ -7,10 +7,6 @@ export const Settlement = {
   currentVacantRentMode: 'none',
   currentVacantCalcData: null,
 
-  async openVacantCalculationModal(tenantId) {
-    return this.openVacantCalculation(tenantId);
-  },
-
   async openVacantCalculation(tenantId) {
     if (!tenantId) return;
 
@@ -169,8 +165,6 @@ export const Settlement = {
     if (moveOutStr) {
       const parts = moveOutStr.split('-');
       if (parts.length === 3) {
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10);
         const day = parseInt(parts[2], 10);
         const occupiedDaysInput = document.getElementById('vacant-occupied-days');
         if (occupiedDaysInput) occupiedDaysInput.value = day;
@@ -501,7 +495,7 @@ export const Settlement = {
       } else {
         window.prompt('Copy settlement breakdown below:', text);
       }
-    } catch (e) {
+    } catch {
       window.prompt('Copy settlement breakdown below:', text);
     }
   },

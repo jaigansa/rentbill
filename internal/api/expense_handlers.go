@@ -11,6 +11,17 @@ import (
 // Expenses Handlers
 func (s *Server) HandleExpenses(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
+	case http.MethodGet:
+		expenses, err := s.db.GetAllExpenses()
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if expenses == nil {
+			expenses = []database.Expense{}
+		}
+		sendJSON(w, http.StatusOK, expenses)
+
 	case http.MethodPost:
 		var ex database.Expense
 		if err := json.NewDecoder(r.Body).Decode(&ex); err != nil {
