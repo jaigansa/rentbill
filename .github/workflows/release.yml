@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [amd64, arm64]
+        exclude:
+          # macOS arm64 only on macOS runner
+          - os: macos-latest
+            arch: amd64
+          # Windows arm64 not supported
+          - os: windows-latest
+            arch: arm64
+          # Linux arm64 not needed (macOS/Windows runners handle their own)
+          - os: ubuntu-latest
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        id: build
+        env:
+          CGO_ENABLED: 0
+        run: |
+          case "${{ matrix.os }}-${{ matrix.arch }}" in
+            ubuntu-latest-amd64)
+              make linux
+              binary_name="rentbill-linux-amd64"
+              ;;
+            macos-latest-arm64)
+              make mac
+              binary_name="rentbill-darwin-arm64"
+              ;;
+            windows-latest-amd64)
+              make windows
+              binary_name="rentbill.exe"
+              ;;
+          esac
+          echo "binary=$binary_name" >> $GITHUB_OUTPUT
+          echo "path=$(pwd)/$binary_name" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: RentBill ${{ steps.get_tag.outputs.tag }}
+          body: |
+            ## RentBill ${{ steps.get_tag.outputs.tag }}
+
+            Pure Go desktop/local-server rental & billing management application.
+
+            ### Features
+            - Properties, tenants, bills, payments & expenses management
+            - Batch monthly bill generation with meter readings
+            - 4-digit PIN security lock with rate limiting
+            - CSV & JSON backup/export
+            - LAN sharing for phone access over Wi-Fi
+            - Dark theme (workshop palette)
+            - Pure Go static binary (CGO_ENABLED=0)
+
+            ### Installation
+            ```bash
+            ./rentbill.sh install --share
+            ```
+
+            Or run directly:
+            ```bash
+            ./rentbill
+            ```
+          files: ${{ steps.build.outputs.path }}
+          draft: false
+          prerelease: false
