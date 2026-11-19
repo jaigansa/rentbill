@@ -3836,6 +3836,150 @@ select {
   color: var(--primary);
 }
 
+/* Send Payment Notice Modal Upgrades */
+.reminder-header {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reminder-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--primary-gradient);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.reminder-header-icon i,
+.reminder-header-icon [data-lucide] {
+  width: 18px;
+  height: 18px;
+}
+
+/* Tenant Info Card */
+.reminder-tenant-card {
+  padding: 14px 16px;
+}
+
+.reminder-tenant-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+/* Color-coded channel pills */
+.channel-pill {
+  position: relative;
+}
+
+.channel-pill[data-channel="whatsapp"] i { color: var(--whatsapp); }
+.channel-pill[data-channel="email"] i { color: var(--danger); }
+.channel-pill[data-channel="sms_rcs"] i { color: var(--primary); }
+
+.channel-pill.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.channel-pill.active strong { color: var(--primary); }
+
+.channel-pill:hover {
+  border-color: var(--primary);
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+
+/* Color-coded template pills */
+.template-pill[data-tpl="gentle"] i { color: var(--primary); }
+.template-pill[data-tpl="due_today"] i { color: var(--warning); }
+.template-pill[data-tpl="overdue"] i { color: var(--danger); }
+.template-pill[data-tpl="receipt"] i { color: var(--success); }
+
+.template-pill.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.template-pill.active strong { color: var(--primary); }
+
+.template-pill:hover {
+  border-color: var(--primary);
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+
+/* Template-specific active colors */
+.template-pill.active[data-tpl="gentle"] { border-color: var(--primary); background: var(--primary-light); }
+.template-pill.active[data-tpl="due_today"] { border-color: var(--warning); background: var(--warning-light); }
+.template-pill.active[data-tpl="due_today"] strong { color: var(--warning); }
+.template-pill.active[data-tpl="overdue"] { border-color: var(--danger); background: var(--danger-light); }
+.template-pill.active[data-tpl="overdue"] strong { color: var(--danger); }
+.template-pill.active[data-tpl="receipt"] { border-color: var(--success); background: var(--success-light); }
+.template-pill.active[data-tpl="receipt"] strong { color: var(--success); }
+
+/* Preview Card */
+.reminder-preview-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.reminder-whatsapp-preview {
+  border: none;
+  box-shadow: none;
+  margin-top: 0;
+}
+
+.reminder-whatsapp-preview .whatsapp-chat-header {
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+.reminder-whatsapp-preview .whatsapp-chat-bubble {
+  max-width: 85%;
+}
+
+/* Stats Bar */
+.reminder-stats-bar {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+/* Send Button */
+.reminder-send-btn {
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.reminder-send-btn:hover {
+  box-shadow: 0 0 20px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .reminder-channels-grid {
+    grid-template-columns: 1fr;
+  }
+  .reminder-templates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 600px) {
   .ledger-summary-grid {
     grid-template-columns: 1fr;

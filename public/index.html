@@ -1598,47 +1598,74 @@
 
 
 
-  <!-- Modal: Automated Multi-Channel Payment Notice & Reminder Engine -->
+  <!-- Modal: Send Payment Notice -->
   <div class="modal" id="modal-reminder">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <div>
-          <h3><i data-lucide="send" style="vertical-align:-2px; color:var(--primary); margin-right:4px;"></i> Send Payment Notice</h3>
-          <span style="font-size:0.75rem; color:var(--text-muted);" id="reminder-tenant-subtitle">SMS / RCS, WhatsApp & Multi-Channel Notice</span>
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header reminder-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="reminder-header-icon">
+            <i data-lucide="send" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Send Payment Notice</h3>
+              <span class="badge badge-primary" style="font-size:0.7rem; font-weight:600;">Multi-Channel</span>
+            </div>
+            <div id="reminder-tenant-subtitle" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+            SMS / RCS, WhatsApp & Email
+            </div>
+          </div>
         </div>
         <button class="modal-close" data-close="modal-reminder">&times;</button>
       </div>
       <div class="modal-body" style="padding-top:12px;">
+
+        <!-- Tenant Info Card -->
+        <div class="app-card reminder-tenant-card" style="margin-bottom:14px;">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:8px; padding-left:2px;">Tenant</div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="reminder-tenant-avatar">
+              <span id="reminder-tenant-avatar-char">T</span>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:0.9rem; color:var(--text-main);" id="reminder-tenant-name">Tenant Name</div>
+              <div style="font-size:0.78rem; color:var(--text-muted);" id="reminder-tenant-unit">Unit • Phone</div>
+            </div>
+            <div style="font-size:0.85rem; font-weight:800; color:var(--danger);" id="reminder-tenant-balance">₹0.00 due</div>
+          </div>
+        </div>
+
         <!-- Channel Selector -->
         <div class="form-group">
-          <label style="font-weight:600; margin-bottom:6px;">Select Dispatch Channel</label>
+          <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Dispatch Channel</label>
           <div class="reminder-channels-grid">
             <button type="button" class="channel-pill active" data-channel="sms_rcs">
               <i data-lucide="message-square"></i>
               <div>
                 <strong>SMS / RCS</strong>
-                <small>Native Messages (Universal)</small>
+                <small>Native Messages</small>
               </div>
             </button>
             <button type="button" class="channel-pill" data-channel="whatsapp">
               <i data-lucide="message-circle"></i>
               <div>
                 <strong>WhatsApp</strong>
-                <small>Direct WhatsApp Chat</small>
+                <small>Direct Chat</small>
               </div>
             </button>
             <button type="button" class="channel-pill" data-channel="email">
               <i data-lucide="mail"></i>
               <div>
                 <strong>Email</strong>
-                <small>Send to Tenant Email</small>
+                <small>Send to Email</small>
               </div>
             </button>
           </div>
         </div>
 
-        <div class="form-group" style="margin-top:12px;">
-          <label style="font-weight:600; margin-bottom:6px;">Select Notice Template</label>
+        <!-- Notice Template Selector -->
+        <div class="form-group" style="margin-top:14px;">
+          <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Notice Template</label>
           <div class="reminder-templates-grid">
             <button type="button" class="template-pill active" data-tpl="gentle">
               <i data-lucide="bell"></i>
@@ -1651,28 +1678,28 @@
               <i data-lucide="calendar"></i>
               <div>
                 <strong>Due Today</strong>
-                <small>Friendly reminder that rent is due today</small>
+                <small>Rent due today</small>
               </div>
             </button>
             <button type="button" class="template-pill" data-tpl="overdue">
               <i data-lucide="alert-triangle"></i>
               <div>
                 <strong>Overdue Notice</strong>
-                <small>Urgent notice for unpaid rent dues</small>
+                <small>Urgent unpaid dues</small>
               </div>
             </button>
             <button type="button" class="template-pill" data-tpl="receipt">
               <i data-lucide="check-circle-2"></i>
               <div>
                 <strong>Payment Thank You</strong>
-                <small>Acknowledge receipt and show balance</small>
+                <small>Confirm receipt & balance</small>
               </div>
             </button>
           </div>
         </div>
 
         <!-- Real Character & Words Length View Stats Bar -->
-        <div class="share-stats-bar" id="reminder-stats-bar" style="margin-top: 14px;">
+        <div class="share-stats-bar reminder-stats-bar" style="margin-top: 14px;">
           <div class="share-stat-pill" title="Character count">
             <i data-lucide="hash"></i>
             <span id="reminder-stat-chars"><strong>0</strong> chars</span>
@@ -1685,47 +1712,42 @@
             <i data-lucide="message-square"></i>
             <span id="reminder-stat-sms"><strong>1</strong> SMS</span>
           </div>
-          <div class="share-preview-tabs" id="reminder-preview-tabs">
-            <button type="button" class="preview-mode-btn active" id="btn-reminder-view-wa" title="Real WhatsApp Chat View">
-              <i data-lucide="message-circle"></i> WhatsApp View
-            </button>
-            <button type="button" class="preview-mode-btn" id="btn-reminder-view-raw" title="Raw Text View">
-              <i data-lucide="code"></i> Raw Text
-            </button>
-          </div>
         </div>
 
         <!-- Real WhatsApp Chat Screen Preview for Reminders -->
-        <div id="reminder-whatsapp-screen" class="whatsapp-chat-container">
-          <div class="whatsapp-chat-header">
-            <div class="whatsapp-chat-avatar">
-              <span id="reminder-wa-avatar-char">T</span>
+        <div class="app-card reminder-preview-card">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:8px; padding-left:2px;">Preview</div>
+          <div id="reminder-whatsapp-screen" class="whatsapp-chat-container reminder-whatsapp-preview">
+            <div class="whatsapp-chat-header">
+              <div class="whatsapp-chat-avatar">
+                <span id="reminder-wa-avatar-char">T</span>
+              </div>
+              <div class="whatsapp-chat-info">
+                <div class="whatsapp-chat-name" id="reminder-wa-tenant-name">Tenant</div>
+                <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
+              </div>
+              <div class="whatsapp-chat-actions">
+                <i data-lucide="phone" style="width:13px; height:13px;"></i>
+                <i data-lucide="video" style="width:13px; height:13px;"></i>
+                <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
+              </div>
             </div>
-            <div class="whatsapp-chat-info">
-              <div class="whatsapp-chat-name" id="reminder-wa-tenant-name">Tenant</div>
-              <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
-            </div>
-            <div class="whatsapp-chat-actions">
-              <i data-lucide="phone" style="width:13px; height:13px;"></i>
-              <i data-lucide="video" style="width:13px; height:13px;"></i>
-              <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
-            </div>
-          </div>
-          <div class="whatsapp-chat-body">
-            <div class="whatsapp-chat-bubble">
-              <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
-              <div class="whatsapp-bubble-meta">
-                <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
-                <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+            <div class="whatsapp-chat-body">
+              <div class="whatsapp-chat-bubble">
+                <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
+                <div class="whatsapp-bubble-meta">
+                  <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
+                  <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Raw Text Preview & Edit Container -->
-        <div class="form-group" id="reminder-raw-container" style="display:none; margin-top: 8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <label for="reminder-message-text" style="margin-bottom:0; font-size:0.8rem; font-weight:600;">Message Text (Editable)</label>
+        <div class="form-group" id="reminder-raw-container" style="display:none; margin-top: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-weight:600; margin-bottom:0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Message Text (Editable)</label>
             <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
               <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
             </button>
@@ -1733,10 +1755,10 @@
           <textarea id="reminder-message-text" rows="9" class="form-control" style="font-size:0.82rem; font-family:monospace; line-height:1.45; resize:vertical; width:100%; white-space:pre-wrap;" placeholder="Edit notice text here..."></textarea>
         </div>
       </div>
-      <div class="modal-footer" style="flex-wrap:wrap; gap:8px;">
+      <div class="modal-footer" style="flex-wrap:wrap; gap:8px; padding-top:16px;">
         <button type="button" class="btn btn-secondary" data-close="modal-reminder">Cancel</button>
-        <button type="button" class="btn btn-primary" id="btn-send-reminder-primary" style="flex:1;">
-          <i data-lucide="message-square" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send SMS</span>
+        <button type="button" class="btn btn-primary reminder-send-btn" id="btn-send-reminder-primary" style="flex:1; min-width:200px;">
+          <i data-lucide="send" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send Notice</span>
         </button>
       </div>
     </div>
