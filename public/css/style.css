@@ -1585,6 +1585,11 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--primary);
 }
 
+/* Hide text label on inactive tabs - icon only */
+.nav-item:not(.active) .nav-label {
+  display: none;
+}
+
 .nav-item.active .nav-icon {
   color: var(--primary);
 }
