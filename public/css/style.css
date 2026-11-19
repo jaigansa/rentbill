@@ -4818,14 +4818,6 @@ select {
 .fintech-col-trend.down { color: var(--danger); }
 .fintech-col-trend.neutral { color: var(--text-muted); }
 
-.fintech-overdue-sub {
-  font-size: 0.68rem;
-  font-weight: 650;
-  color: var(--danger);
-  line-height: 1.1;
-  margin-top: 1px;
-}
-
 /* Compact Tenant Card */
 .tenant-compact-card {
   padding: 10px 12px;

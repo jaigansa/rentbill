@@ -437,7 +437,6 @@ const App = {
   async loadDashboard() {
     try {
       const data = await API.getDashboard(this.selectedDashboardMonth);
-      const curr = window.APP_CURRENCY || '₹';
 
       // 1. Synchronize Month Selector Options
       const monthSelect = document.getElementById('dash-month-select');
@@ -482,12 +481,6 @@ const App = {
       setStatCard('dash-total-billed', data.total_billed);
       setStatCard('dash-total-collected', data.total_collected);
       setStatCard('dash-total-pending', data.total_pending);
-      setStatCard('dash-total-overdue', data.total_overdue);
-
-      const overdueWrap = document.getElementById('dash-overdue-wrap');
-      if (overdueWrap) {
-        overdueWrap.style.display = (data.total_overdue && data.total_overdue > 0) ? 'block' : 'none';
-      }
 
       const expEl = document.getElementById('dash-total-expenses');
       if (expEl) {
@@ -574,7 +567,7 @@ const App = {
                   </div>
                   <div class="batch-bill-desc">Auto-generate base rent, utilities & arrears in 1 click.</div>
                 </div>
-                <button type="button" class="btn btn-primary btn-sm" onclick="App.openBatchBillsModal('${data.selected_month}', ${unbilledList.length})">
+                <button type="button" class="btn btn-primary btn-sm" onclick="App.openBatchBillsModal('${data.selected_month}')">
                   <i data-lucide="layers" style="width:14px;height:14px;"></i> Generate All Bills (${unbilledList.length})
                 </button>
               </div>
@@ -688,7 +681,7 @@ const App = {
   },
 
   // 1-Click Batch Monthly Bill Generator with EB Reading Entry Roll
-  async openBatchBillsModal(month, count) {
+  async openBatchBillsModal(month) {
     const targetMonth = month || this.selectedDashboardMonth || new Date().toISOString().slice(0, 7);
     const monthInput = document.getElementById('batch-billing-month');
     if (monthInput) {
