@@ -128,15 +128,19 @@
 
         <!-- Bottom Summary Strip: Clean Columns Separated by Subtle Hairlines -->
         <div class="fintech-breakdown-grid">
-          <div class="fintech-col">
+          <div class="fintech-col primary">
             <div class="fintech-col-header">
               <i data-lucide="file-text"></i>
               <span>Billed</span>
             </div>
             <strong class="fintech-col-value" id="dash-total-billed">₹0</strong>
+            <div class="fintech-col-trend up" id="dash-billed-trend" style="display:none;">
+              <i data-lucide="trending-up" style="width:10px; height:10px;"></i>
+              <span id="dash-billed-trend-val">+0%</span>
+            </div>
           </div>
 
-          <div class="fintech-col">
+          <div class="fintech-col warning">
             <div class="fintech-col-header">
               <i data-lucide="clock"></i>
               <span>Pending</span>
@@ -145,22 +149,33 @@
             <span class="fintech-overdue-sub" id="dash-overdue-wrap" style="display:none;">
               <span id="dash-total-overdue">₹0</span> overdue
             </span>
+            <div class="fintech-col-trend down" id="dash-pending-trend" style="display:none;">
+              <i data-lucide="trending-down" style="width:10px; height:10px;"></i>
+              <span id="dash-pending-trend-val">-0%</span>
+            </div>
           </div>
 
-          <div class="fintech-col">
+          <div class="fintech-col danger">
             <div class="fintech-col-header">
               <i data-lucide="receipt"></i>
               <span>Expenses</span>
             </div>
             <strong class="fintech-col-value" id="dash-total-expenses">₹0</strong>
+            <div class="fintech-col-trend neutral" id="dash-expenses-trend" style="display:none;">
+              <span id="dash-expenses-trend-val">±0%</span>
+            </div>
           </div>
 
-          <div class="fintech-col fintech-col-profit">
+          <div class="fintech-col success fintech-col-profit">
             <div class="fintech-col-header">
               <i data-lucide="trending-up"></i>
               <span>Net Profit</span>
             </div>
             <strong class="fintech-col-value text-success" id="dash-net-profit">₹0</strong>
+            <div class="fintech-col-trend up" id="dash-profit-trend" style="display:none;">
+              <i data-lucide="trending-up" style="width:10px; height:10px;"></i>
+              <span id="dash-profit-trend-val">+0%</span>
+            </div>
           </div>
 
           <div class="fintech-col">
@@ -169,6 +184,9 @@
               <span>Deposits Held</span>
             </div>
             <strong class="fintech-col-value" id="dash-total-deposits" title="Total security deposits currently held in trust for active tenants">₹0</strong>
+            <div class="fintech-col-trend neutral" id="dash-deposits-trend" style="display:none;">
+              <span id="dash-deposits-trend-val">±0%</span>
+            </div>
           </div>
         </div>
       </div>

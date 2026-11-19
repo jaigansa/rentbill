@@ -4709,11 +4709,17 @@ select {
 /* Bottom Breakdown Grid */
 .fintech-breakdown-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   border-top: 1px solid var(--border);
   padding-top: 12px;
   margin-top: 4px;
+}
+
+@media (min-width: 1024px) {
+  .fintech-breakdown-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 @media (max-width: 680px) {
@@ -4726,26 +4732,57 @@ select {
 .fintech-col {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   background: var(--surface-alt);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  padding: 10px 12px;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  cursor: pointer;
 }
 
 .fintech-col:hover {
-  border-color: rgba(245, 158, 11, 0.3);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 14px var(--accent-glow);
+  background: var(--surface);
+}
+
+.fintech-col:active {
+  transform: scale(0.97);
+}
+
+.fintech-col.primary { border-top: 3px solid var(--primary); }
+.fintech-col.warning { border-top: 3px solid var(--warning); }
+.fintech-col.danger { border-top: 3px solid var(--danger); }
+.fintech-col.success { border-top: 3px solid var(--success); }
+
+.fintech-col.primary .fintech-col-header i,
+.fintech-col.primary .fintech-col-header [data-lucide] {
+  color: var(--primary);
+}
+
+.fintech-col.warning .fintech-col-header i,
+.fintech-col.warning .fintech-col-header [data-lucide] {
+  color: var(--warning);
+}
+
+.fintech-col.danger .fintech-col-header i,
+.fintech-col.danger .fintech-col-header [data-lucide] {
+  color: var(--danger);
+}
+
+.fintech-col.success .fintech-col-header i,
+.fintech-col.success .fintech-col-header [data-lucide] {
+  color: var(--success);
 }
 
 .fintech-col-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.65rem;
+  gap: 6px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -4754,18 +4791,32 @@ select {
 
 .fintech-col-header i,
 .fintech-col-header [data-lucide] {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
 }
 
 .fintech-col-value {
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: -0.015em;
+  font-size: 1.3rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
   text-shadow: var(--value-text-shadow);
 }
+
+.fintech-col-trend {
+  font-size: 0.68rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.fintech-col-trend.up { color: var(--success); }
+.fintech-col-trend.down { color: var(--danger); }
+.fintech-col-trend.neutral { color: var(--text-muted); }
 
 .fintech-overdue-sub {
   font-size: 0.68rem;
