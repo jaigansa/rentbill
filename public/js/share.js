@@ -439,8 +439,6 @@ const Share = {
   openFallbackShareModal(bill, initialText) {
     const previewEl = document.getElementById('share-preview-text');
     const charCountEl = document.getElementById('share-char-count');
-    const btnFmtSms = document.getElementById('btn-share-fmt-sms');
-    const btnFmtFull = document.getElementById('btn-share-fmt-full');
 
     const charRealEl = document.getElementById('share-char-count-real');
     const wordCountEl = document.getElementById('share-word-count');
@@ -484,9 +482,7 @@ const Share = {
     if (btnViewRaw) btnViewRaw.onclick = () => setViewMode('raw');
     setViewMode('whatsapp');
 
-    let currentFormat = 'full'; // 'full' (WhatsApp) or 'sms'
     let fullText = initialText || this.buildBillText(bill);
-    let smsText = this.buildSmsRcsBillText(bill, false);
 
     const updateStatsDisplay = (text) => {
       const stats = this.calculateTextStats(text);
@@ -494,9 +490,7 @@ const Share = {
       if (wordCountEl) wordCountEl.innerHTML = `<strong>${stats.words}</strong> words`;
       if (smsPartsEl) smsPartsEl.innerHTML = `<strong>${stats.smsParts}</strong> SMS`;
       if (charCountEl) {
-        charCountEl.textContent = currentFormat === 'sms'
-          ? `${stats.chars} chars (${stats.smsParts} SMS / RCS message)`
-          : `${stats.chars} chars`;
+        charCountEl.textContent = `${stats.chars} chars`;
       }
     };
 
@@ -506,39 +500,24 @@ const Share = {
       }
     };
 
-    const updatePreview = (fmt) => {
-      currentFormat = fmt;
-      const activeText = fmt === 'sms' ? smsText : fullText;
-      if (previewEl) previewEl.value = activeText;
-      updateStatsDisplay(activeText);
-      updateWhatsAppBubble(activeText);
-
-      if (btnFmtSms) {
-        if (fmt === 'sms') btnFmtSms.classList.add('active');
-        else btnFmtSms.classList.remove('active');
-      }
-      if (btnFmtFull) {
-        if (fmt === 'full') btnFmtFull.classList.add('active');
-        else btnFmtFull.classList.remove('active');
-      }
+    const updatePreview = () => {
+      if (previewEl) previewEl.value = fullText;
+      updateStatsDisplay(fullText);
+      updateWhatsAppBubble(fullText);
     };
 
     // Live typing updates both stats and WhatsApp chat bubble
     if (previewEl) {
       previewEl.oninput = () => {
         const val = previewEl.value;
-        if (currentFormat === 'sms') smsText = val;
-        else fullText = val;
+        fullText = val;
         updateStatsDisplay(val);
         updateWhatsAppBubble(val);
       };
     }
 
-    if (btnFmtSms) btnFmtSms.onclick = () => updatePreview('sms');
-    if (btnFmtFull) btnFmtFull.onclick = () => updatePreview('full');
-
     // Default to rich WhatsApp format
-    updatePreview('full');
+    updatePreview();
 
     const cleanPhone = (bill.tenant_phone || '').replace(/[^0-9]/g, '');
 
