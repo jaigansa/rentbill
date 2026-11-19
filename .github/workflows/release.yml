@@ -11,18 +11,32 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [amd64, arm64]
-        exclude:
-          # macOS arm64 only on macOS runner
-          - os: macos-latest
-            arch: amd64
-          # Windows arm64 not supported
-          - os: windows-latest
-            arch: arm64
-          # Linux arm64 not needed (macOS/Windows runners handle their own)
+        include:
           - os: ubuntu-latest
-            arch: arm64
+            goos: linux
+            goarch: amd64
+            artifact: rentbill-linux-amd64
+            make_target: linux
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            artifact: rentbill-linux-arm64
+            make_target: linux-arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact: rentbill-darwin-arm64
+            make_target: mac
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            artifact: rentbill-darwin-amd64
+            make_target: mac-intel
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact: rentbill-windows-amd64.exe
+            make_target: windows
 
     steps:
       - name: Checkout code
@@ -31,7 +45,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.25'
+          go-version: 'stable'
 
       - name: Get tag name
         id: get_tag
@@ -41,28 +55,18 @@ jobs:
         id: build
         env:
           CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          case "${{ matrix.os }}-${{ matrix.arch }}" in
-            ubuntu-latest-amd64)
-              make linux
-              binary_name="rentbill-linux-amd64"
-              ;;
-            macos-latest-arm64)
-              make mac
-              binary_name="rentbill-darwin-arm64"
-              ;;
-            windows-latest-amd64)
-              make windows
-              binary_name="rentbill.exe"
-              ;;
-          esac
-          echo "binary=$binary_name" >> $GITHUB_OUTPUT
-          echo "path=$(pwd)/$binary_name" >> $GITHUB_OUTPUT
+          make ${{ matrix.make_target }}
+          echo "binary=${{ matrix.artifact }}" >> $GITHUB_OUTPUT
+          echo "path=$(pwd)/${{ matrix.artifact }}" >> $GITHUB_OUTPUT
 
       - name: Create release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.get_tag.outputs.tag }}
           name: RentBill ${{ steps.get_tag.outputs.tag }}
           body: |
