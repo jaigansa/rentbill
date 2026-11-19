@@ -1,6 +1,7 @@
 # Build & Distribution Output
 dist/
 outputs/
+release/
 *.exe
 /rentbill
 /rentbill-*

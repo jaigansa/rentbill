@@ -18,6 +18,7 @@ INSTALL_ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
 SERVICE_FILE="${USER_SYSTEMD_DIR}/${SERVICE_NAME}"
 DEFAULT_DB="${INSTALL_DATA_DIR}/${APP_NAME}.db"
+RELEASE_DIR="${SCRIPT_DIR}/release"
 
 # Helper colors
 RED='\033[0;31m'
@@ -42,6 +43,7 @@ usage() {
     echo "  status             Check status of background service"
     echo "  logs               Follow live logs of background service"
     echo "  uninstall          Stop and remove service, desktop launcher & binary"
+    echo "  release            Cross-compile release binaries for all platforms"
     echo ""
     echo "Flags:"
     echo "  --share, -s        Enable local network Wi-Fi mobile sharing"
@@ -219,6 +221,60 @@ do_build() {
     (cd "${SCRIPT_DIR}" && CGO_ENABLED=0 go build -ldflags="-s -w" -o "${APP_NAME}" .)
     chmod +x "${SCRIPT_DIR}/${APP_NAME}"
     echo -e "${GREEN}✅ Build successful: ${SCRIPT_DIR}/${APP_NAME}${NC}"
+}
+
+do_release() {
+    setup_dependencies
+
+    echo -e "${BLUE}▶ Preparing release directory: ${RELEASE_DIR}${NC}"
+    rm -rf "${RELEASE_DIR}"
+    mkdir -p "${RELEASE_DIR}"
+
+    local version="${VERSION:-1.0.0}"
+    local build_date
+    build_date=$(date -u +"%Y-%m-%d")
+    local ldflags="-s -w -X 'main.Version=${version}'"
+
+    local build_targets=(
+        "linux:amd64:rentbill-linux-amd64"
+        "linux:arm64:rentbill-linux-arm64"
+        "windows:amd64:rentbill-windows-amd64.exe"
+        "darwin:amd64:rentbill-darwin-amd64"
+        "darwin:arm64:rentbill-darwin-arm64"
+    )
+
+    echo -e "${YELLOW}🔨 Cross-compiling RentBill for multiple platforms...${NC}"
+    for target in "${build_targets[@]}"; do
+        local goos="${target%%:*}"
+        local rest="${target#*:}"
+        local goarch="${rest%%:*}"
+        local out_name="${rest#*:}"
+        local out_path="${RELEASE_DIR}/${out_name}"
+
+        echo -e "${BLUE}  ▶ Building ${goos}/${goarch} -> ${out_name}${NC}"
+        (
+            cd "${SCRIPT_DIR}"
+            CGO_ENABLED=0 GOOS="${goos}" GOARCH="${goarch}" \
+              go build -ldflags="${ldflags}" -o "${out_path}" .
+        )
+        if [ $? -eq 0 ] && [ -f "${out_path}" ]; then
+            chmod +x "${out_path}"
+            echo -e "${GREEN}    ✓ ${out_name}${NC}"
+        else
+            echo -e "${RED}    ✗ Failed to build ${out_name}${NC}"
+        fi
+    done
+
+    echo ""
+    echo -e "${BLUE}▶ Generating checksums...${NC}"
+    (cd "${RELEASE_DIR}" && sha256sum * > "rentbill-${version}-SHA256SUMS.txt")
+    echo -e "${GREEN}✓ Checksums written: release/rentbill-${version}-SHA256SUMS.txt${NC}"
+
+    echo ""
+    echo -e "${GREEN}✅ Release builds complete!${NC}"
+    echo "  Release directory: ${RELEASE_DIR}"
+    echo "  Files:"
+    ls -lh "${RELEASE_DIR}" | awk '{print "    "$9"  "$5}'
 }
 
 install_binary_and_assets() {
@@ -488,6 +544,10 @@ while [[ $# -gt 0 ]]; do
             ACTION="build"
             shift
             ;;
+        release|--release)
+            ACTION="release"
+            shift
+            ;;
         update|--update)
             ACTION="update"
             shift
@@ -543,6 +603,9 @@ case "${ACTION}" in
         ;;
     build)
         do_build
+        ;;
+    release)
+        do_release
         ;;
     desktop)
         install_desktop_entry
