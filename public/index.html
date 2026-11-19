@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="description" content="RentBill - Smart Property & Rent Management Mobile Web App">
+  <title>RentBill - Property & Rent Manager</title>
+  
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/print.css" media="print">
+  <link rel="manifest" href="/manifest.json">
+  <script>
+    (function() {
+      try {
+        // Securely capture ephemeral local app token
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          sessionStorage.setItem('rb_app_token', token);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (e) {}
+
+      try {
+        const saved = localStorage.getItem('rb_theme') || 'system';
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = saved === 'dark' || (saved === 'system' && prefersDark);
+        if (isDark) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#090d16');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', '#2563eb');
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- Top App Bar -->
+  <header class="top-nav">
+    <div class="brand">
+      <span class="brand-icon"><i data-lucide="home"></i></span>
+      <div class="brand-text">
+        <h1>RentBill</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-lan-share" title="Connect Phone (Wi-Fi)" aria-label="Connect Phone">
+        <i data-lucide="smartphone"></i>
+      </button>
+      <button class="icon-btn" id="btn-lock-app" title="Lock App Now" aria-label="Lock App" style="display:none;">
+        <i data-lucide="lock"></i>
+      </button>
+      <button class="icon-btn" id="btn-toggle-theme" title="Toggle Theme" aria-label="Toggle Theme">
+        <i data-lucide="moon" id="theme-toggle-icon"></i>
+      </button>
+      <button class="icon-btn" id="btn-open-settings" title="Settings" aria-label="Settings">
+        <i data-lucide="settings"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Container with Tabs -->
+  <main class="app-content">
+    
+    <!-- Tab 1: Dashboard View -->
+    <section id="view-dashboard" class="tab-view active">
+      <div class="section-header">
+        <div>
+          <h2>Dashboard</h2>
+        </div>
+        <span class="badge badge-date" id="current-date-badge"></span>
+      </div>
+
+      <!-- Modern Fintech Overview Card (Unified Financial Statement) -->
+      <div class="hero-cashflow-card fintech-card">
+        <!-- Top Row: Card Title / Status & Integrated Month Picker -->
+        <div class="fintech-header">
+          <div class="fintech-title-group">
+            <span class="fintech-icon-badge">
+              <i data-lucide="wallet"></i>
+            </span>
+            <div class="fintech-title-wrap">
+              <span class="fintech-title">Rent Collection</span>
+              <span class="fintech-rate-badge" id="dash-collection-pct">0%</span>
+            </div>
+          </div>
+
+          <!-- Integrated Month Selector -->
+          <div class="dash-month-selector fintech-month-selector">
+            <button type="button" class="btn-month-nav" id="btn-month-prev" title="Previous Month">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="month-select-wrapper">
+              <select id="dash-month-select" class="month-select-dropdown">
+                <!-- Dynamically populated via JS -->
+              </select>
+            </div>
+            <button type="button" class="btn-month-nav" id="btn-month-next" title="Next Month">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Primary Focal Metric: Total Collected Revenue -->
+        <div class="fintech-hero-body">
+          <div class="fintech-hero-label">Total Collected</div>
+          <div class="fintech-hero-amount" id="dash-total-collected">₹0</div>
+          
+          <div class="fintech-hero-meta">
+            <span class="fintech-status-dot"></span>
+            <span id="dash-collection-subtext">₹0 collected of ₹0 billed</span>
+          </div>
+
+          <!-- Sleek Minimalist Progress Track -->
+          <div class="fintech-progress-track">
+            <div class="fintech-progress-bar" id="dash-collection-bar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Bottom Summary Strip: Clean Columns Separated by Subtle Hairlines -->
+        <div class="fintech-breakdown-grid">
+          <div class="fintech-col primary">
+            <div class="fintech-col-header">
+              <i data-lucide="file-text"></i>
+              <span>Billed</span>
+            </div>
+            <strong class="fintech-col-value" id="dash-total-billed">₹0</strong>
+            <div class="fintech-col-trend up" id="dash-billed-trend" style="display:none;">
+              <i data-lucide="trending-up" style="width:10px; height:10px;"></i>
+              <span id="dash-billed-trend-val">+0%</span>
+            </div>
+          </div>
+
+          <div class="fintech-col warning">
+            <div class="fintech-col-header">
+              <i data-lucide="clock"></i>
+              <span>Pending</span>
+            </div>
+            <strong class="fintech-col-value text-warning" id="dash-total-pending">₹0</strong>
+            <div class="fintech-col-trend down" id="dash-pending-trend" style="display:none;">
+              <i data-lucide="trending-down" style="width:10px; height:10px;"></i>
+              <span id="dash-pending-trend-val">-0%</span>
+            </div>
+          </div>
+
+          <div class="fintech-col danger">
+            <div class="fintech-col-header">
+              <i data-lucide="receipt"></i>
+              <span>Expenses</span>
+            </div>
+            <strong class="fintech-col-value" id="dash-total-expenses">₹0</strong>
+            <div class="fintech-col-trend neutral" id="dash-expenses-trend" style="display:none;">
+              <span id="dash-expenses-trend-val">±0%</span>
+            </div>
+          </div>
+
+          <div class="fintech-col success fintech-col-profit">
+            <div class="fintech-col-header">
+              <i data-lucide="trending-up"></i>
+              <span>Net Profit</span>
+            </div>
+            <strong class="fintech-col-value text-success" id="dash-net-profit">₹0</strong>
+            <div class="fintech-col-trend up" id="dash-profit-trend" style="display:none;">
+              <i data-lucide="trending-up" style="width:10px; height:10px;"></i>
+              <span id="dash-profit-trend-val">+0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Module 2: "Action Required" Attention Feed -->
+      <div class="dash-section">
+        <div class="dash-section-header">
+          <div class="dash-section-title">
+            <i data-lucide="bell-ring" style="color:var(--warning); width:18px; height:18px;"></i>
+            <span>Action Required</span>
+            <span class="badge badge-overdue" id="dash-action-count" style="display:none;">0</span>
+          </div>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="dash-action-period-hint"></span>
+        </div>
+        <div id="dash-action-feed" class="dash-action-list">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 2: Tenants View -->
+    <section id="view-tenants" class="tab-view">
+      <div class="section-header">
+        <div>
+          <h2>Tenants</h2>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;" id="tenants-count-subtitle">Active & Past Tenants</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-new-tenant-tab">
+          <i data-lucide="user-plus"></i> Add Tenant
+        </button>
+      </div>
+
+      <!-- Tenants Search & Filter Bar -->
+      <div class="search-filter-card">
+        <div class="search-input-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="tenant-search-input" placeholder="Search by name, unit, phone..." autocomplete="off">
+          <button type="button" id="tenant-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
+        </div>
+        <div class="dash-month-bar">
+          <div class="filter-pills" id="tenant-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="active">Active</button>
+            <button type="button" class="filter-pill" data-filter="past">Past</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tenants-list-container" class="cards-list">
+        <div class="empty-state">
+          <i data-lucide="users" style="width:36px; height:36px;"></i>
+          <div>No tenants added yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Properties View -->
+    <section id="view-properties" class="tab-view">
+      <div class="section-header">
+        <div>
+          <h2>Properties & Units</h2>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;" id="properties-count-subtitle">Units & Occupancy</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-new-property-tab">
+          <i data-lucide="plus"></i> Add Property
+        </button>
+      </div>
+
+      <!-- Properties Search & Filter Bar -->
+      <div class="search-filter-card">
+        <div class="search-input-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="property-search-input" placeholder="Search by property name, address, type..." autocomplete="off">
+          <button type="button" id="property-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
+        </div>
+        <div class="dash-month-bar">
+          <div class="filter-pills" id="property-filter-pills">
+            <button type="button" class="filter-pill active" data-filter="all">All</button>
+            <button type="button" class="filter-pill" data-filter="occupied">Occupied</button>
+            <button type="button" class="filter-pill" data-filter="vacant">Vacant</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="properties-list-container" class="cards-list">
+        <div class="empty-state">
+          <i data-lucide="building-2" style="width:36px; height:36px;"></i>
+          <div>No properties added yet.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar (Mobile Native App Look) -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="dashboard">
+      <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" data-tab="tenants">
+      <span class="nav-icon"><i data-lucide="users"></i></span>
+      <span class="nav-label">Tenants</span>
+    </button>
+    <button class="nav-item" data-tab="properties">
+      <span class="nav-icon"><i data-lucide="building"></i></span>
+      <span class="nav-label">Properties</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal: New/Edit Property -->
+  <div class="modal" id="modal-property">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-property-title">Add Property / Unit</h3>
+        <button class="modal-close" data-close="modal-property">&times;</button>
+      </div>
+      <form id="form-property">
+        <input type="hidden" id="prop-id">
+        <div class="form-group">
+          <label for="prop-name">Property Name *</label>
+          <input type="text" id="prop-name" placeholder="Flat 302, Green Villa" required>
+        </div>
+        <div class="form-group">
+          <label for="prop-type">Unit Type</label>
+          <select id="prop-type">
+            <option value="Apartment">Apartment</option>
+            <option value="Independent House">Independent House</option>
+            <option value="Room / Single Bed">Room / Single Bed</option>
+            <option value="Commercial / Shop">Commercial / Shop</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="prop-address">Address</label>
+          <input type="text" id="prop-address" placeholder="MG Road, ...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="prop-rent">Rent (₹)</label>
+            <input type="number" id="prop-rent" step="any" min="0" placeholder="10000">
+          </div>
+          <div class="form-group">
+            <label for="prop-elec-rate">Elec Rate (₹/unit)</label>
+            <input type="number" id="prop-elec-rate" step="any" min="0" placeholder="9.50">
+          </div>
+        </div>
+
+        <div class="form-divider" style="margin-top:8px;">Water Mode</div>
+        <div class="form-group">
+          <label for="prop-water-type">Water Billing Type</label>
+          <select id="prop-water-type">
+            <option value="FIXED">Fixed Amount (₹ per month)</option>
+            <option value="METER">Meter Reading (₹ per unit/kL)</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group" id="group-prop-water-fixed">
+            <label for="prop-water">Water Charge (₹)</label>
+            <input type="number" id="prop-water" step="any" min="0" placeholder="200">
+          </div>
+          <div class="form-group" id="group-prop-water-meter" style="display:none;">
+            <label for="prop-water-rate">Rate (₹/unit)</label>
+            <input type="number" id="prop-water-rate" step="any" min="0" placeholder="15.00">
+          </div>
+          <div class="form-group">
+            <label for="prop-maint">Maintenance (₹)</label>
+            <input type="number" id="prop-maint" step="any" min="0" placeholder="500">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-property">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Property</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: New/Edit Tenant -->
+  <div class="modal" id="modal-tenant">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-tenant-title">Add Tenant</h3>
+        <button class="modal-close" data-close="modal-tenant">&times;</button>
+      </div>
+      <form id="form-tenant">
+        <input type="hidden" id="tenant-id">
+        <!-- Profile Picture / Avatar Upload Section -->
+        <div class="tenant-photo-upload-container">
+          <div class="tenant-photo-preview-wrap" id="tenant-photo-preview-wrap">
+            <div class="tenant-photo-avatar-placeholder" id="tenant-photo-avatar-placeholder">
+              <i data-lucide="user" style="width:28px; height:28px; color:var(--text-muted);"></i>
+            </div>
+            <img id="tenant-photo-preview-img" src="" alt="Tenant Photo" style="display:none;">
+            <button type="button" class="btn-avatar-badge" id="btn-trigger-tenant-photo" title="Upload Photo">
+              <i data-lucide="camera" style="width:14px; height:14px;"></i>
+            </button>
+          </div>
+          <div class="tenant-photo-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="btn-upload-tenant-photo">
+              <i data-lucide="upload" style="width:13px; height:13px; vertical-align:-1px;"></i> Choose Photo
+            </button>
+            <button type="button" class="btn-text btn-text-danger" id="btn-remove-tenant-photo" style="display:none; font-size:0.75rem; padding:2px 6px;">
+              Remove
+            </button>
+            <input type="file" id="tenant-photo-file-input" accept="image/*" style="display:none;">
+            <input type="hidden" id="tenant-photo">
+            <span class="tenant-photo-hint">Optional photo</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="tenant-name">Name *</label>
+          <input type="text" id="tenant-name" placeholder="Rahul Sharma" required>
+        </div>
+        <div class="form-group">
+          <label for="tenant-phone">Phone Number *</label>
+          <input type="tel" id="tenant-phone" placeholder="9876543210" required>
+          <small id="hint-tenant-phone" class="form-inline-feedback" style="display:none;"></small>
+        </div>
+        <div class="form-group">
+          <label for="tenant-email">Email</label>
+          <input type="email" id="tenant-email" placeholder="rahul@example.com">
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="margin-bottom:0; font-weight:600; font-size:0.85rem;">Co-occupants</label>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-add-co-occupant" style="padding: 2px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-sm);">
+              <i data-lucide="plus" style="width:12px; height:12px;"></i> Add Person
+            </button>
+          </div>
+          <div id="co-occupants-list" style="display:flex; flex-direction:column; gap:8px;">
+            <!-- Dynamic rows of co-occupants will be injected here -->
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="tenant-prop-id">Property / Unit</label>
+          <select id="tenant-prop-id" required>
+            <option value="">-- Select --</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tenant-deposit">Deposit (₹)</label>
+            <input type="number" id="tenant-deposit" step="any" min="0" placeholder="20000">
+          </div>
+          <div class="form-group">
+            <label for="tenant-opening-arrear">Opening Arrear (₹)</label>
+            <input type="number" id="tenant-opening-arrear" step="any" min="0" placeholder="0.00">
+            <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
+                Unpaid dues carried to first bill.
+            </small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tenant-move-in">Move-in</label>
+            <input type="date" id="tenant-move-in">
+          </div>
+          <div class="form-group" id="group-tenant-status">
+            <label for="tenant-is-active">Status</label>
+            <select id="tenant-is-active">
+              <option value="1">Active</option>
+              <option value="0">Deactivated</option>
+            </select>
+            <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
+            Marks tenant as moved-out.
+            </small>
+          </div>
+        </div>
+
+        <!-- Initial Move-in Meter Readings -->
+        <div style="border-top:1px dashed var(--border); padding-top:12px; margin-top:6px; margin-bottom:12px;">
+          <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="gauge" style="width:16px; height:16px; color:var(--warning);"></i>
+            Move-in Meter Readings (Initial Starting Values)
+          </div>
+          <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">
+          First bill starts from these readings.
+          </p>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="tenant-init-elec">Elec Meter</label>
+              <input type="number" id="tenant-init-elec" step="any" min="0" placeholder="0.0">
+            </div>
+            <div class="form-group">
+              <label for="tenant-init-water">Water Meter</label>
+              <input type="number" id="tenant-init-water" step="any" min="0" placeholder="0.0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Owner Payment / Receiving Info for this tenant -->
+        <details class="owner-payment-card" id="tenant-payment-card" open>
+          <summary class="owner-payment-summary">
+            <div class="owner-payment-summary-title">
+              <i data-lucide="credit-card"></i>
+              <span>Payment Details <span class="owner-payment-sub">(For Rent Collection)</span></span>
+            </div>
+            <div class="owner-payment-summary-right">
+              <span class="owner-payment-badge" id="tenant-payment-badge">Optional</span>
+              <i data-lucide="chevron-down" class="owner-payment-chevron"></i>
+            </div>
+          </summary>
+          <div class="owner-payment-body">
+            <p class="owner-payment-hint">
+            Shown in bills & QR code.
+            </p>
+            <div class="owner-payment-grid">
+              <div class="form-group">
+                <label for="tenant-payment-upi">
+                  <i data-lucide="qr-code"></i> UPI ID
+                </label>
+                <input type="text" id="tenant-payment-upi" placeholder="landlord@upi">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-bank-name">
+                  <i data-lucide="building"></i> Bank
+                </label>
+                <input type="text" id="tenant-payment-bank-name" placeholder="HDFC Bank">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-account-no">
+                  <i data-lucide="hash"></i> Account No
+                </label>
+                <input type="text" id="tenant-payment-account-no" placeholder="123456789012" inputmode="numeric">
+              </div>
+              <div class="form-group">
+                <label for="tenant-payment-ifsc">
+                  <i data-lucide="shield-check"></i> IFSC Code
+                </label>
+                <input type="text" id="tenant-payment-ifsc" placeholder="SBIN0001234" style="text-transform:uppercase;">
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Tenant Documents & Lease Agreements Section -->
+        <div class="form-divider" style="margin-top:14px;">Documents &amp; Agreements</div>
+        <div class="tenant-docs-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:0.78rem; color:var(--text-muted);">Agreements & ID proofs (PDF/Image).</span>
+            <input type="file" id="tenant-doc-file-input" accept=".pdf,image/png,image/jpeg,image/webp" style="display:none;" multiple>
+            <button type="button" class="btn btn-outline btn-sm" id="btn-trigger-tenant-doc" style="white-space:nowrap;">
+              <i data-lucide="paperclip" style="width:14px;height:14px;"></i> Attach File
+            </button>
+          </div>
+
+          <div id="tenant-form-docs-list" class="tenant-form-docs-list" style="display:flex; flex-direction:column; gap:6px;">
+            <!-- Dynamic attached documents pills/cards -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-tenant">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Tenant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Document & Agreement Viewer (PDF / Image) -->
+  <div class="modal" id="modal-doc-preview">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="doc-preview-title" style="margin-bottom:2px;">Document Preview</h3>
+          <span id="doc-preview-meta" style="font-size:0.8rem; color:var(--text-muted);"></span>
+        </div>
+        <button class="modal-close" data-close="modal-doc-preview">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px; min-height:420px; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <iframe id="doc-preview-frame" style="width:100%; height:540px; border:1px solid var(--border); border-radius:var(--radius-sm); display:none;"></iframe>
+        <img id="doc-preview-img" style="max-width:100%; max-height:540px; object-fit:contain; border-radius:var(--radius-sm); display:none;" alt="Document">
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" class="btn btn-primary" id="btn-doc-download">
+          <i data-lucide="download" style="width:14px;height:14px;"></i> Download Document
+        </button>
+        <button type="button" class="btn btn-secondary" data-close="modal-doc-preview">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Avatar Zoom Lightbox (Google Contacts / WhatsApp Style) -->
+  <div class="modal" id="modal-avatar-zoom">
+    <div class="modal-dialog avatar-zoom-dialog">
+      <button type="button" class="modal-close avatar-zoom-close" data-close="modal-avatar-zoom" aria-label="Close">&times;</button>
+      <div class="avatar-zoom-content">
+        <div class="avatar-zoom-image-container">
+          <img id="avatar-zoom-img" src="" alt="Profile Photo" class="avatar-zoom-img" style="display:none;">
+          <div id="avatar-zoom-initials" class="avatar-zoom-initials" style="display:none;"></div>
+        </div>
+        <div class="avatar-zoom-info">
+          <h3 id="avatar-zoom-name" class="avatar-zoom-name"></h3>
+          <p id="avatar-zoom-unit" class="avatar-zoom-unit"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Vacant Form Calculation / Move-Out Settlement -->
+  <div class="modal" id="modal-vacant-calculation">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header no-print vacant-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="vacant-header-icon">
+            <i data-lucide="calculator" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Vacant Calculation</h3>
+              <span class="badge badge-warning" style="font-size:0.7rem; font-weight:600;">Move-Out Settlement</span>
+            </div>
+            <div id="vacant-calc-subtitle" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+            Final move-out settlement
+            </div>
+          </div>
+        </div>
+        <button class="modal-close" data-close="modal-vacant-calculation">&times;</button>
+      </div>
+
+      <div class="vacant-calc-body no-print" style="padding-top:10px;">
+        <!-- Top Quick Metrics -->
+        <div class="vacant-summary-grid vacant-stat-cards">
+          <div class="vacant-stat-box vacant-stat-tenant">
+            <span class="vacant-stat-label">Resident</span>
+            <span class="vacant-stat-val" id="vacant-disp-tenant">--</span>
+          </div>
+          <div class="vacant-stat-box vacant-stat-unit">
+            <span class="vacant-stat-label">Unit</span>
+            <span class="vacant-stat-val text-primary" id="vacant-disp-unit">--</span>
+          </div>
+          <div class="vacant-stat-box vacant-stat-deposit">
+            <span class="vacant-stat-label">Deposit</span>
+            <span class="vacant-stat-val text-success" id="vacant-disp-deposit">₹0.00</span>
+          </div>
+          <div class="vacant-stat-box vacant-stat-arrears">
+            <span class="vacant-stat-label">Arrears</span>
+            <span class="vacant-stat-val text-danger" id="vacant-disp-arrears">₹0.00</span>
+          </div>
+        </div>
+
+        <form id="form-vacant-calculation" onsubmit="event.preventDefault();">
+          <input type="hidden" id="vacant-tenant-id">
+          <input type="hidden" id="vacant-prop-id">
+
+          <!-- Section 1: Move-Out Details -->
+          <div class="vacant-section vacant-section-moveout">
+            <div class="vacant-section-header">
+              <i data-lucide="calendar" style="width:16px; height:16px; color:var(--primary);"></i>
+              <span>Move-Out Details</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vacant-move-out-date">Move-Out Date *</label>
+                <input type="date" id="vacant-move-out-date" required>
+              </div>
+              <div class="form-group">
+                <label for="vacant-move-in-display">Move-In Date</label>
+                <input type="text" id="vacant-move-in-display" readonly class="input-readonly">
+              </div>
+            </div>
+            <div id="vacant-tenancy-duration-hint" style="font-size:0.75rem; color:var(--text-muted); margin-top:-6px; margin-bottom:4px;">
+              <!-- Duration badge e.g. 240 days / 8 months -->
+            </div>
+          </div>
+
+          <!-- Section 2: Move-Out Utilities -->
+          <div class="vacant-section vacant-section-utilities">
+            <div class="vacant-section-header">
+              <i data-lucide="gauge" style="width:16px; height:16px; color:var(--warning);"></i>
+              <span>Final Utility Meter Readings</span>
+            </div>
+            
+            <!-- Electricity -->
+            <div class="vacant-meter-box vacant-meter-elec">
+              <div style="font-weight:600; font-size:0.82rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span><i data-lucide="zap" style="width:14px; height:14px; color:var(--warning); vertical-align:-2px;"></i> Electricity (Rate: ₹<span id="vacant-elec-rate-disp">0</span>/unit)</span>
+                <span id="vacant-elec-subtotal" style="font-weight:700; color:var(--text-main);">₹0.00</span>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacant-prev-elec">Prev Reading</label>
+                  <input type="number" id="vacant-prev-elec" step="any" readonly class="input-readonly">
+                </div>
+                <div class="form-group">
+                  <label for="vacant-curr-elec">Final Reading</label>
+                  <input type="number" id="vacant-curr-elec" step="any" min="0" placeholder="1450">
+                </div>
+                <div class="form-group">
+                  <label for="vacant-elec-units">Units Used</label>
+                  <input type="text" id="vacant-elec-units" readonly class="input-readonly" value="0 units">
+                </div>
+              </div>
+            </div>
+
+            <!-- Water -->
+            <div class="vacant-meter-box vacant-meter-water" style="margin-top:10px;">
+              <div style="font-weight:600; font-size:0.82rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                <span><i data-lucide="droplet" style="width:14px; height:14px; color:var(--primary); vertical-align:-2px;"></i> Water Charges (<span id="vacant-water-mode-disp">Fixed</span>)</span>
+                <span id="vacant-water-subtotal" style="font-weight:700; color:var(--text-main);">₹0.00</span>
+              </div>
+              <div class="form-row" id="vacant-water-meter-row" style="display:none;">
+                <div class="form-group">
+                  <label for="vacant-prev-water">Prev Reading</label>
+                  <input type="number" id="vacant-prev-water" step="any" readonly class="input-readonly">
+                </div>
+                <div class="form-group">
+                  <label for="vacant-curr-water">Final Reading</label>
+                  <input type="number" id="vacant-curr-water" step="any" min="0" placeholder="230">
+                </div>
+                <div class="form-group">
+                  <label for="vacant-water-units">Units Used</label>
+                  <input type="text" id="vacant-water-units" readonly class="input-readonly" value="0 units">
+                </div>
+              </div>
+              <div class="form-group" id="vacant-water-fixed-row" style="margin-bottom:0;">
+                <label for="vacant-water-fixed-charge">Water Charge (₹)</label>
+                <input type="number" id="vacant-water-fixed-charge" step="any" min="0" placeholder="0.00">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Final Month Rent Proration -->
+          <div class="vacant-section vacant-section-rent">
+            <div class="vacant-section-header">
+              <i data-lucide="home" style="width:16px; height:16px; color:var(--primary);"></i>
+              <span>Move-Out Month Rent</span>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+              <button type="button" class="vacant-pill-btn active" data-rent-mode="none" id="btn-rent-mode-none">None (Already Paid)</button>
+              <button type="button" class="vacant-pill-btn" data-rent-mode="prorated" id="btn-rent-mode-prorated">Prorated for Days</button>
+              <button type="button" class="vacant-pill-btn" data-rent-mode="full" id="btn-rent-mode-full">Full</button>
+            </div>
+            <div class="form-row" id="vacant-prorate-row" style="display:none;">
+              <div class="form-group">
+                <label for="vacant-base-rent">Rent (₹)</label>
+                <input type="number" id="vacant-base-rent" step="any" min="0">
+              </div>
+              <div class="form-group">
+                <label for="vacant-occupied-days">Days</label>
+                <input type="number" id="vacant-occupied-days" min="0" max="31">
+              </div>
+              <div class="form-group">
+                <label for="vacant-rent-amount">Calculated Rent (₹)</label>
+                <input type="number" id="vacant-rent-amount" step="any" min="0" value="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: Deductions & Adjustments -->
+          <div class="vacant-section vacant-section-deductions">
+            <div class="vacant-section-header">
+              <i data-lucide="wrench" style="width:16px; height:16px; color:var(--danger);"></i>
+              <span>Deductions &amp; Adjustments</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vacant-deduct-arrears">Past Unpaid</label>
+                <input type="number" id="vacant-deduct-arrears" step="any" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="vacant-deduct-painting">Painting</label>
+                <input type="number" id="vacant-deduct-painting" step="any" min="0" placeholder="0">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vacant-deduct-cleaning">Cleaning</label>
+                <input type="number" id="vacant-deduct-cleaning" step="any" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="vacant-deduct-repairs">Repairs</label>
+                <input type="number" id="vacant-deduct-repairs" step="any" min="0" placeholder="0">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="vacant-deduct-other">Other Deductions</label>
+                <input type="number" id="vacant-deduct-other" step="any" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="vacant-extra-credit">Credit / Advance</label>
+                <input type="number" id="vacant-extra-credit" step="any" min="0" placeholder="0">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="vacant-deduct-notes">Remarks</label>
+              <input type="text" id="vacant-deduct-notes" placeholder="Remarks">
+            </div>
+          </div>
+
+          <!-- Live Real-Time Settlement Calculation Banner -->
+          <div class="vacant-settlement-card vacant-breakdown-card">
+            <div class="vacant-settlement-breakdown">
+              <div class="breakdown-col credits-col">
+                <div class="breakdown-title text-success"><i data-lucide="plus-circle" style="width:14px; height:14px; vertical-align:-2px;"></i> Total Credits</div>
+                <div class="breakdown-item"><span>Security Deposit:</span> <strong id="sum-credit-deposit">₹0.00</strong></div>
+                <div class="breakdown-item"><span>Extra Credit/Advance:</span> <strong id="sum-credit-extra">₹0.00</strong></div>
+                <div class="breakdown-total text-success"><span>Total Credit:</span> <strong id="sum-total-credits">₹0.00</strong></div>
+              </div>
+              <div class="breakdown-col debits-col">
+                <div class="breakdown-title text-danger"><i data-lucide="minus-circle" style="width:14px; height:14px; vertical-align:-2px;"></i> Total Dues &amp; Deductions</div>
+                <div class="breakdown-item"><span>Past Unpaid Bills:</span> <strong id="sum-debit-arrears">₹0.00</strong></div>
+                <div class="breakdown-item"><span>Final Utilities:</span> <strong id="sum-debit-utilities">₹0.00</strong></div>
+                <div class="breakdown-item"><span>Move-Out Rent:</span> <strong id="sum-debit-rent">₹0.00</strong></div>
+                <div class="breakdown-item"><span>Damages / Cleaning / Painting:</span> <strong id="sum-debit-deductions">₹0.00</strong></div>
+                <div class="breakdown-total text-danger"><span>Total Deductions:</span> <strong id="sum-total-debits">₹0.00</strong></div>
+              </div>
+            </div>
+
+            <!-- Net Result Banner -->
+            <div class="vacant-net-banner refund" id="vacant-net-banner">
+              <div class="net-banner-icon" id="vacant-net-icon">
+                <i data-lucide="check-circle-2"></i>
+              </div>
+              <div class="net-banner-content">
+                <div class="net-banner-label" id="vacant-net-label">REFUND TO TENANT</div>
+                <div class="net-banner-val" id="vacant-net-amount">₹0.00</div>
+                <div class="net-banner-desc" id="vacant-net-desc">Landlord will refund this balance to the tenant.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:12px;">
+              <label class="checkbox-container" style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="vacant-opt-create-bill" checked>
+                <span>Record final settlement bill in ledger for financial history</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Modal Actions Footer -->
+          <div class="modal-footer no-print vacant-modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:16px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-vacant-copy">
+                <i data-lucide="copy" style="width:14px; height:14px;"></i> Copy
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-vacant-print">
+                <i data-lucide="printer" style="width:14px; height:14px;"></i> Print
+              </button>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn btn-secondary" data-close="modal-vacant-calculation">Cancel</button>
+              <button type="button" class="btn btn-danger vacant-confirm-btn" id="btn-vacant-confirm">
+                <i data-lucide="log-out" style="width:16px; height:16px;"></i> Vacate Unit
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Printable Move-Out Settlement Statement (Rendered via JS for Clean Print/PDF) -->
+      <div id="vacant-printable" class="vacant-print-container">
+        <!-- Rendered dynamically via App.renderVacantPrintableSheet() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Tenant Bill Ledger -->
+  <div class="modal" id="modal-ledger">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-ledger-tenant-name" style="margin-bottom:2px;">Tenant Bills</h3>
+          <span id="modal-ledger-unit-info" style="font-size:0.8rem; color:var(--text-muted);"></span>
+        </div>
+        <button class="modal-close" data-close="modal-ledger">&times;</button>
+      </div>
+
+      <!-- Ledger Summary Cards -->
+      <div class="ledger-summary-grid">
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Total Billed</span>
+          <span class="ledger-stat-value" id="ledger-total-billed">₹0.00</span>
+        </div>
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Total Paid</span>
+          <span class="ledger-stat-value text-success" id="ledger-total-paid">₹0.00</span>
+        </div>
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Balance Due</span>
+          <span class="ledger-stat-value text-danger" id="ledger-total-balance">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- Ledger View Switcher (Three Tabs: Bills, Payments, Ledger) -->
+      <div class="ledger-tab-bar no-print">
+        <button type="button" class="ledger-tab-btn active" id="btn-ledger-tab-bills" data-tab="bills">
+          <i data-lucide="receipt"></i>
+          <span>Bills</span>
+          <span class="ledger-tab-count" id="ledger-count-bills">0</span>
+        </button>
+        <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-payments" data-tab="payments">
+          <i data-lucide="credit-card"></i>
+          <span>Payments</span>
+          <span class="ledger-tab-count" id="ledger-count-payments">0</span>
+        </button>
+        <button type="button" class="ledger-tab-btn" id="btn-ledger-tab-ledger" data-tab="ledger">
+          <i data-lucide="book-open"></i>
+          <span>Ledger</span>
+        </button>
+      </div>
+
+      <!-- Ledger Bills List -->
+      <div id="ledger-bills-container" class="bills-list">
+        <div class="empty-state">
+          <i data-lucide="receipt" style="width:36px; height:36px;"></i>
+          <div>Loading tenant bills...</div>
+        </div>
+      </div>
+
+      <!-- Printable Tenant Statement (Rendered via JS for Clean Print/PDF) -->
+      <div id="tenant-ledger-printable" class="tenant-ledger-print-container">
+        <!-- Rendered dynamically via Tenants.renderTenantLedgerPrintSheet() -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-outline" id="btn-ledger-print" title="Print preview tenant financial statement">
+            <i data-lucide="printer" style="width:14px; height:14px; vertical-align:-2px;"></i>
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-ledger-export-csv" title="Export tenant ledger to CSV spreadsheet">
+            <i data-lucide="download" style="width:14px; height:14px; vertical-align:-2px;"></i>
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary" data-close="modal-ledger">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Property Expenses & Net Profit Ledger -->
+  <div class="modal" id="modal-property-expenses">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-property-expenses-title" style="margin-bottom:2px;">Property Expenses</h3>
+          <span id="modal-property-expenses-sub" style="font-size:0.8rem; color:var(--text-muted);">Maintenance & Repair Costs</span>
+        </div>
+        <button class="modal-close" data-close="modal-property-expenses">&times;</button>
+      </div>
+
+      <!-- Property Financial Summary Grid -->
+      <div class="ledger-summary-grid">
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Total Rent Inflow</span>
+          <span class="ledger-stat-value text-success" id="prop-stat-income">₹0.00</span>
+        </div>
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Total Incurred Expenses</span>
+          <span class="ledger-stat-value text-danger" id="prop-stat-expenses">₹0.00</span>
+        </div>
+        <div class="ledger-stat-card">
+          <span class="ledger-stat-label">Net Profit / Yield</span>
+          <span class="ledger-stat-value" id="prop-stat-net-profit">₹0.00</span>
+        </div>
+      </div>
+
+      <!-- Expenses Action Bar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <h4 style="font-size:0.95rem; font-weight:700; margin:0;">Expense History</h4>
+          <span class="badge badge-date" id="expense-count-badge" style="font-size:0.7rem; font-weight:700; padding:1px 7px;">0</span>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-prop-add-expense">
+          <i data-lucide="plus"></i> Add Expense
+        </button>
+      </div>
+
+      <!-- Expenses Search & Filter Bar -->
+      <div class="expense-filter-bar no-print">
+        <div class="search-input-box expense-search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="expense-search-input" placeholder="Search title, paid to, notes..." autocomplete="off">
+          <button type="button" id="expense-search-clear" class="btn-search-clear" style="display:none;" title="Clear search">&times;</button>
+        </div>
+        <div class="expense-filter-dropdowns">
+          <select id="expense-filter-category" class="expense-filter-select" title="Filter by Category">
+            <option value="all">All Categories</option>
+            <option value="Repairs & Maintenance">Repairs & Maintenance</option>
+            <option value="Owner Takeout">Owner Takeout</option>
+            <option value="Plumbing">Plumbing</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Painting / Renovation">Painting / Renovation</option>
+            <option value="Property Tax / Municipal">Property Tax / Municipal</option>
+            <option value="Cleaning & Sanitation">Cleaning & Sanitation</option>
+            <option value="Carpentry">Carpentry</option>
+            <option value="Appliances">Appliances</option>
+            <option value="Other">Other</option>
+          </select>
+          <select id="expense-filter-month" class="expense-filter-select" title="Filter by Month">
+            <option value="all">All Months</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Expenses List Container -->
+      <div id="property-expenses-container" class="bills-list" style="max-height: 480px; overflow-y: auto; padding-right: 2px;">
+        <div class="empty-state">
+          <i data-lucide="receipt-text" style="width:36px; height:36px;"></i>
+          <div>Loading property expenses...</div>
+        </div>
+      </div>
+
+      <!-- Printable Property Expenses Statement (Rendered via JS for Clean Print/PDF) -->
+      <div id="property-expenses-printable" class="prop-expenses-print-container">
+        <!-- Rendered dynamically via App.renderPropertyExpensesPrintSheet() -->
+      </div>
+
+      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-outline" id="btn-prop-expenses-print" title="Print preview property expenses statement">
+            <i data-lucide="printer" style="width:15px; height:15px; vertical-align:-2px;"></i>
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-prop-expenses-export-csv" title="Export expenses to CSV spreadsheet">
+            <i data-lucide="download" style="width:15px; height:15px; vertical-align:-2px;"></i>
+          </button>
+        </div>
+        <button type="button" class="btn btn-secondary" data-close="modal-property-expenses">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Expense Form -->
+  <div class="modal" id="modal-expense">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-expense-title">Add Property Expense</h3>
+        <button class="modal-close" data-close="modal-expense">&times;</button>
+      </div>
+      <form id="form-expense">
+        <input type="hidden" id="expense-id">
+        <input type="hidden" id="expense-property-id">
+
+        <div class="form-group">
+          <label for="expense-property-name">Property / Unit</label>
+          <input type="text" id="expense-property-name" readonly class="input-readonly">
+        </div>
+
+        <div class="form-group">
+          <label for="expense-title">Expense Title *</label>
+          <input type="text" id="expense-title" placeholder="Bathroom plumbing fix" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expense-category">Category *</label>
+            <select id="expense-category" required>
+              <option value="Repairs & Maintenance">Repairs & Maintenance</option>
+              <option value="Owner Takeout">Owner Takeout</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Painting / Renovation">Painting / Renovation</option>
+              <option value="Property Tax / Municipal">Property Tax / Municipal</option>
+              <option value="Cleaning & Sanitation">Cleaning & Sanitation</option>
+              <option value="Carpentry">Carpentry</option>
+              <option value="Appliances">Appliances</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="expense-amount">Amount (₹) *</label>
+            <input type="number" id="expense-amount" step="any" min="1" placeholder="850" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="expense-date">Date *</label>
+            <input type="date" id="expense-date" required>
+          </div>
+          <div class="form-group">
+            <label for="expense-method">Mode</label>
+            <select id="expense-method">
+              <option value="Cash">Cash</option>
+              <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+              <option value="Bank Transfer">Bank Transfer (NEFT / IMPS)</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="expense-paid-to">Paid To</label>
+          <input type="text" id="expense-paid-to" placeholder="Ramesh Plumber">
+        </div>
+
+        <div class="form-group">
+          <label for="expense-notes">Notes</label>
+          <input type="text" id="expense-notes" placeholder="Bill #104">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-expense">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Generate / Edit Bill -->
+  <div class="modal" id="modal-bill">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-bill-title">Generate Rent & Utility Bill</h3>
+        <button class="modal-close" data-close="modal-bill">&times;</button>
+      </div>
+      <form id="form-bill">
+        <input type="hidden" id="bill-id">
+        <div class="form-group">
+          <label for="bill-tenant-select">Tenant *</label>
+          <select id="bill-tenant-select" required>
+            <option value="">-- Choose Tenant --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Assigned Unit</label>
+          <input type="text" id="bill-property-display" readonly class="input-readonly">
+          <input type="hidden" id="bill-property-id">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bill-month">Month *</label>
+            <input type="month" id="bill-month" required>
+            <div id="bill-month-text" style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-top:3px; min-height:1rem;"></div>
+          </div>
+          <div class="form-group">
+            <label for="bill-due-date">Due Date *</label>
+            <input type="date" id="bill-due-date" required>
+          </div>
+        </div>
+
+        <div class="form-divider">Rent & Utilities Breakdown</div>
+
+        <div class="form-group">
+          <label for="bill-base-rent">Base Rent (₹) *</label>
+          <input type="number" id="bill-base-rent" step="any" min="0" required>
+        </div>
+
+        <!-- Electricity Meter Calculation Box -->
+        <div class="calc-box">
+          <div class="calc-box-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i data-lucide="zap" style="color:var(--warning); vertical-align:-2px;"></i> Electricity</span>
+            <span id="badge-elec-meter-source" class="badge badge-date" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label for="bill-prev-meter" style="margin-bottom:0;">Previous</label>
+                <button type="button" class="btn-text" id="btn-unlock-prev-elec" style="font-size:0.72rem; padding:0; display:none;" title="Click to manually adjust previous reading">
+                  <i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Edit
+                </button>
+              </div>
+              <input type="number" id="bill-prev-meter" step="any" min="0" value="0">
+              <small id="hint-prev-elec" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;"></small>
+            </div>
+            <div class="form-group">
+              <label for="bill-curr-meter">Current *</label>
+              <input type="number" id="bill-curr-meter" step="any" min="0" value="0">
+              <small id="warn-curr-elec" style="font-size:0.72rem; color:var(--danger); display:none; margin-top:2px; font-weight:600;">Must be ≥ Previous</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bill-elec-rate">Rate (₹/Unit)</label>
+              <input type="number" id="bill-elec-rate" step="any" min="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>Units Used</label>
+              <input type="text" id="bill-elec-units" readonly class="input-readonly" value="0 units">
+            </div>
+          </div>
+          <div class="calc-summary">
+            <span>Electricity Charge:</span>
+            <strong id="bill-elec-subtotal">₹0.00</strong>
+          </div>
+        </div>
+
+        <!-- Water Billing Section (Fixed or Metered) -->
+        <div class="form-group">
+          <label for="bill-water-type">Water Mode</label>
+          <select id="bill-water-type">
+            <option value="FIXED">Fixed Water Charge</option>
+            <option value="METER">Water Meter Calculation</option>
+          </select>
+        </div>
+
+        <!-- Fixed Water Input -->
+        <div class="form-group" id="bill-water-fixed-box">
+          <label for="bill-water">Water Charge (₹)</label>
+          <input type="number" id="bill-water" step="any" min="0" value="0">
+        </div>
+
+        <!-- Metered Water Box -->
+        <div class="calc-box" id="bill-water-meter-box" style="display:none;">
+          <div class="calc-box-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i data-lucide="droplet" style="color:var(--primary); vertical-align:-2px;"></i> Water Meter</span>
+            <span id="badge-water-meter-source" class="badge badge-date" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <label for="bill-prev-water-meter" style="margin-bottom:0;">Previous</label>
+                <button type="button" class="btn-text" id="btn-unlock-prev-water" style="font-size:0.72rem; padding:0; display:none;" title="Click to manually adjust previous reading">
+                  <i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Edit
+                </button>
+              </div>
+              <input type="number" id="bill-prev-water-meter" step="any" min="0" value="0">
+              <small id="hint-prev-water" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;"></small>
+            </div>
+            <div class="form-group">
+              <label for="bill-curr-water-meter">Current *</label>
+              <input type="number" id="bill-curr-water-meter" step="any" min="0" value="0">
+              <small id="warn-curr-water" style="font-size:0.72rem; color:var(--danger); display:none; margin-top:2px; font-weight:600;">Must be ≥ Previous</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="bill-water-rate">Rate (₹/Unit)</label>
+              <input type="number" id="bill-water-rate" step="any" min="0" value="0">
+            </div>
+            <div class="form-group">
+              <label>Units Used</label>
+              <input type="text" id="bill-water-units" readonly class="input-readonly" value="0 units">
+            </div>
+          </div>
+          <div class="calc-summary">
+            <span>Water Charge:</span>
+            <strong id="bill-water-subtotal">₹0.00</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="bill-maint">Maintenance (₹)</label>
+          <input type="number" id="bill-maint" step="any" min="0" value="0">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bill-other">Other (₹)</label>
+            <input type="number" id="bill-other" step="any" value="0">
+          </div>
+          <div class="form-group">
+            <label for="bill-other-desc">Reason</label>
+            <input type="text" id="bill-other-desc" placeholder="Late fee, AC repair">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="bill-discount" style="color:var(--success, #16a34a); font-weight:600;">
+              <i data-lucide="tag" style="width:13px; height:13px; vertical-align:-2px;"></i> Discount (₹)
+            </label>
+            <input type="number" id="bill-discount" step="any" min="0" value="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="bill-discount-reason">Reason</label>
+            <input type="text" id="bill-discount-reason" placeholder="Early payment">
+          </div>
+        </div>
+
+        <!-- Previous Unpaid Arrears / Balance Carryover -->
+        <div class="form-group" id="group-bill-prev-balance">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <label for="bill-prev-balance" style="margin-bottom:0;">
+              <i data-lucide="history" style="width:14px; height:14px; vertical-align:-2px; color:var(--danger);"></i> Previous Arrears (₹)
+            </label>
+            <span id="badge-prev-balance" class="badge badge-overdue" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
+          </div>
+          <input type="number" id="bill-prev-balance" step="any" value="0">
+          <small id="hint-prev-balance" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">From previous unpaid bill</small>
+        </div>
+
+        <div class="bill-total-banner">
+          <span>Total:</span>
+          <span class="total-highlight" id="bill-calculated-total">₹0.00</span>
+        </div>
+
+        <div class="form-group">
+          <label for="bill-notes">Notes</label>
+          <input type="text" id="bill-notes" placeholder="Pay via UPI before 5th">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-bill">Cancel</button>
+          <button type="submit" class="btn btn-primary">Generate Bill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: 1-Click Batch Monthly Bill Generator -->
+  <div class="modal" id="modal-batch-bills">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+            <i data-lucide="layers" style="width:16px; height:16px; color:var(--primary);"></i>
+            <h3 style="margin:0; font-size:1.15rem;">Batch Generate Bills</h3>
+          </div>
+          <span style="font-size:0.78rem; color:var(--text-muted);">Enter meter readings for all tenants &amp; generate monthly bills in one shot</span>
+        </div>
+        <button class="modal-close" data-close="modal-batch-bills">&times;</button>
+      </div>
+      <form id="form-batch-bills">
+
+        <!-- Billing Setup -->
+        <div class="app-card" style="margin-bottom:14px;">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:10px; padding-left:2px;">Billing Setup</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="batch-billing-month">Billing Month *</label>
+              <input type="month" id="batch-billing-month" required>
+            </div>
+            <div class="form-group">
+              <label for="batch-due-date">Due Date *</label>
+              <input type="date" id="batch-due-date" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Meter Reading Entry Roll -->
+        <div class="app-card" style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+            <div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:700; color:var(--text-main);">
+                <i data-lucide="gauge" style="width:14px; height:14px; color:var(--primary);"></i>
+                Meter Readings
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted);">Enter latest reading per tenant</div>
+            </div>
+            <span class="badge badge-date" id="batch-meter-count-badge">0 Tenants</span>
+          </div>
+
+          <div id="batch-meter-entries-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);">
+            <!-- Populated dynamically via JS -->
+            <div class="empty-state compact" style="padding:24px 16px;">
+              <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Empty</div>
+              <div style="font-size:0.82rem; color:var(--text-main); margin-top:4px;">Loading active tenants &amp; previous readings…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-time Roll Summary Strip -->
+        <div class="batch-roll-summary" id="batch-roll-summary" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; margin-top:0;">
+          <div>
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Estimated Billing</span>
+            <strong style="font-size:1.3rem; margin-left:6px; color:var(--primary); font-variant-numeric: tabular-nums;" id="batch-total-roll-amount">₹0.00</strong>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.78rem; color:var(--text-muted);" id="batch-total-units-summary">0 units</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">·</span>
+            <span style="font-size:0.78rem; color:var(--text-muted);" id="batch-tenant-count-summary">0 tenants</span>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding-top:16px; padding-bottom:0;">
+          <button type="button" class="btn btn-secondary" data-close="modal-batch-bills">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-batch-bills" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="zap"></i>
+            <span>Generate Bills</span>
+            <span id="batch-submit-count" style="font-size:0.78rem; opacity:0.9;">(0)</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Record Payment -->
+  <div class="modal" id="modal-payment">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Record Payment</h3>
+        <button class="modal-close" data-close="modal-payment">&times;</button>
+      </div>
+      <form id="form-payment">
+        <input type="hidden" id="pay-bill-id">
+        <div class="pay-bill-info" id="pay-bill-info">
+          <!-- Populated dynamically with bill number, tenant and balance -->
+        </div>
+        <div class="form-group">
+          <label for="pay-amount">Amount (₹) *</label>
+          <input type="number" id="pay-amount" step="any" min="1" required>
+        </div>
+        <div class="form-group">
+          <label for="pay-date">Date *</label>
+          <input type="date" id="pay-date" required>
+        </div>
+        <div class="form-group">
+          <label for="pay-method">Mode</label>
+          <select id="pay-method">
+            <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer (NEFT / IMPS)</option>
+            <option value="Cheque">Cheque</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pay-ref">Reference</label>
+          <input type="text" id="pay-ref" placeholder="UPI Ref / Bank Ref Number">
+        </div>
+        <div class="form-group">
+          <label for="pay-notes">Notes</label>
+          <input type="text" id="pay-notes" placeholder="Received via GPay">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-payment">Cancel</button>
+          <button type="submit" class="btn btn-success"><i data-lucide="check" style="width:16px; height:16px; vertical-align:-2px; margin-right:4px;"></i> Save Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit / Delete Payment Record -->
+  <div class="modal" id="modal-edit-payment">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin-bottom:2px;">Edit Payment Record</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="edit-pay-bill-info">Payment Details</span>
+        </div>
+        <button class="modal-close" data-close="modal-edit-payment">&times;</button>
+      </div>
+      <form id="form-edit-payment">
+        <input type="hidden" id="edit-pay-id">
+        <input type="hidden" id="edit-pay-bill-id">
+        <div class="form-group">
+          <label for="edit-pay-amount">Amount (₹) *</label>
+          <input type="number" id="edit-pay-amount" step="any" min="0.01" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-pay-date">Date *</label>
+            <input type="date" id="edit-pay-date" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-pay-method">Mode</label>
+            <select id="edit-pay-method">
+              <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer (NEFT / IMPS)</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-pay-ref">Reference</label>
+          <input type="text" id="edit-pay-ref" placeholder="UPI Ref / Bank Ref Number">
+        </div>
+        <div class="form-group">
+          <label for="edit-pay-notes">Notes</label>
+          <input type="text" id="edit-pay-notes" placeholder="Received via GPay">
+        </div>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <button type="button" class="btn btn-outline" id="btn-delete-payment-record" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.4);">
+            <i data-lucide="trash-2" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Delete Payment
+          </button>
+          <div style="display:flex; gap:8px; margin-left:auto;">
+            <button type="button" class="btn btn-secondary" data-close="modal-edit-payment">Cancel</button>
+            <button type="submit" class="btn btn-primary"><i data-lucide="check" style="width:14px; height:14px; vertical-align:-2px; margin-right:4px;"></i> Save Changes</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Bill Details / Invoice & Receipt View -->
+  <div class="modal" id="modal-invoice">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header no-print">
+        <h3>Invoice / Receipt</h3>
+        <button class="modal-close" data-close="modal-invoice">&times;</button>
+      </div>
+      
+      <!-- Printable / Exportable Invoice Template -->
+      <div id="invoice-printable" class="invoice-container">
+        <!-- Rendered via JS -->
+      </div>
+
+      <div class="modal-footer no-print">
+        <button type="button" class="btn btn-outline" id="btn-invoice-share" title="Share Bill via WhatsApp, SMS, or Email">
+          <i data-lucide="share-2"></i>
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-invoice-download-img" title="Download HD Receipt Image (PNG) to Gallery/Files">
+          <i data-lucide="image"></i>
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-invoice-print">
+          <i data-lucide="printer"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Fallback Share Dialog (When navigator.share is not supported or for desktop) -->
+  <div class="modal" id="modal-share">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3><i data-lucide="share-2" style="vertical-align:-2px; margin-right:4px;"></i> Share Bill & Notice</h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Send to tenant via SMS, RCS, WhatsApp or Email</span>
+        </div>
+        <button class="modal-close" data-close="modal-share">&times;</button>
+      </div>
+      <div class="share-options-body">
+        <div class="share-action-grid">
+          <button type="button" class="share-channel-btn btn-whatsapp" id="btn-share-channel-wa">
+            <i data-lucide="message-circle"></i>
+            <span>WhatsApp</span>
+          </button>
+          <button type="button" class="share-channel-btn btn-sms" id="btn-share-channel-sms">
+            <i data-lucide="message-square"></i>
+            <span>SMS / RCS</span>
+          </button>
+          <button type="button" class="share-channel-btn btn-email" id="btn-share-channel-email">
+            <i data-lucide="mail"></i>
+            <span>Email</span>
+          </button>
+          <button type="button" class="share-channel-btn btn-copy" id="btn-share-channel-copy">
+            <i data-lucide="copy"></i>
+            <span>Copy Text</span>
+          </button>
+        </div>
+
+        <!-- Dynamic UPI QR Code Preview -->
+        <div id="share-upi-card" class="share-upi-card" style="display:none;">
+          <div id="share-upi-qrcode" class="share-upi-qrcode-wrap"></div>
+          <div class="share-upi-info">
+            <div class="share-upi-badge"><i data-lucide="qr-code"></i> Instant UPI Payment</div>
+            <div id="share-upi-id-text" class="share-upi-vpa"></div>
+            <div id="share-upi-amount-text" class="share-upi-amount"></div>
+            <div class="share-upi-apps">GPay • PhonePe • Paytm • BHIM</div>
+          </div>
+          <a href="#" id="share-btn-upi-pay" class="btn btn-sm btn-primary share-upi-btn" target="_blank">
+            <i data-lucide="smartphone"></i> Pay
+          </a>
+        </div>
+
+        <!-- Real Character & Words Length View Stats Bar -->
+        <div class="share-stats-bar" id="share-stats-bar">
+          <div class="share-stat-pill" title="Real character length">
+            <i data-lucide="hash"></i>
+            <span id="share-char-count-real"><strong>0</strong> chars</span>
+          </div>
+          <div class="share-stat-pill" title="Word count">
+            <i data-lucide="align-left"></i>
+            <span id="share-word-count"><strong>0</strong> words</span>
+          </div>
+          <div class="share-stat-pill" id="share-sms-parts-pill" title="SMS Segments (160 chars / part)">
+            <i data-lucide="message-square"></i>
+            <span id="share-sms-parts"><strong>1</strong> SMS</span>
+          </div>
+          <div class="share-preview-tabs">
+            <button type="button" class="preview-mode-btn active" id="btn-view-whatsapp" title="Real WhatsApp Chat View">
+              <i data-lucide="message-circle"></i> WhatsApp View
+            </button>
+            <button type="button" class="preview-mode-btn" id="btn-view-raw" title="Raw Text View">
+              <i data-lucide="code"></i> Raw Text
+            </button>
+          </div>
+        </div>
+
+        <!-- Real WhatsApp Chat Screen Preview -->
+        <div id="share-whatsapp-screen" class="whatsapp-chat-container">
+          <div class="whatsapp-chat-header">
+            <div class="whatsapp-chat-avatar">
+              <span id="share-wa-avatar-char">T</span>
+            </div>
+            <div class="whatsapp-chat-info">
+              <div class="whatsapp-chat-name" id="share-wa-tenant-name">Tenant</div>
+              <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
+            </div>
+            <div class="whatsapp-chat-actions">
+              <i data-lucide="phone" style="width:13px; height:13px;"></i>
+              <i data-lucide="video" style="width:13px; height:13px;"></i>
+              <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
+            </div>
+          </div>
+          <div class="whatsapp-chat-body">
+            <div class="whatsapp-chat-bubble">
+              <div class="whatsapp-bubble-text" id="share-wa-bubble-content"></div>
+              <div class="whatsapp-bubble-meta">
+                <span class="whatsapp-bubble-time" id="share-wa-time">10:00 AM</span>
+                <span class="whatsapp-ticks" title="Read by tenant">✓✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Text Preview & Edit Container -->
+        <div class="form-group" id="share-raw-container" style="display:none; margin-top: 8px;">
+          <textarea id="share-preview-text" rows="8" class="form-control" style="font-size:0.82rem; font-family:monospace; resize:vertical; width:100%;" placeholder="Edit bill message here..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close="modal-share">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Modal: Send Payment Notice -->
+  <div class="modal" id="modal-reminder">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header reminder-header">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="reminder-header-icon">
+            <i data-lucide="send" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Send Payment Notice</h3>
+              <span class="badge badge-primary" style="font-size:0.7rem; font-weight:600;">Multi-Channel</span>
+            </div>
+            <div id="reminder-tenant-subtitle" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
+            SMS / RCS, WhatsApp & Email
+            </div>
+          </div>
+        </div>
+        <button class="modal-close" data-close="modal-reminder">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top:12px;">
+
+        <!-- Tenant Info Card -->
+        <div class="app-card reminder-tenant-card" style="margin-bottom:14px;">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:8px; padding-left:2px;">Tenant</div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="reminder-tenant-avatar">
+              <span id="reminder-tenant-avatar-char">T</span>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; font-size:0.9rem; color:var(--text-main);" id="reminder-tenant-name">Tenant Name</div>
+              <div style="font-size:0.78rem; color:var(--text-muted);" id="reminder-tenant-unit">Unit • Phone</div>
+            </div>
+            <div style="font-size:0.85rem; font-weight:800; color:var(--danger);" id="reminder-tenant-balance">₹0.00 due</div>
+          </div>
+        </div>
+
+        <!-- Channel Selector -->
+        <div class="form-group">
+          <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Dispatch Channel</label>
+          <select id="reminder-channel-select" class="form-control reminder-channel-select">
+            <option value="sms_rcs" selected>SMS / RCS — Native Messages</option>
+            <option value="whatsapp">WhatsApp — Direct Chat</option>
+            <option value="email">Email — Send to Email</option>
+          </select>
+        </div>
+
+        <!-- Notice Template Selector -->
+        <div class="form-group" style="margin-top:14px;">
+          <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Notice Template</label>
+          <select id="reminder-template-select" class="form-control reminder-template-select">
+            <option value="gentle" selected>Gentle Reminder — Polite notice for upcoming rent</option>
+            <option value="due_today">Due Today — Rent due today</option>
+            <option value="overdue">Overdue Notice — Urgent unpaid dues</option>
+            <option value="receipt">Payment Thank You — Confirm receipt & balance</option>
+          </select>
+        </div>
+
+        <!-- Real Character & Words Length View Stats Bar -->
+        <div class="share-stats-bar reminder-stats-bar" style="margin-top: 14px;">
+          <div class="share-stat-pill" title="Character count">
+            <i data-lucide="hash"></i>
+            <span id="reminder-stat-chars"><strong>0</strong> chars</span>
+          </div>
+          <div class="share-stat-pill" title="Word count">
+            <i data-lucide="align-left"></i>
+            <span id="reminder-stat-words"><strong>0</strong> words</span>
+          </div>
+          <div class="share-stat-pill" id="reminder-stat-sms-pill" title="SMS Segments (160 chars / part)">
+            <i data-lucide="message-square"></i>
+            <span id="reminder-stat-sms"><strong>1</strong> SMS</span>
+          </div>
+        </div>
+
+        <!-- Real WhatsApp Chat Screen Preview for Reminders -->
+        <div class="reminder-preview-card">
+
+          <!-- WhatsApp Message Bubble Only (shown when WhatsApp channel selected) -->
+          <div id="reminder-wa-bubble-only" class="reminder-wa-bubble-only" style="display:none;">
+            <div class="whatsapp-chat-bubble wa-sent">
+              <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
+              <div class="whatsapp-bubble-meta">
+                <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
+                <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Full WhatsApp Chat Screen (shown when SMS/Email selected for reference) -->
+          <div id="reminder-whatsapp-screen" class="whatsapp-chat-container reminder-whatsapp-preview" style="display:none;">
+            <div class="whatsapp-chat-header">
+              <div class="whatsapp-chat-avatar">
+                <span id="reminder-wa-avatar-char">T</span>
+              </div>
+              <div class="whatsapp-chat-info">
+                <div class="whatsapp-chat-name" id="reminder-wa-tenant-name">Tenant</div>
+                <div class="whatsapp-chat-status"><span class="wa-online-dot"></span> online</div>
+              </div>
+              <div class="whatsapp-chat-actions">
+                <i data-lucide="phone" style="width:13px; height:13px;"></i>
+                <i data-lucide="video" style="width:13px; height:13px;"></i>
+                <i data-lucide="more-vertical" style="width:13px; height:13px;"></i>
+              </div>
+            </div>
+            <div class="whatsapp-chat-body">
+              <div class="whatsapp-chat-bubble">
+                <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content-full"></div>
+                <div class="whatsapp-bubble-meta">
+                  <span class="whatsapp-bubble-time" id="reminder-wa-time-full">10:00 AM</span>
+                  <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raw Text Preview & Edit Container -->
+        <div class="form-group" id="reminder-raw-container" style="display:none; margin-top: 14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-weight:600; margin-bottom:0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Message Text (Editable)</label>
+            <button type="button" class="btn-text" id="btn-copy-reminder-msg" style="font-size:0.75rem;">
+              <i data-lucide="copy" style="width:12px; height:12px; vertical-align:-1px;"></i> Copy
+            </button>
+          </div>
+          <textarea id="reminder-message-text" rows="9" class="form-control" style="font-size:0.82rem; font-family:monospace; line-height:1.45; resize:vertical; width:100%; white-space:pre-wrap;" placeholder="Edit notice text here..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-wrap:wrap; gap:8px; padding-top:16px;">
+        <button type="button" class="btn btn-secondary" data-close="modal-reminder">Cancel</button>
+        <button type="button" class="btn btn-primary reminder-send-btn" id="btn-send-reminder-primary" style="flex:1; min-width:200px;">
+          <i data-lucide="send" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send Notice</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Modal: Mobile Action Sheet Pop-up (Full View Options for 3-Dot Click) -->
+  <div class="modal action-sheet-modal" id="modal-action-sheet">
+    <div class="action-sheet-dialog">
+      <div class="action-sheet-handle-bar"></div>
+      <div class="action-sheet-header">
+        <h3 id="action-sheet-title" class="action-sheet-title">Options</h3>
+        <span id="action-sheet-subtitle" class="action-sheet-subtitle">Select an action</span>
+      </div>
+      <div class="action-sheet-body" id="action-sheet-items">
+        <!-- Rendered dynamically via JS with big, easy-to-tap buttons -->
+      </div>
+      <div class="action-sheet-footer">
+        <button type="button" class="btn btn-secondary btn-block action-sheet-btn-cancel" data-close="modal-action-sheet">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Protective Hold-to-Delete Confirmation -->
+  <div class="modal" id="modal-confirm-delete">
+    <div class="modal-dialog">
+      <div class="modal-header" style="border-bottom:none; padding-bottom:0;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:36px; height:36px; border-radius:var(--radius-full); background:var(--danger-light); display:flex; align-items:center; justify-content:center; color:var(--danger); flex-shrink:0;">
+            <i data-lucide="alert-triangle" style="width:20px; height:20px;"></i>
+          </div>
+          <div>
+            <h3 id="delete-modal-title" style="color:var(--danger); margin-bottom:2px;">Confirm Deletion</h3>
+            <span id="delete-modal-subtitle" style="font-size:0.75rem; color:var(--text-muted);">Protective Confirmation</span>
+          </div>
+        </div>
+        <button class="modal-close" data-close="modal-confirm-delete">&times;</button>
+      </div>
+
+      <div style="margin: 16px 0;">
+        <div id="delete-modal-warning-box" class="delete-warning-box">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <p style="font-size:0.8rem; color:var(--text-muted); text-align:center; margin-bottom:12px;">
+          To prevent accidental deletion, press and hold the button below for 10 seconds.
+        </p>
+
+        <!-- Interactive Hold to Delete Button -->
+        <div class="hold-delete-wrapper">
+          <button type="button" class="btn-hold-delete" id="btn-hold-delete">
+            <div class="hold-delete-progress" id="hold-delete-progress"></div>
+            <div class="hold-delete-content">
+              <i data-lucide="trash-2" id="hold-delete-icon" style="width:18px; height:18px;"></i>
+              <span id="hold-delete-label">Hold to Delete (10s)</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="border-top:none; padding-top:0;">
+        <button type="button" class="btn btn-secondary btn-block" data-close="modal-confirm-delete">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings & LAN Details -->
+  <div class="modal" id="modal-settings">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>App Settings</h3>
+        <button class="modal-close" data-close="modal-settings">&times;</button>
+      </div>
+      <div class="settings-body">
+        
+        <div class="settings-section">
+          <h4><i data-lucide="palette" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Appearance &amp; Theme</h4>
+          <p class="settings-desc">Choose between Light mode, Dark mode, or follow your device system settings.</p>
+          <div class="form-group" style="margin-bottom:0;">
+            <select id="settings-theme-select">
+              <option value="system">Auto (System Default)</option>
+              <option value="light">Light Mode</option>
+              <option value="dark">Dark Mode</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4><i data-lucide="shield-check" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> App Security (4-Digit PIN Lock)</h4>
+          <p class="settings-desc">Protect your rental figures and tenant records with a quick 4-digit PIN whenever the app is opened or backgrounded.</p>
+          <div id="pin-settings-status" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="lock" style="width:16px; height:16px; color:var(--text-muted);" id="pin-status-icon"></i>
+              <span style="font-size:0.85rem; font-weight:600;" id="pin-status-text">PIN Lock: Disabled</span>
+            </div>
+            <span class="badge badge-date" id="pin-status-badge">OFF</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-open-pin-setup" style="flex:1;">
+              <i data-lucide="key-round"></i> Set PIN
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-disable-pin" style="display:none; color:var(--danger); border-color:rgba(239,68,68,0.3);">
+              <i data-lucide="unlock"></i> Turn Off PIN
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4><i data-lucide="file-spreadsheet" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Tax &amp; Accounting CSV Exports</h4>
+          <p class="settings-desc">Download clean Excel/CSV spreadsheets for annual tax filing, CA accounting, and property financial audits.</p>
+          <div class="export-csv-control-group" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <div style="flex:1; min-width:220px;">
+              <select id="select-export-category" class="form-control" style="width:100%; height:40px; border:1px solid var(--border); border-radius:var(--radius-sm); padding:0 12px; background:var(--surface); color:var(--text-main); font-size:0.9rem;">
+                <option value="bills">Rent Bills (Monthly Invoices &amp; Balances)</option>
+                <option value="expenses">Property Expenses (Maintenance &amp; Utilities)</option>
+                <option value="payments">Payment Receipts (UPI, Cash &amp; Bank)</option>
+                <option value="tenants">Tenants &amp; Security Deposits Held</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-run-csv-export" style="display:flex; align-items:center; justify-content:center; gap:8px; height:40px; padding:0 20px; white-space:nowrap; font-weight:600;">
+              <i data-lucide="download"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4><i data-lucide="database" style="vertical-align:-2px; margin-right:4px; color:var(--primary);"></i> Import & Export Database</h4>
+          <p class="settings-desc">Export your complete database (properties, tenants, bills, payments, expenses) as a portable JSON file, or import and restore data on any device.</p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <a href="/api/backup/export" class="btn btn-secondary btn-block" style="text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;" download>
+              <i data-lucide="download-cloud"></i> Export Database (.json)
+            </a>
+            <div>
+              <input type="file" id="input-restore-backup" accept=".json" style="display:none;">
+              <button type="button" class="btn btn-secondary btn-block" id="btn-trigger-restore" style="display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i data-lucide="upload-cloud"></i> Import DB
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Set Up / Change 4-Digit Security PIN -->
+  <div class="modal" id="modal-pin-setup">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="pin-setup-modal-title">Configure 4-Digit PIN</h3>
+        <button class="modal-close" data-close="modal-pin-setup">&times;</button>
+      </div>
+      <form id="form-pin-setup">
+        <p class="settings-desc" style="margin-bottom:14px;">
+          Set a 4-digit PIN to protect your rental records.
+        </p>
+
+        <div class="form-group" id="group-current-pin" style="display:none;">
+          <label for="input-current-pin">Current PIN *</label>
+          <input type="password" id="input-current-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="input-new-pin">New PIN *</label>
+          <input type="password" id="input-new-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
+          <small id="hint-new-pin" class="form-inline-feedback" style="color:var(--text-muted);">Must be exactly 4 numbers (0-9).</small>
+        </div>
+
+        <div class="form-group">
+          <label for="input-confirm-pin">Confirm PIN *</label>
+          <input type="password" id="input-confirm-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
+          <small id="hint-confirm-pin" class="form-inline-feedback" style="display:none;"></small>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close="modal-pin-setup">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-pin">Save PIN</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Connect Phone via Wi-Fi / Local Network Sharing -->
+  <div class="modal" id="modal-lan-share">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i data-lucide="smartphone" style="vertical-align:-2px; margin-right:6px;"></i> Connect Phone (Wi-Fi)</h3>
+        <button class="modal-close" data-close="modal-lan-share">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px 20px 24px;">
+        <div id="lan-share-status-wrap" style="margin-bottom:14px; text-align:center;">
+          <span id="lan-share-badge" class="badge" style="padding:6px 14px; font-size:13px; font-weight:600; border-radius:20px;">
+            Checking status...
+          </span>
+        </div>
+
+        <div id="lan-share-qrcode-container" style="display:flex; justify-content:center; align-items:center; margin:16px auto; padding:16px; background:#ffffff; border-radius:12px; width:200px; height:200px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <div id="lan-share-qrcode"></div>
+        </div>
+
+        <p id="lan-share-instructions" style="text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+          Scan with your phone camera while connected to the same Wi-Fi network.
+        </p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="font-size:12px; font-weight:600; color:var(--text-muted);">Direct Mobile URL:</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="lan-share-url-input" readonly style="font-size:12px; font-family:monospace; cursor:text; flex:1;" onclick="this.select();">
+            <button type="button" class="btn btn-secondary" id="btn-copy-lan-url" style="white-space:nowrap; padding:0 12px; font-size:13px;">
+              <i data-lucide="copy" style="width:14px; height:14px; vertical-align:-2px;"></i> Copy
+            </button>
+          </div>
+        </div>
+
+        <div id="lan-share-inactive-hint" style="display:none; padding:12px 14px; background:rgba(234, 179, 8, 0.12); border:1px solid rgba(234, 179, 8, 0.4); border-radius:8px; font-size:12px; line-height:1.45; color:var(--text-main);">
+          ⚠️ <strong>Local Loopback Only:</strong> LAN sharing is currently inactive. Run RentBill with <code>./rentbill -share</code> (or <code>make share</code>) to enable mobile access across your Wi-Fi network.
+        </div>
+
+        <div class="modal-footer" style="padding:0; margin-top:16px; border:none; display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary" data-close="modal-lan-share">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full-Screen 4-Digit Security PIN Lock Screen -->
+  <div id="app-lock-screen" class="lock-screen-overlay" style="display:none;">
+    <div class="lock-screen-dialog">
+      <div class="lock-icon-circle">
+        <i data-lucide="shield-check"></i>
+      </div>
+      <h2 class="lock-title">RentBill Protected</h2>
+      <p class="lock-subtitle" id="lock-screen-subtitle">Enter 4-Digit PIN to unlock</p>
+
+      <!-- 4 PIN Dot Indicators -->
+      <div class="pin-dots-wrapper" id="lock-pin-dots">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+
+      <!-- Tactile 3x4 Keypad -->
+      <div class="pin-keypad-grid">
+        <button type="button" class="pin-key" data-key="1">1</button>
+        <button type="button" class="pin-key" data-key="2">2</button>
+        <button type="button" class="pin-key" data-key="3">3</button>
+        <button type="button" class="pin-key" data-key="4">4</button>
+        <button type="button" class="pin-key" data-key="5">5</button>
+        <button type="button" class="pin-key" data-key="6">6</button>
+        <button type="button" class="pin-key" data-key="7">7</button>
+        <button type="button" class="pin-key" data-key="8">8</button>
+        <button type="button" class="pin-key" data-key="9">9</button>
+        <button type="button" class="pin-key pin-key-fn" data-key="clear" title="Clear">C</button>
+        <button type="button" class="pin-key" data-key="0">0</button>
+        <button type="button" class="pin-key pin-key-fn pin-key-backspace" data-key="backspace" title="Delete" aria-label="Backspace">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="pin-fn-icon">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+            <line x1="18" y1="9" x2="12" y2="15"/>
+            <line x1="12" y1="9" x2="18" y2="15"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="lock-screen-footer-hint">
+        <span><i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Protected SQLite Records</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (Local, No CDN) -->
+  <script src="/js/lucide.min.js"></script>
+  <script src="/js/qrcode.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/share.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

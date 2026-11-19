@@ -1,0 +1,494 @@
+package api_test
+
+import (
+	"bytes"
+	"encoding/json"
+	"io/fs"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"testing"
+	"testing/fstest"
+
+	"rentbill/internal/api"
+	"rentbill/internal/database"
+)
+
+func setupTestServer(t *testing.T) (*api.Server, *database.DB, *http.ServeMux, func()) {
+	t.Helper()
+	tempDir, err := os.MkdirTemp("", "rentbill_api_test_*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	dbPath := filepath.Join(tempDir, "test_api.db")
+	db, err := database.InitDB(dbPath)
+	if err != nil {
+		os.RemoveAll(tempDir)
+		t.Fatalf("failed to init db: %v", err)
+	}
+
+	server := api.NewServer(db)
+	mux := http.NewServeMux()
+	emptyFS := fstest.MapFS{}
+	api.RegisterRoutes(mux, server, fs.FS(emptyFS))
+
+	cleanup := func() {
+		db.Close()
+		os.RemoveAll(tempDir)
+	}
+	return server, db, mux, cleanup
+}
+
+func TestServerSideAuthMiddleware(t *testing.T) {
+	_, db, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	// 1. PIN disabled initially -> /api/dashboard should succeed
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK when PIN disabled, got %d", rec.Code)
+	}
+
+	// 2. Enable PIN '1234'
+	if err := db.SetPIN("1234"); err != nil {
+		t.Fatalf("failed setting PIN: %v", err)
+	}
+
+	// 3. Request without auth -> must be rejected with 401 Unauthorized
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized when PIN enabled, got %d", rec.Code)
+	}
+
+	var errResp map[string]interface{}
+	_ = json.NewDecoder(rec.Body).Decode(&errResp)
+	if errResp["pin_required"] != true {
+		t.Errorf("expected pin_required: true in response, got %v", errResp)
+	}
+
+	// 4. Verify with wrong PIN
+	wrongBody, _ := json.Marshal(map[string]string{"pin": "0000"})
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/verify", bytes.NewReader(wrongBody))
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 for wrong PIN, got %d", rec.Code)
+	}
+
+	// 5. Verify with correct PIN
+	correctBody, _ := json.Marshal(map[string]string{"pin": "1234"})
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/verify", bytes.NewReader(correctBody))
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for correct PIN, got %d", rec.Code)
+	}
+
+	var verifyResp struct {
+		Success bool   `json:"success"`
+		Token   string `json:"token"`
+	}
+	_ = json.NewDecoder(rec.Body).Decode(&verifyResp)
+	if !verifyResp.Success || verifyResp.Token == "" {
+		t.Fatalf("expected success and valid token, got %v", verifyResp)
+	}
+
+	// Check cookie
+	cookies := rec.Result().Cookies()
+	var sessionCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "rentbill_session" {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil || sessionCookie.Value != verifyResp.Token {
+		t.Fatalf("expected rentbill_session cookie with token value, got %v", sessionCookie)
+	}
+
+	// 6. Request with Cookie -> should succeed with 200 OK
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK with session cookie, got %d", rec.Code)
+	}
+
+	// 7. Request with Bearer header -> should succeed with 200 OK
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Header.Set("Authorization", "Bearer "+verifyResp.Token)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK with Bearer token, got %d", rec.Code)
+	}
+
+	// 8. Logout
+	req = httptest.NewRequest(http.MethodPost, "/api/auth/logout", nil)
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for logout, got %d", rec.Code)
+	}
+
+	// 9. Subsequent request with old session should fail with 401
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.AddCookie(sessionCookie)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 after logout, got %d", rec.Code)
+	}
+}
+
+func TestLocalGUISecurityMiddleware(t *testing.T) {
+	server, _, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	const secretToken = "super_secret_local_gui_token_12345"
+	server.SetLocalAppToken(secretToken)
+	handler := server.SecurityMiddleware(mux)
+
+	// 1. Missing token on /api/ endpoint -> should return 403 Forbidden
+	req := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden without token, got %d", rec.Code)
+	}
+
+	// 2. Invalid token on /api/ endpoint -> should return 403 Forbidden
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("X-RentBill-Token", "wrong_token")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden with wrong token, got %d", rec.Code)
+	}
+
+	// 3. Valid token on header -> should succeed with 200 OK
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("X-RentBill-Token", secretToken)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK with valid token, got %d", rec.Code)
+	}
+
+	// Verify Security Headers
+	if rec.Header().Get("X-Frame-Options") != "DENY" {
+		t.Errorf("missing or incorrect X-Frame-Options header")
+	}
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Errorf("missing or incorrect X-Content-Type-Options header")
+	}
+
+	// 4. DNS Rebinding / Invalid Host -> should return 400 Bad Request
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "malicious-site.com:8080"
+	req.Header.Set("X-RentBill-Token", secretToken)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request on rebinding host, got %d", rec.Code)
+	}
+
+	// 5. Cross-Origin CSRF attack from external webpage -> should return 403 Forbidden
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Origin", "http://evil-website.com")
+	req.Header.Set("X-RentBill-Token", secretToken)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden on external origin, got %d", rec.Code)
+	}
+
+	// 6. External Referer -> should return 403 Forbidden
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Referer", "http://evil-website.com/phishing.html")
+	req.Header.Set("X-RentBill-Token", secretToken)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden on external referer, got %d", rec.Code)
+	}
+}
+
+func TestLANSharingAndPrivateIPValidation(t *testing.T) {
+	server, _, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	const secretToken = "lan_sharing_secret_token_99999"
+	server.SetLocalAppToken(secretToken)
+	server.SetAllowRemote(true) // LAN sharing enabled
+	server.SetNetworkInfo(8080, []string{"http://192.168.1.100:8080/?token=" + secretToken}, true)
+	handler := server.SecurityMiddleware(mux)
+
+	// 1. GET /api/network/info -> should return LAN endpoints and port 8080
+	req := httptest.NewRequest(http.MethodGet, "/api/network/info", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("X-RentBill-Token", secretToken)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK for /api/network/info, got %d", rec.Code)
+	}
+
+	var netInfo struct {
+		LanShared bool     `json:"lan_shared"`
+		Port      int      `json:"port"`
+		LanURLs   []string `json:"lan_urls"`
+		Token     string   `json:"token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &netInfo); err != nil {
+		t.Fatalf("failed decoding network info: %v", err)
+	}
+	if !netInfo.LanShared || netInfo.Port != 8080 || len(netInfo.LanURLs) == 0 {
+		t.Errorf("unexpected network info response: %+v", netInfo)
+	}
+
+	// 2. Private LAN IPs should be accepted when LAN sharing is enabled
+	validPrivateHosts := []string{
+		"192.168.1.50:8080",
+		"10.0.0.12:8080",
+		"172.16.5.2:8080",
+		"192.168.0.1",
+	}
+	for _, host := range validPrivateHosts {
+		req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+		req.Host = host
+		req.Header.Set("X-RentBill-Token", secretToken)
+		rec = httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Errorf("expected 200 OK for private LAN host %s, got %d", host, rec.Code)
+		}
+	}
+
+	// 3. Public domains and non-private IPs MUST still be rejected with 400 Bad Request to prevent DNS rebinding
+	publicHosts := []string{
+		"evil.com:8080",
+		"attacker-rebinding.org:8080",
+		"8.8.8.8:8080", // Public IP
+		"1.1.1.1:8080", // Public IP
+	}
+	for _, host := range publicHosts {
+		req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+		req.Host = host
+		req.Header.Set("X-RentBill-Token", secretToken)
+		rec = httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 Bad Request for non-private host %s, got %d", host, rec.Code)
+		}
+	}
+}
+
+func TestDefaultSecurityModeWithoutToken(t *testing.T) {
+	server, _, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	// Default: server.LocalAppToken is "" (no -token supplied)
+	handler := server.SecurityMiddleware(mux)
+
+	// 1. Health check /api/health should always return 200 OK
+	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	req.Host = "127.0.0.1:8080"
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/health, got %d", rec.Code)
+	}
+
+	// 2. Normal API access should succeed without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for /api/dashboard without token, got %d", rec.Code)
+	}
+
+	// 3. DNS Rebinding must still be rejected even without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "evil-domain.com:8080"
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 Bad Request for rebinding domain without token, got %d", rec.Code)
+	}
+
+	// 4. Cross-Origin CSRF must still be rejected even without token
+	req = httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
+	req.Host = "127.0.0.1:8080"
+	req.Header.Set("Origin", "http://malicious-website.com")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for external origin without token, got %d", rec.Code)
+	}
+}
+
+func TestPaymentAPIEndpoints(t *testing.T) {
+	_, db, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	propID, _ := db.CreateProperty(&database.Property{Name: "Unit B", UnitType: "Apartment", DefaultRent: 8000})
+	tenantID, _ := db.CreateTenant(&database.Tenant{Name: "Bob", Phone: "9876543210", PropertyID: &propID})
+	billID, _ := db.CreateBill(&database.Bill{TenantID: tenantID, PropertyID: propID, BillingMonth: "2026-11", DueDate: "2099-11-20", BaseRent: 8000})
+
+	// 1. POST /api/payments
+	payBody, _ := json.Marshal(map[string]interface{}{
+		"bill_id":        billID,
+		"amount":         3000,
+		"payment_date":   "2026-11-05",
+		"payment_method": "UPI",
+		"notes":          "GPay first half",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/payments", bytes.NewReader(payBody))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var createdPay database.Payment
+	_ = json.NewDecoder(rec.Body).Decode(&createdPay)
+	if createdPay.ID == 0 || createdPay.Amount != 3000 {
+		t.Fatalf("unexpected created payment: %+v", createdPay)
+	}
+
+	// 2. GET /api/bills/{id}/payments
+	req = httptest.NewRequest(http.MethodGet, "/api/bills/"+strconv.FormatInt(billID, 10)+"/payments", nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from bill payments, got %d", rec.Code)
+	}
+	var payments []database.Payment
+	_ = json.NewDecoder(rec.Body).Decode(&payments)
+	if len(payments) != 1 || payments[0].ID != createdPay.ID {
+		t.Fatalf("expected 1 payment in list, got %+v", payments)
+	}
+
+	// 3. GET /api/payments/{id}
+	req = httptest.NewRequest(http.MethodGet, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment detail, got %d", rec.Code)
+	}
+
+	// 4. PUT /api/payments/{id} (edit amount to 8000)
+	editBody, _ := json.Marshal(map[string]interface{}{
+		"amount":         8000,
+		"payment_date":   "2026-11-06",
+		"payment_method": "Cash",
+		"notes":          "Full settlement",
+	})
+	req = httptest.NewRequest(http.MethodPut, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), bytes.NewReader(editBody))
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment update, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// Verify bill is now PAID
+	b, _ := db.GetBillByID(billID)
+	if b.Status != "PAID" || b.PaidAmount != 8000 {
+		t.Fatalf("expected bill to be PAID 8000, got %s, %f", b.Status, b.PaidAmount)
+	}
+
+	// 5. DELETE /api/payments/{id}
+	req = httptest.NewRequest(http.MethodDelete, "/api/payments/"+strconv.FormatInt(createdPay.ID, 10), nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from payment delete, got %d", rec.Code)
+	}
+
+	// Verify bill is now PENDING 0
+	b, _ = db.GetBillByID(billID)
+	if b.Status != "PENDING" || b.PaidAmount != 0 {
+		t.Fatalf("expected bill to be PENDING 0 after delete, got %s, %f", b.Status, b.PaidAmount)
+	}
+}
+
+func TestBatchBillAPIEndpoint(t *testing.T) {
+	_, db, mux, cleanup := setupTestServer(t)
+	defer cleanup()
+
+	propID, err := db.CreateProperty(&database.Property{
+		Name:              "Green Acres 101",
+		DefaultRent:       12000,
+		ElectricityRate:   8.5,
+		WaterBillingType:  "FIXED",
+		WaterCharge:       250,
+		MaintenanceCharge: 400,
+	})
+	if err != nil {
+		t.Fatalf("failed creating property: %v", err)
+	}
+
+	_, err = db.CreateTenant(&database.Tenant{
+		Name:             "Bob Builder",
+		Phone:            "9988776655",
+		PropertyID:       &propID,
+		OpeningArrear:    500,
+		InitialElecMeter: 200,
+		IsActive:         true,
+	})
+	if err != nil {
+		t.Fatalf("failed creating tenant: %v", err)
+	}
+
+	// Test GET /api/bills/batch/preview
+	reqPrev := httptest.NewRequest(http.MethodGet, "/api/bills/batch/preview?month=2026-12", nil)
+	recPrev := httptest.NewRecorder()
+	mux.ServeHTTP(recPrev, reqPrev)
+	if recPrev.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK from batch preview API, got %d", recPrev.Code)
+	}
+
+	// POST /api/bills/batch
+	batchBody, _ := json.Marshal(map[string]string{
+		"billing_month": "2026-12",
+		"due_date":      "2026-12-10",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/bills/batch", bytes.NewReader(batchBody))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 Created from batch bill API, got %d, body=%s", rec.Code, rec.Body.String())
+	}
+
+	var res struct {
+		BillingMonth string          `json:"billing_month"`
+		CreatedCount int             `json:"created_count"`
+		Bills        []database.Bill `json:"bills"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
+		t.Fatalf("failed decoding batch response: %v", err)
+	}
+
+	if res.CreatedCount != 1 || len(res.Bills) != 1 {
+		t.Fatalf("expected 1 bill created in response, got %d", res.CreatedCount)
+	}
+	if res.Bills[0].TotalAmount != (12000 + 250 + 400 + 500) {
+		t.Fatalf("expected total amount 13150, got %f", res.Bills[0].TotalAmount)
+	}
+}

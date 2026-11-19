@@ -1,0 +1,35 @@
+# Build & Distribution Output
+dist/
+outputs/
+release/
+*.exe
+/rentbill
+/rentbill-*
+*.log
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.system_generated/
+
+# Environment Local Secrets
+.env
+.env.local
+*.local

@@ -1,0 +1,942 @@
+/* Print Stylesheet for clean receipt & PDF output */
+@page {
+  size: A4 portrait;
+  margin: 12mm 15mm 12mm 15mm;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    font-size: 12pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Pure Print Isolation: Hide all non-printable elements */
+  body > *:not(#modal-invoice):not(#modal-vacant-calculation):not(#modal-property-expenses):not(#modal-ledger),
+  .top-nav,
+  .bottom-nav,
+  .app-content,
+  .quick-actions,
+  .filter-bar,
+  .search-filter-card,
+  .modal-footer,
+  .modal-header,
+  .no-print,
+  .toast,
+  #toast,
+  #app-lock-screen,
+  .modal:not(#modal-invoice):not(#modal-vacant-calculation):not(#modal-property-expenses):not(#modal-ledger) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* When printing, hide modal if not active */
+  #modal-invoice:not(.active),
+  #modal-vacant-calculation:not(.active),
+  #modal-property-expenses:not(.active),
+  #modal-ledger:not(.active) {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  #modal-vacant-calculation.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-vacant-calculation.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-vacant-calculation .modal-header,
+  #modal-vacant-calculation .modal-footer,
+  #modal-vacant-calculation .modal-close,
+  #modal-vacant-calculation .vacant-calc-body,
+  #modal-vacant-calculation form {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Property Expenses Print Isolation */
+  #modal-property-expenses.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-property-expenses.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-property-expenses .modal-header,
+  #modal-property-expenses .modal-footer,
+  #modal-property-expenses .modal-close,
+  #modal-property-expenses .ledger-summary-grid,
+  #modal-property-expenses .expense-filter-bar,
+  #modal-property-expenses #property-expenses-container,
+  #modal-property-expenses .modal-dialog > div:not(#property-expenses-printable) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Property Expenses Printable Sheet */
+  #property-expenses-printable {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Tenant Ledger & Bills Modal Print Isolation */
+  #modal-ledger.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-ledger.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-ledger .modal-header,
+  #modal-ledger .modal-footer,
+  #modal-ledger .modal-close,
+  #modal-ledger .ledger-summary-grid,
+  #modal-ledger .ledger-tab-bar,
+  #modal-ledger #ledger-bills-container,
+  #modal-ledger .modal-dialog > div:not(#tenant-ledger-printable) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Tenant Ledger Printable Sheet */
+  #tenant-ledger-printable {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .prop-print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .prop-print-title {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    color: #111827 !important;
+    line-height: 1.2 !important;
+  }
+
+  .prop-print-subtitle {
+    font-size: 0.82rem !important;
+    color: #4b5563 !important;
+    margin-top: 3px !important;
+    font-weight: 600 !important;
+  }
+
+  .prop-print-meta {
+    font-size: 0.8rem !important;
+    color: #111827 !important;
+    margin-top: 4px !important;
+  }
+
+  .prop-print-summary-box {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    margin-bottom: 14px !important;
+    font-size: 0.82rem !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    background: #f9fafb !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .prop-print-summary-col {
+    flex: 1 !important;
+    text-align: center !important;
+  }
+
+  .prop-print-summary-lbl {
+    font-size: 0.68rem !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .prop-print-summary-val {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+  }
+
+  .prop-print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 10px 0 !important;
+    font-size: 0.82rem !important;
+    page-break-inside: auto !important;
+  }
+
+  .prop-print-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding: 6px 8px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.5px !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .prop-print-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 6px 8px !important;
+    color: #111827 !important;
+    text-align: left !important;
+  }
+
+  .prop-print-table td.num, .prop-print-table th.num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .prop-print-table tr.total-row td {
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 2px solid #111827 !important;
+    font-weight: 800 !important;
+    background: #f9fafb !important;
+    padding: 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* =========================================================
+     PRO-STYLE PRINT SETTLEMENT STATEMENT FOR VACANT FORM
+     Minimalist, Borderless Canvas & Clean Accounting Format
+     ========================================================= */
+  #vacant-printable {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .vacant-print-brand {
+    flex: 1 !important;
+  }
+
+  .vacant-print-title {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.8px !important;
+    text-transform: uppercase !important;
+    color: #111827 !important;
+    line-height: 1.2 !important;
+  }
+
+  .vacant-print-subtitle {
+    font-size: 0.8rem !important;
+    color: #4b5563 !important;
+    margin-top: 3px !important;
+    font-weight: 600 !important;
+  }
+
+  .vacant-print-meta {
+    font-size: 0.82rem !important;
+    color: #111827 !important;
+    margin-top: 4px !important;
+  }
+
+  .vacant-print-status {
+    text-align: right !important;
+  }
+
+  .vacant-print-badge {
+    display: inline-block !important;
+    border: 1.5px solid #111827 !important;
+    padding: 2px 8px !important;
+    border-radius: 3px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .vacant-print-net-amount {
+    font-size: 1.35rem !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
+    margin-top: 3px !important;
+  }
+
+  .vacant-print-parties {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    margin-bottom: 12px !important;
+    font-size: 0.85rem !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    background: #f9fafb !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-party-col {
+    flex: 1 !important;
+  }
+
+  .vacant-print-party-right {
+    text-align: right !important;
+  }
+
+  .vacant-print-party-lbl {
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .vacant-print-party-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+  }
+
+  .vacant-print-party-sub {
+    color: #374151 !important;
+    font-size: 0.82rem !important;
+    margin-top: 2px !important;
+  }
+
+  .vacant-print-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 10px 0 !important;
+    font-size: 0.85rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding: 6px 8px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.5px !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 5px 8px !important;
+    color: #111827 !important;
+    text-align: left !important;
+  }
+
+  .vacant-print-table td.num, .vacant-print-table th.num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .vacant-table-section-row td {
+    background: #f9fafb !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    color: #1f2937 !important;
+    text-transform: uppercase !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+    border-top: 1px solid #d1d5db !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-subtotal-row td {
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1px solid #111827 !important;
+    font-weight: 700 !important;
+    background: #fafafa !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-final-row td {
+    border-top: 2px solid #111827 !important;
+    border-bottom: 2px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+    background: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-words {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 3px solid #111827 !important;
+    border-radius: 2px !important;
+    padding: 5px 10px !important;
+    margin-top: 8px !important;
+    color: #1f2937 !important;
+    font-size: 0.8rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .vacant-print-notes {
+    font-size: 0.78rem !important;
+    color: #4b5563 !important;
+    margin-top: 6px !important;
+    font-style: italic !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-print-signatures {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 40px !important;
+    margin-top: 32px !important;
+    margin-bottom: 10px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .vacant-sign-box {
+    flex: 1 !important;
+  }
+
+  .vacant-sign-line {
+    border-bottom: 1.5px solid #111827 !important;
+    margin-bottom: 5px !important;
+    height: 30px !important;
+  }
+
+  .vacant-sign-label {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    color: #111827 !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .vacant-sign-sub {
+    font-size: 0.72rem !important;
+    color: #6b7280 !important;
+    margin-top: 2px !important;
+  }
+
+  .vacant-print-footer {
+    border-top: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+    font-size: 0.72rem !important;
+    margin-top: 16px !important;
+    padding-top: 6px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  /* Make sure modal-invoice is cleanly displayed as the main document */
+  #modal-invoice.active {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    inset: auto !important;
+  }
+
+  #modal-invoice.active .modal-dialog {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    animation: none !important;
+    background: #ffffff !important;
+  }
+
+  #modal-invoice .modal-header,
+  #modal-invoice .modal-footer {
+    display: none !important;
+  }
+
+  /* =========================================================
+     PRO-STYLE BLACK & WHITE (MONOCHROME) PRINT INVOICE
+     Minimalist, Borderless Canvas & Clean Typography
+     ========================================================= */
+  .invoice-container {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .inv-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 2px solid #111827 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .inv-brand-section {
+    flex: 1 !important;
+  }
+
+  .inv-title {
+    color: #111827 !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    line-height: 1.2 !important;
+  }
+
+  .inv-num {
+    color: #111827 !important;
+    font-size: 0.9rem !important;
+    margin-top: 3px !important;
+  }
+
+  .inv-date {
+    color: #4b5563 !important;
+    font-size: 0.8rem !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-meta-section {
+    text-align: right !important;
+  }
+
+  .inv-period, .inv-due {
+    font-size: 0.85rem !important;
+    color: #111827 !important;
+    margin-top: 3px !important;
+  }
+
+  /* Minimalist Stamp Status Badge */
+  .badge {
+    border: 1.5px solid #111827 !important;
+    background: transparent !important;
+    color: #111827 !important;
+    padding: 2px 10px !important;
+    border-radius: 3px !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    display: inline-block !important;
+  }
+
+  .badge-paid,
+  .badge-pending,
+  .badge-overdue {
+    background: transparent !important;
+    color: #111827 !important;
+    border-color: #111827 !important;
+  }
+
+  /* Parties Section: Two Column Grid */
+  .inv-parties {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 20px !important;
+    margin-bottom: 14px !important;
+    font-size: 0.85rem !important;
+    padding: 10px 12px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+    background: #f9fafb !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .inv-party-col {
+    flex: 1 !important;
+  }
+
+  .inv-party-right {
+    text-align: right !important;
+  }
+
+  .inv-party-label {
+    font-size: 0.72rem !important;
+    text-transform: uppercase !important;
+    font-weight: 700 !important;
+    color: #6b7280 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 3px !important;
+  }
+
+  .inv-party-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+  }
+
+  .inv-party-detail {
+    color: #374151 !important;
+    font-size: 0.82rem !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-party-co {
+    color: #4b5563 !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* Clean Minimal Table */
+  .inv-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 12px 0 !important;
+    font-size: 0.88rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .inv-table th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1.5px solid #111827 !important;
+    padding: 7px 8px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .inv-table td {
+    border-bottom: 1px solid #e5e7eb !important;
+    padding: 7px 8px !important;
+    color: #111827 !important;
+    text-align: left !important;
+  }
+
+  .inv-table td.num, .inv-table th.num {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .inv-subtext {
+    font-size: 0.75rem !important;
+    color: #6b7280 !important;
+    margin-top: 2px !important;
+  }
+
+  .inv-row-discount td {
+    background: #f0fdf4 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .inv-row-arrears td {
+    background: #fef2f2 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Bookkeeping Totals */
+  .inv-total-row td {
+    border-top: 1.5px solid #111827 !important;
+    border-bottom: 1px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+    color: #111827 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .inv-paid-row td {
+    border-bottom: 1px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+  }
+
+  .inv-balance-row td {
+    border-bottom: 2px solid #111827 !important;
+    font-weight: 800 !important;
+    font-size: 1rem !important;
+    color: #111827 !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  /* Clean Minimal Amount in Words */
+  .amount-words-box {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 3px solid #111827 !important;
+    border-radius: 2px !important;
+    padding: 6px 10px !important;
+    margin-top: 10px !important;
+    color: #1f2937 !important;
+    font-size: 0.82rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Payment Details Box */
+  .payment-details-box {
+    background: transparent !important;
+    border: 1px dashed #6b7280 !important;
+    border-radius: 4px !important;
+    padding: 8px 12px !important;
+    margin-top: 12px !important;
+    color: #111827 !important;
+    font-size: 0.82rem !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .payment-details-title {
+    font-weight: 700 !important;
+    color: #111827 !important;
+    margin-bottom: 4px !important;
+    text-transform: uppercase !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .payment-details-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 4px 16px !important;
+  }
+
+  .payment-details-box div {
+    color: #111827 !important;
+  }
+
+  .mono-val {
+    font-family: monospace !important;
+    font-weight: 600 !important;
+  }
+
+  .payment-details-box.has-upi-qr {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+
+  .payment-details-info {
+    flex: 1 !important;
+  }
+
+  .invoice-qr-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 2px !important;
+    background: #ffffff !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 4px !important;
+    padding: 6px !important;
+  }
+
+  .invoice-qr-code canvas,
+  .invoice-qr-code img {
+    display: block !important;
+    width: 84px !important;
+    height: 84px !important;
+  }
+
+  .invoice-qr-label {
+    font-size: 7px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
+    color: #0f172a !important;
+  }
+
+  /* Notes */
+  .inv-notes-box {
+    font-size: 0.8rem !important;
+    color: #4b5563 !important;
+    margin-top: 8px !important;
+    font-style: italic !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Digital Invoice Notice */
+  .inv-footer-notice {
+    border-top: 1px solid #d1d5db !important;
+    color: #6b7280 !important;
+    font-size: 0.72rem !important;
+    margin-top: 20px !important;
+    padding-top: 8px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+}

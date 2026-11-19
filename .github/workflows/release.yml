@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            artifact: rentbill-linux-amd64
+            make_target: linux
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            artifact: rentbill-linux-arm64
+            make_target: linux-arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            artifact: rentbill-darwin-arm64
+            make_target: mac
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            artifact: rentbill-darwin-amd64
+            make_target: mac-intel
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            artifact: rentbill-windows-amd64.exe
+            make_target: windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Build binary
+        env:
+          CGO_ENABLED: 0
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          make ${{ matrix.make_target }}
+          echo "${{ matrix.artifact }}" >> $GITHUB_OUTPUT
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release/
+          merge-multiple: true
+
+      - name: List downloaded files
+        run: ls -lh release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: RentBill ${{ steps.get_tag.outputs.tag }}
+          body: |
+            ## RentBill ${{ steps.get_tag.outputs.tag }}
+
+            Pure Go desktop/local-server rental & billing management application.
+
+            ### Features
+            - Properties, tenants, bills, payments & expenses management
+            - Batch monthly bill generation with meter readings
+            - 4-digit PIN security lock with rate limiting
+            - CSV & JSON backup/export
+            - LAN sharing for phone access over Wi-Fi
+            - Dark theme (workshop palette)
+            - Pure Go static binary (CGO_ENABLED=0)
+
+            ### Installation
+            ```bash
+            ./rentbill.sh install --share
+            ```
+
+            Or run directly:
+            ```bash
+            ./rentbill
+            ```
+          files: release/*
+          draft: false
+          prerelease: false
