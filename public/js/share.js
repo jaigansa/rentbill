@@ -251,7 +251,7 @@ const Share = {
     const isPaid = bill.status === 'PAID' || (bill.balance_amount !== undefined && bill.balance_amount <= 0 && bill.total_amount > 0);
     if (!isPaid) {
       lines.push(divider);
-      lines.push(`📌 Once paid, kindly share the payment details / transaction screenshot.`);
+      lines.push(`📌 Share payment screenshot once paid.`);
     }
 
     if (bill.notes) {
@@ -290,7 +290,7 @@ const Share = {
         msg += ` Due Bal: ${currency}${numFmt(balance)}.`;
       }
       if (payDetails) msg += ` ${payDetails}.`;
-      if (!isPaid) msg += ` Once paid, please share payment details.`;
+      if (!isPaid) msg += ` Share payment screenshot once paid.`;
       msg += ` Thank you!`;
       return msg;
     }
@@ -352,7 +352,7 @@ const Share = {
       lines.push(payDetails);
     }
     if (!isPaid) {
-      lines.push(`Once paid, kindly share the payment details / transaction screenshot.`);
+      lines.push(`Share payment screenshot once paid.`);
     }
     lines.push(`Thank you! - RentBill`);
     return lines.join('\n');
@@ -377,7 +377,7 @@ const Share = {
           canNativeShare = true;
         }
       }
-    } catch (e) {
+    } catch {
       canNativeShare = false;
     }
 
@@ -485,7 +485,7 @@ const Share = {
     setViewMode('whatsapp');
 
     let currentFormat = 'full'; // 'full' (WhatsApp) or 'sms'
-    let fullText = this.buildBillText(bill);
+    let fullText = initialText || this.buildBillText(bill);
     let smsText = this.buildSmsRcsBillText(bill, false);
 
     const updateStatsDisplay = (text) => {
@@ -590,7 +590,7 @@ const Share = {
           if (window.App && typeof window.App.toast === 'function') {
             window.App.toast('Bill text copied to clipboard!');
           }
-        } catch (e) {
+        } catch {
           previewEl.select();
           document.execCommand('copy');
           if (window.App && typeof window.App.toast === 'function') {
@@ -1041,7 +1041,7 @@ const Share = {
       ctx.textAlign = 'left';
       ctx.fillStyle = '#0284c7';
       ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('📌 Once paid, kindly share the payment details / transaction screenshot.', 32, y + 16);
+      ctx.fillText('📌 Share payment screenshot once paid.', 32, y + 16);
       y += 20;
     }
 
@@ -1390,19 +1390,6 @@ const Share = {
     window.location.href = mailto;
   },
 
-  // Device native share sheet
-  async sendNativeShare(title, text) {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: title, text: text });
-        return true;
-      } catch (err) {
-        if (err && err.name === 'AbortError') return true;
-      }
-    }
-    return false;
-  },
-
   // Open WhatsApp directly with phone and text
   sendWhatsAppDirect(phone, text) {
     const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
@@ -1469,7 +1456,7 @@ const Share = {
           canNativeShare = true;
         }
       }
-    } catch (e) {
+    } catch {
       canNativeShare = false;
     }
 
@@ -1496,7 +1483,7 @@ const Share = {
         } else {
           window.prompt('Copy statement below:', text);
         }
-      } catch (e) {
+      } catch {
         window.prompt('Copy statement below:', text);
       }
     }

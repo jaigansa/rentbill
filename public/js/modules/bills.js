@@ -268,7 +268,7 @@ export const Bills = {
           if (badgeWater) badgeWater.style.display = 'none';
           if (hintWater) hintWater.textContent = 'Starting reading for new tenant';
         }
-      } catch (err) {
+      } catch {
         prevElecMeter.value = 0;
         prevWaterMeter.value = 0;
       }
@@ -313,7 +313,6 @@ export const Bills = {
   },
 
   renderBillCardHtml(b) {
-    const curr = window.APP_CURRENCY || '₹';
     const badgeClass = b.status === 'PAID' ? 'badge-paid' : (b.status === 'OVERDUE' ? 'badge-overdue' : (b.status === 'PARTIAL' ? 'badge-partial' : 'badge-pending'));
     
     return `
@@ -729,7 +728,7 @@ export const Bills = {
 
         ${b.status !== 'PAID' ? `
           <div class="inv-pay-instruction" style="margin: 10px 0; padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border-left: 3px solid var(--primary, #2563eb); border-radius: 6px; font-size: 0.85rem; color: var(--text);">
-            <strong>📌 Payment Note:</strong> Once paid, kindly share the payment confirmation / transaction screenshot.
+            <strong>📌 Payment Note:</strong> Share payment screenshot once paid.
           </div>
         ` : ''}
 
@@ -776,20 +775,6 @@ export const Bills = {
       this.refreshIcons();
     } catch (e) {
       this.toast('Error: ' + e.message, 'error');
-    }
-  },
-
-  async openPaymentForTenant(tenantId) {
-    try {
-      const allBills = await API.getBills();
-      const unpaid = (allBills || []).filter(b => b.tenant_id == tenantId && (b.balance_amount > 0 || b.status !== 'PAID'));
-      if (unpaid.length > 0) {
-        this.openPaymentModal(unpaid[0].id);
-      } else {
-        this.openTenantLedger(tenantId);
-      }
-    } catch (e) {
-      this.openTenantLedger(tenantId);
     }
   },
 
