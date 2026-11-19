@@ -229,6 +229,7 @@
   height: 1.15rem;
   stroke-width: 2;
   vertical-align: middle;
+  color: var(--text-main);
 }
 
 .brand-icon i, .brand-icon [data-lucide] {
