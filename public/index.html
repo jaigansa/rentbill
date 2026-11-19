@@ -575,14 +575,14 @@
   <!-- Modal: Vacant Form Calculation / Move-Out Settlement -->
   <div class="modal" id="modal-vacant-calculation">
     <div class="modal-dialog modal-lg">
-      <div class="modal-header no-print">
+      <div class="modal-header no-print vacant-header">
         <div style="display:flex; align-items:center; gap:10px;">
-          <div style="width:38px; height:38px; border-radius:var(--radius-md); background:rgba(239, 68, 68, 0.12); display:flex; align-items:center; justify-content:center; color:var(--danger); flex-shrink:0;">
+          <div class="vacant-header-icon">
             <i data-lucide="calculator" style="width:20px; height:20px;"></i>
           </div>
           <div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Vacant Form Calculation</h3>
+              <h3 style="margin:0; font-size:1.15rem; font-weight:700;">Vacant Calculation</h3>
               <span class="badge badge-warning" style="font-size:0.7rem; font-weight:600;">Move-Out Settlement</span>
             </div>
             <div id="vacant-calc-subtitle" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
@@ -595,21 +595,21 @@
 
       <div class="vacant-calc-body no-print" style="padding-top:10px;">
         <!-- Top Quick Metrics -->
-        <div class="vacant-summary-grid">
-          <div class="vacant-stat-box">
+        <div class="vacant-summary-grid vacant-stat-cards">
+          <div class="vacant-stat-box vacant-stat-tenant">
             <span class="vacant-stat-label">Resident</span>
             <span class="vacant-stat-val" id="vacant-disp-tenant">--</span>
           </div>
-          <div class="vacant-stat-box">
-            <span class="vacant-stat-label">Assigned Property</span>
+          <div class="vacant-stat-box vacant-stat-unit">
+            <span class="vacant-stat-label">Unit</span>
             <span class="vacant-stat-val text-primary" id="vacant-disp-unit">--</span>
           </div>
-          <div class="vacant-stat-box">
-            <span class="vacant-stat-label">Security Deposit</span>
+          <div class="vacant-stat-box vacant-stat-deposit">
+            <span class="vacant-stat-label">Deposit</span>
             <span class="vacant-stat-val text-success" id="vacant-disp-deposit">₹0.00</span>
           </div>
-          <div class="vacant-stat-box">
-            <span class="vacant-stat-label">Past Unpaid Dues</span>
+          <div class="vacant-stat-box vacant-stat-arrears">
+            <span class="vacant-stat-label">Arrears</span>
             <span class="vacant-stat-val text-danger" id="vacant-disp-arrears">₹0.00</span>
           </div>
         </div>
@@ -619,18 +619,18 @@
           <input type="hidden" id="vacant-prop-id">
 
           <!-- Section 1: Move-Out Details -->
-          <div class="vacant-section">
+          <div class="vacant-section vacant-section-moveout">
             <div class="vacant-section-header">
               <i data-lucide="calendar" style="width:16px; height:16px; color:var(--primary);"></i>
-              <span>Move-Out Date &amp; Tenancy Period</span>
+              <span>Move-Out Details</span>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-move-out-date">Move-Out *</label>
+                <label for="vacant-move-out-date">Move-Out Date *</label>
                 <input type="date" id="vacant-move-out-date" required>
               </div>
               <div class="form-group">
-                <label for="vacant-move-in-display">Move-In</label>
+                <label for="vacant-move-in-display">Move-In Date</label>
                 <input type="text" id="vacant-move-in-display" readonly class="input-readonly">
               </div>
             </div>
@@ -639,26 +639,26 @@
             </div>
           </div>
 
-          <!-- Section 2: Move-Out Utilities (Electricity & Water) -->
-          <div class="vacant-section">
+          <!-- Section 2: Move-Out Utilities -->
+          <div class="vacant-section vacant-section-utilities">
             <div class="vacant-section-header">
               <i data-lucide="gauge" style="width:16px; height:16px; color:var(--warning);"></i>
               <span>Final Utility Meter Readings</span>
             </div>
             
             <!-- Electricity -->
-            <div class="vacant-meter-box">
+            <div class="vacant-meter-box vacant-meter-elec">
               <div style="font-weight:600; font-size:0.82rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                 <span><i data-lucide="zap" style="width:14px; height:14px; color:var(--warning); vertical-align:-2px;"></i> Electricity (Rate: ₹<span id="vacant-elec-rate-disp">0</span>/unit)</span>
                 <span id="vacant-elec-subtotal" style="font-weight:700; color:var(--text-main);">₹0.00</span>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="vacant-prev-elec">Prev Meter</label>
+                  <label for="vacant-prev-elec">Prev Reading</label>
                   <input type="number" id="vacant-prev-elec" step="any" readonly class="input-readonly">
                 </div>
                 <div class="form-group">
-                  <label for="vacant-curr-elec">Final Meter</label>
+                  <label for="vacant-curr-elec">Final Reading</label>
                   <input type="number" id="vacant-curr-elec" step="any" min="0" placeholder="1450">
                 </div>
                 <div class="form-group">
@@ -669,18 +669,18 @@
             </div>
 
             <!-- Water -->
-            <div class="vacant-meter-box" style="margin-top:10px;">
+            <div class="vacant-meter-box vacant-meter-water" style="margin-top:10px;">
               <div style="font-weight:600; font-size:0.82rem; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                 <span><i data-lucide="droplet" style="width:14px; height:14px; color:var(--primary); vertical-align:-2px;"></i> Water Charges (<span id="vacant-water-mode-disp">Fixed</span>)</span>
                 <span id="vacant-water-subtotal" style="font-weight:700; color:var(--text-main);">₹0.00</span>
               </div>
               <div class="form-row" id="vacant-water-meter-row" style="display:none;">
                 <div class="form-group">
-                  <label for="vacant-prev-water">Prev Meter</label>
+                  <label for="vacant-prev-water">Prev Reading</label>
                   <input type="number" id="vacant-prev-water" step="any" readonly class="input-readonly">
                 </div>
                 <div class="form-group">
-                  <label for="vacant-curr-water">Final Meter</label>
+                  <label for="vacant-curr-water">Final Reading</label>
                   <input type="number" id="vacant-curr-water" step="any" min="0" placeholder="230">
                 </div>
                 <div class="form-group">
@@ -696,7 +696,7 @@
           </div>
 
           <!-- Section 3: Final Month Rent Proration -->
-          <div class="vacant-section">
+          <div class="vacant-section vacant-section-rent">
             <div class="vacant-section-header">
               <i data-lucide="home" style="width:16px; height:16px; color:var(--primary);"></i>
               <span>Move-Out Month Rent</span>
@@ -722,39 +722,39 @@
             </div>
           </div>
 
-          <!-- Section 4: Deductions & Damage Adjustments -->
-          <div class="vacant-section">
+          <!-- Section 4: Deductions & Adjustments -->
+          <div class="vacant-section vacant-section-deductions">
             <div class="vacant-section-header">
               <i data-lucide="wrench" style="width:16px; height:16px; color:var(--danger);"></i>
-              <span>Deductions, Damages &amp; Adjustments</span>
+              <span>Deductions &amp; Adjustments</span>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-arrears">Arrears (₹)</label>
+                <label for="vacant-deduct-arrears">Past Unpaid</label>
                 <input type="number" id="vacant-deduct-arrears" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-deduct-painting">Painting (₹)</label>
+                <label for="vacant-deduct-painting">Painting</label>
                 <input type="number" id="vacant-deduct-painting" step="any" min="0" placeholder="0">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-cleaning">Cleaning (₹)</label>
+                <label for="vacant-deduct-cleaning">Cleaning</label>
                 <input type="number" id="vacant-deduct-cleaning" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-deduct-repairs">Repairs (₹)</label>
+                <label for="vacant-deduct-repairs">Repairs</label>
                 <input type="number" id="vacant-deduct-repairs" step="any" min="0" placeholder="0">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-other">Other Deductions (₹)</label>
+                <label for="vacant-deduct-other">Other Deductions</label>
                 <input type="number" id="vacant-deduct-other" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-extra-credit">Credit / Advance (₹)</label>
+                <label for="vacant-extra-credit">Credit / Advance</label>
                 <input type="number" id="vacant-extra-credit" step="any" min="0" placeholder="0">
               </div>
             </div>
@@ -765,7 +765,7 @@
           </div>
 
           <!-- Live Real-Time Settlement Calculation Banner -->
-          <div class="vacant-settlement-card">
+          <div class="vacant-settlement-card vacant-breakdown-card">
             <div class="vacant-settlement-breakdown">
               <div class="breakdown-col credits-col">
                 <div class="breakdown-title text-success"><i data-lucide="plus-circle" style="width:14px; height:14px; vertical-align:-2px;"></i> Total Credits</div>
@@ -804,7 +804,7 @@
           </div>
 
           <!-- Modal Actions Footer -->
-          <div class="modal-footer no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:16px;">
+          <div class="modal-footer no-print vacant-modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:16px;">
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" class="btn btn-secondary btn-sm" id="btn-vacant-copy">
                 <i data-lucide="copy" style="width:14px; height:14px;"></i> Copy
@@ -815,7 +815,7 @@
             </div>
             <div style="display:flex; gap:8px;">
               <button type="button" class="btn btn-secondary" data-close="modal-vacant-calculation">Cancel</button>
-              <button type="button" class="btn btn-danger" id="btn-vacant-confirm">
+              <button type="button" class="btn btn-danger vacant-confirm-btn" id="btn-vacant-confirm">
                 <i data-lucide="log-out" style="width:16px; height:16px;"></i> Complete Move-Out &amp; Vacate
               </button>
             </div>

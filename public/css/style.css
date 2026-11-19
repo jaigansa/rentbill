@@ -4133,15 +4133,33 @@ select {
 /* ===================================================
    Vacant Form Calculation / Move-Out Settlement Modal
    =================================================== */
-.vacant-summary-grid {
-  display: grid;
+.vacant-header {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vacant-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px var(--danger-bg);
+}
+
+.vacant-stat-cards {
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 14px;
 }
 
 @media (min-width: 640px) {
-  .vacant-summary-grid {
+  .vacant-stat-cards {
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
   }
@@ -4150,28 +4168,41 @@ select {
 .vacant-stat-box {
   background: var(--surface-alt);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.vacant-stat-box:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: var(--shadow-sm);
+}
+
+.vacant-stat-box.vacant-stat-tenant { border-left: 3px solid var(--primary); }
+.vacant-stat-box.vacant-stat-unit { border-left: 3px solid var(--text-subtle); }
+.vacant-stat-box.vacant-stat-deposit { border-left: 3px solid var(--success); }
+.vacant-stat-box.vacant-stat-arrears { border-left: 3px solid var(--danger); }
+
 .vacant-stat-label {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
 }
 
 .vacant-stat-val {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: var(--value-text-shadow);
 }
 
 .vacant-section {
@@ -4180,11 +4211,17 @@ select {
   border-radius: var(--radius-md);
   padding: 12px 14px;
   margin-bottom: 12px;
-  transition: border-color 0.2s;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vacant-section:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .vacant-section:focus-within {
-  border-color: rgba(37, 99, 235, 0.4);
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .vacant-section-header {
@@ -4202,13 +4239,22 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s ease;
 }
+
+.vacant-meter-box:hover {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.vacant-meter-elec { border-left: 3px solid var(--warning); }
+.vacant-meter-water { border-left: 3px solid var(--primary); }
 
 .vacant-pill-btn {
   background: var(--surface-alt);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  padding: 5px 12px;
+  padding: 6px 14px;
   font-size: 0.78rem;
   font-weight: 600;
   border-radius: var(--radius-full);
@@ -4225,7 +4271,7 @@ select {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .vacant-settlement-card {
@@ -4235,6 +4281,12 @@ select {
   padding: 14px;
   margin-top: 14px;
   margin-bottom: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vacant-settlement-card:hover {
+  border-color: rgba(245, 158, 11, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .vacant-settlement-breakdown {
@@ -4255,6 +4307,12 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
+  transition: transform 0.15s ease, border-color 0.2s ease;
+}
+
+.breakdown-col:hover {
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.3);
 }
 
 .breakdown-title {
@@ -4294,23 +4352,24 @@ select {
 }
 
 .vacant-net-banner {
-  margin-top: 12px;
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
+  margin-top: 14px;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .vacant-net-banner.refund {
-  background: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.1);
   border: 1.5px solid var(--success);
 }
 
 .vacant-net-banner.refund .net-banner-icon {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   background: var(--success);
   color: white;
@@ -4318,10 +4377,11 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 0 14px var(--success-bg);
 }
 
 .vacant-net-banner.refund .net-banner-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -4329,10 +4389,11 @@ select {
 }
 
 .vacant-net-banner.refund .net-banner-val {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--success);
   line-height: 1.2;
+  text-shadow: var(--value-text-shadow);
 }
 
 .vacant-net-banner.refund .net-banner-desc {
@@ -4341,13 +4402,13 @@ select {
 }
 
 .vacant-net-banner.due {
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.1);
   border: 1.5px solid var(--danger);
 }
 
 .vacant-net-banner.due .net-banner-icon {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   background: var(--danger);
   color: white;
@@ -4355,10 +4416,11 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 0 14px var(--danger-bg);
 }
 
 .vacant-net-banner.due .net-banner-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -4366,10 +4428,11 @@ select {
 }
 
 .vacant-net-banner.due .net-banner-val {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--danger);
   line-height: 1.2;
+  text-shadow: var(--value-text-shadow);
 }
 
 .vacant-net-banner.due .net-banner-desc {
@@ -4383,8 +4446,8 @@ select {
 }
 
 .vacant-net-banner.zero .net-banner-icon {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-full);
   background: var(--text-subtle);
   color: white;
@@ -4395,7 +4458,7 @@ select {
 }
 
 .vacant-net-banner.zero .net-banner-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -4403,7 +4466,7 @@ select {
 }
 
 .vacant-net-banner.zero .net-banner-val {
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-main);
   line-height: 1.2;
@@ -4412,6 +4475,24 @@ select {
 .vacant-net-banner.zero .net-banner-desc {
   font-size: 0.75rem;
   color: var(--text-muted);
+}
+
+/* Modal footer specific to vacant modal */
+.vacant-modal-footer {
+  padding-top: 18px;
+  padding-bottom: 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.vacant-confirm-btn {
+  min-width: 200px;
+  box-shadow: 0 0 14px var(--danger-bg);
+}
+
+.vacant-confirm-btn:hover {
+  box-shadow: 0 0 20px var(--danger-bg);
+  transform: translateY(-1px);
 }
 
 /* Printable Settlement & Expense Containers (Hidden on Screen, Shown in print.css) */
