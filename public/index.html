@@ -704,7 +704,7 @@
             <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
               <button type="button" class="vacant-pill-btn active" data-rent-mode="none" id="btn-rent-mode-none">None (Already Paid)</button>
               <button type="button" class="vacant-pill-btn" data-rent-mode="prorated" id="btn-rent-mode-prorated">Prorated for Days</button>
-              <button type="button" class="vacant-pill-btn" data-rent-mode="full" id="btn-rent-mode-full">Full Month</button>
+              <button type="button" class="vacant-pill-btn" data-rent-mode="full" id="btn-rent-mode-full">Full</button>
             </div>
             <div class="form-row" id="vacant-prorate-row" style="display:none;">
               <div class="form-group">
@@ -816,7 +816,7 @@
             <div style="display:flex; gap:8px;">
               <button type="button" class="btn btn-secondary" data-close="modal-vacant-calculation">Cancel</button>
               <button type="button" class="btn btn-danger vacant-confirm-btn" id="btn-vacant-confirm">
-                <i data-lucide="log-out" style="width:16px; height:16px;"></i> Complete Move-Out &amp; Vacate
+                <i data-lucide="log-out" style="width:16px; height:16px;"></i> Vacate Unit
               </button>
             </div>
           </div>
@@ -1257,7 +1257,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close="modal-bill">Cancel</button>
-          <button type="submit" class="btn btn-primary">Generate & Save Bill</button>
+          <button type="submit" class="btn btn-primary">Generate Bill</button>
         </div>
       </form>
     </div>
@@ -1512,10 +1512,10 @@
         <!-- Format switch pills: Full breakdown vs Concise SMS/RCS -->
         <div style="margin-top: 14px; display: flex; gap: 8px;">
           <button type="button" class="filter-pill active" id="btn-share-fmt-full" style="flex:1; justify-content:center;">
-            <i data-lucide="file-text" style="width:14px; height:14px; vertical-align:-2px;"></i> Full Breakdown
+            <i data-lucide="file-text" style="width:14px; height:14px; vertical-align:-2px;"></i> Full
           </button>
           <button type="button" class="filter-pill" id="btn-share-fmt-sms" style="flex:1; justify-content:center;">
-            <i data-lucide="message-square" style="width:14px; height:14px; vertical-align:-2px;"></i> Concise SMS / RCS
+            <i data-lucide="message-square" style="width:14px; height:14px; vertical-align:-2px;"></i> Concise
           </button>
         </div>
 
@@ -1721,7 +1721,7 @@
       <div class="modal-footer" style="flex-wrap:wrap; gap:8px;">
         <button type="button" class="btn btn-secondary" data-close="modal-reminder">Cancel</button>
         <button type="button" class="btn btn-primary" id="btn-send-reminder-primary" style="flex:1;">
-          <i data-lucide="message-square" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send via SMS / RCS</span>
+          <i data-lucide="message-square" id="btn-send-primary-icon"></i> <span id="btn-send-primary-text">Send SMS</span>
         </button>
       </div>
     </div>
@@ -1824,7 +1824,7 @@
           </div>
           <div style="display:flex; gap:8px;">
             <button type="button" class="btn btn-primary btn-sm" id="btn-open-pin-setup" style="flex:1;">
-              <i data-lucide="key-round"></i> Configure 4-Digit PIN
+              <i data-lucide="key-round"></i> Set PIN
             </button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-disable-pin" style="display:none; color:var(--danger); border-color:rgba(239,68,68,0.3);">
               <i data-lucide="unlock"></i> Turn Off PIN
@@ -1860,7 +1860,7 @@
             <div>
               <input type="file" id="input-restore-backup" accept=".json" style="display:none;">
               <button type="button" class="btn btn-secondary btn-block" id="btn-trigger-restore" style="display:flex; align-items:center; justify-content:center; gap:6px;">
-                <i data-lucide="upload-cloud"></i> Import Database (.json)
+                <i data-lucide="upload-cloud"></i> Import DB
               </button>
             </div>
           </div>
@@ -1901,7 +1901,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close="modal-pin-setup">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-save-pin">Save & Enable PIN</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-pin">Save PIN</button>
         </div>
       </form>
     </div>
