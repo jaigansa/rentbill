@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"rentbill/internal/database"
@@ -47,5 +48,6 @@ func sendJSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 func sendError(w http.ResponseWriter, status int, msg string) {
+	log.Printf("API error %d: %s", status, msg)
 	sendJSON(w, status, map[string]string{"error": msg})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // ExtractToken retrieves the session token from the HTTP cookie or Authorization/X-Auth-Token header
@@ -107,16 +108,18 @@ func (s *Server) HandleAuthSetPIN(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, err := s.db.CreateSession()
-	if err == nil {
-		http.SetCookie(w, &http.Cookie{
-			Name:     "rentbill_session",
-			Value:    token,
-			Path:     "/",
-			MaxAge:   86400 * 30,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		})
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "Failed to create session")
+		return
 	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "rentbill_session",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   86400 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"token":   token,
@@ -176,5 +179,21 @@ func (s *Server) HandleAuthLogout(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Logged out successfully",
+	})
+}
+
+func (s *Server) HandleAuthPinStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		sendError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	attempts, lockoutUntil, locked := s.db.PinStatus()
+	sendJSON(w, http.StatusOK, map[string]interface{}{
+		"pin_enabled":       s.db.IsPINEnabled(),
+		"attempts":          attempts,
+		"max_attempts":      5,
+		"locked":            locked,
+		"lockout_until":     lockoutUntil.Format(time.RFC3339),
+		"lockout_remaining": int(time.Until(lockoutUntil).Seconds()),
 	})
 }

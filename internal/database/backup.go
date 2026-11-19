@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -108,7 +109,7 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 	defer tx.Rollback()
 
 	// Clear existing data cleanly
-	tables := []string{"payments", "expenses", "bills", "tenants", "properties", "app_settings"}
+	tables := []string{"payments", "expenses", "bills", "tenants", "properties", "app_settings", "app_sessions"}
 	for _, t := range tables {
 		if _, err := tx.Exec("DELETE FROM " + t); err != nil {
 			return fmt.Errorf("failed clearing table %s: %w", t, err)
@@ -201,5 +202,14 @@ func (db *DB) RestoreBackup(data *BackupData) error {
 		_, _ = tx.Exec("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", k, v)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	// VACUUM to reclaim space after restore
+	if _, err := db.Exec("VACUUM"); err != nil {
+		log.Printf("vacuum after restore: %v", err)
+	}
+
+	return nil
 }

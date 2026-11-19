@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	_ "modernc.org/sqlite"
 )
@@ -35,6 +36,13 @@ func InitDB(dataSourceName string) (*DB, error) {
 
 	if err := createTables(db); err != nil {
 		return nil, fmt.Errorf("failed creating tables: %w", err)
+	}
+
+	// Integrity check on startup
+	var integrityOK string
+	err = db.QueryRow("PRAGMA integrity_check").Scan(&integrityOK)
+	if err != nil || integrityOK != "ok" {
+		return nil, fmt.Errorf("database integrity check failed: %s", integrityOK)
 	}
 
 	return &DB{db}, nil
@@ -187,7 +195,9 @@ func createTables(db *sql.DB) error {
 		"ALTER TABLE tenants ADD COLUMN documents TEXT DEFAULT '[]'",
 	}
 	for _, m := range migrations {
-		_, _ = db.Exec(m) // Ignore if column already exists
+		if _, err := db.Exec(m); err != nil {
+			log.Printf("migration warning: %v", err)
+		}
 	}
 	return nil
 }

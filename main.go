@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"embed"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -30,14 +28,6 @@ var Version = "1.0.0"
 
 //go:embed public/*
 var publicFS embed.FS
-
-func generateSecurityToken() string {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return fmt.Sprintf("rb_%d", time.Now().UnixNano())
-	}
-	return hex.EncodeToString(b)
-}
 
 // getDefaultDBPath resolves the persistent database location following XDG standards
 func getDefaultDBPath() string {
@@ -123,6 +113,14 @@ func tryConnectRunningInstance(port string) (string, bool) {
 }
 
 func main() {
+	// Set India timezone for all date/time operations
+	loc, err := time.LoadLocation("Asia/Kolkata")
+	if err != nil {
+		log.Printf("⚠️  Could not load Asia/Kolkata timezone: %v, using system local", err)
+	} else {
+		time.Local = loc
+	}
+
 	defaultDB := getDefaultDBPath()
 
 	defaultPort := os.Getenv("PORT")
@@ -169,6 +167,13 @@ func main() {
 		log.Fatalf("❌ Database initialization failed: %v", err)
 	}
 	defer db.Close()
+
+	// Reclaim space on startup
+	if _, err := db.Exec("VACUUM"); err != nil {
+		log.Printf("⚠️  Startup VACUUM: %v", err)
+	}
+
+	log.Printf("✅ Database initialized: %s", *dbPath)
 
 	// Emergency PIN Reset CLI Flag (--reset-pin)
 	if *resetPIN {

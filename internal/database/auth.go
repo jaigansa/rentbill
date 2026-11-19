@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func hashPIN(pin string) string {
@@ -47,8 +48,43 @@ func (db *DB) VerifyPIN(pin string) bool {
 	if !db.IsPINEnabled() {
 		return true
 	}
+
+	// Check lockout
+	lockoutUntil := db.GetSetting("app_pin_lockout_until")
+	if lockoutUntil != "" {
+		if t, err := time.Parse(time.RFC3339, lockoutUntil); err == nil && time.Now().Before(t) {
+			return false // locked out
+		}
+		// Lockout expired, reset attempts
+		db.SetSetting("app_pin_attempts", "0")
+		db.SetSetting("app_pin_lockout_until", "")
+	}
+
 	stored := db.GetSetting("app_pin_hash")
-	return hashPIN(pin) == stored
+	if hashPIN(pin) == stored {
+		// Successful verify - reset attempts
+		db.SetSetting("app_pin_attempts", "0")
+		db.SetSetting("app_pin_lockout_until", "")
+		return true
+	}
+
+	// Failed attempt - increment counter
+	attemptsStr := db.GetSetting("app_pin_attempts")
+	attempts := 0
+	if attemptsStr != "" {
+		fmt.Sscanf(attemptsStr, "%d", &attempts)
+	}
+	attempts++
+	db.SetSetting("app_pin_attempts", fmt.Sprintf("%d", attempts))
+
+	// Lockout after 5 failed attempts for 15 minutes
+	if attempts >= 5 {
+		until := time.Now().Add(15 * time.Minute).Format(time.RFC3339)
+		db.SetSetting("app_pin_lockout_until", until)
+		return false
+	}
+
+	return false
 }
 
 // DisablePIN removes the PIN lock and revokes all active sessions
@@ -108,4 +144,24 @@ func (db *DB) RevokeSession(token string) error {
 func (db *DB) RevokeAllSessions() error {
 	_, err := db.Exec("DELETE FROM app_sessions")
 	return err
+}
+
+// PinStatus returns the current PIN attempt count and lockout state
+func (db *DB) PinStatus() (attempts int, lockoutUntil time.Time, locked bool) {
+	attemptsStr := db.GetSetting("app_pin_attempts")
+	if attemptsStr != "" {
+		fmt.Sscanf(attemptsStr, "%d", &attempts)
+	}
+	lockoutStr := db.GetSetting("app_pin_lockout_until")
+	if lockoutStr != "" {
+		if t, err := time.Parse(time.RFC3339, lockoutStr); err == nil {
+			if time.Now().Before(t) {
+				return attempts, t, true
+			}
+			// Lockout expired - reset
+			db.SetSetting("app_pin_attempts", "0")
+			db.SetSetting("app_pin_lockout_until", "")
+		}
+	}
+	return attempts, time.Time{}, false
 }

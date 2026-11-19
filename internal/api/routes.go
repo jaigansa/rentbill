@@ -150,7 +150,6 @@ func (s *Server) HandleNetworkInfo(w http.ResponseWriter, r *http.Request) {
 		"port":       s.StaticPort,
 		"local_url":  localURL,
 		"lan_urls":   s.LANURLs,
-		"token":      s.LocalAppToken,
 	})
 }
 
@@ -197,6 +196,7 @@ func RegisterRoutes(mux *http.ServeMux, server *Server, publicFS fs.FS) {
 
 	// 4-Digit Security PIN & Auth Endpoints
 	mux.HandleFunc("GET /api/auth/status", server.HandleAuthStatus)
+	mux.HandleFunc("GET /api/auth/pin-status", server.HandleAuthPinStatus)
 	mux.HandleFunc("POST /api/auth/verify", server.HandleAuthVerify)
 	mux.HandleFunc("POST /api/auth/logout", server.HandleAuthLogout)
 	mux.HandleFunc("POST /api/auth/set-pin", server.HandleAuthSetPIN)
