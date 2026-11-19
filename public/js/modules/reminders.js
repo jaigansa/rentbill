@@ -5,17 +5,6 @@ export const Reminders = {
   currentReminderBill: null,
   currentReminderTenant: null,
 
-  async openReminderModalForTenant(tenantId) {
-    const tenant = this.tenants.find(t => t.id == tenantId) || await API.getTenant(tenantId).catch(() => null);
-    if (!tenant) return;
-
-    // Find latest unpaid or most recent bill for this tenant
-    const tenantBills = (this.bills || []).filter(b => b.tenant_id == tenantId);
-    const bill = tenantBills.find(b => b.status !== 'PAID') || tenantBills[0] || null;
-
-    this.showReminderDialog(bill, tenant);
-  },
-
   async openReminderModalForBill(billId) {
     const bill = (this.bills || []).find(b => b.id == billId) || await API.getBill(billId).catch(() => null);
     if (!bill) return;
@@ -53,17 +42,10 @@ export const Reminders = {
       }
     }
 
-    const channelPills = document.querySelectorAll('#modal-reminder .channel-pill');
-    channelPills.forEach(p => {
-      if (p.getAttribute('data-channel') === activeChannel) p.classList.add('active');
-      else p.classList.remove('active');
-    });
-
-    const templatePills = document.querySelectorAll('#modal-reminder .template-pill');
-    templatePills.forEach(p => {
-      if (p.getAttribute('data-tpl') === activeType) p.classList.add('active');
-      else p.classList.remove('active');
-    });
+    const channelSelect = document.getElementById('reminder-channel-select');
+    const templateSelect = document.getElementById('reminder-template-select');
+    if (channelSelect) channelSelect.value = activeChannel;
+    if (templateSelect) templateSelect.value = activeType;
 
     const msgBox = document.getElementById('reminder-message-text');
     const counterEl = document.getElementById('reminder-char-counter');
@@ -164,26 +146,22 @@ export const Reminders = {
 
     regenerateMessage();
 
-    // Bind channel clicks
-    channelPills.forEach(p => {
-      p.onclick = () => {
-        channelPills.forEach(x => x.classList.remove('active'));
-        p.classList.add('active');
-        activeChannel = p.getAttribute('data-channel');
+    // Bind channel change
+    if (channelSelect) {
+      channelSelect.onchange = () => {
+        activeChannel = channelSelect.value;
         setViewMode(activeChannel === 'whatsapp' ? 'whatsapp' : 'raw');
         regenerateMessage();
       };
-    });
+    }
 
-    // Bind template clicks
-    templatePills.forEach(p => {
-      p.onclick = () => {
-        templatePills.forEach(x => x.classList.remove('active'));
-        p.classList.add('active');
-        activeType = p.getAttribute('data-tpl');
+    // Bind template change
+    if (templateSelect) {
+      templateSelect.onchange = () => {
+        activeType = templateSelect.value;
         regenerateMessage();
       };
-    });
+    }
 
     // Live typing counter
     if (msgBox) {
@@ -204,7 +182,7 @@ export const Reminders = {
             document.execCommand('copy');
           }
           this.toast('Reminder text copied to clipboard!');
-        } catch (e) {
+        } catch {
           msgBox.select();
           document.execCommand('copy');
           this.toast('Copied!');

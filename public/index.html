@@ -1638,64 +1638,22 @@
         <!-- Channel Selector -->
         <div class="form-group">
           <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Dispatch Channel</label>
-          <div class="reminder-channels-grid">
-            <button type="button" class="channel-pill active" data-channel="sms_rcs">
-              <i data-lucide="message-square"></i>
-              <div>
-                <strong>SMS / RCS</strong>
-                <small>Native Messages</small>
-              </div>
-            </button>
-            <button type="button" class="channel-pill" data-channel="whatsapp">
-              <i data-lucide="message-circle"></i>
-              <div>
-                <strong>WhatsApp</strong>
-                <small>Direct Chat</small>
-              </div>
-            </button>
-            <button type="button" class="channel-pill" data-channel="email">
-              <i data-lucide="mail"></i>
-              <div>
-                <strong>Email</strong>
-                <small>Send to Email</small>
-              </div>
-            </button>
-          </div>
+          <select id="reminder-channel-select" class="form-control reminder-channel-select">
+            <option value="sms_rcs" selected>SMS / RCS — Native Messages</option>
+            <option value="whatsapp">WhatsApp — Direct Chat</option>
+            <option value="email">Email — Send to Email</option>
+          </select>
         </div>
 
         <!-- Notice Template Selector -->
         <div class="form-group" style="margin-top:14px;">
           <label style="font-weight:600; margin-bottom:8px; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-muted);">Notice Template</label>
-          <div class="reminder-templates-grid">
-            <button type="button" class="template-pill active" data-tpl="gentle">
-              <i data-lucide="bell"></i>
-              <div>
-                <strong>Gentle Reminder</strong>
-                <small>Polite notice for upcoming rent</small>
-              </div>
-            </button>
-            <button type="button" class="template-pill" data-tpl="due_today">
-              <i data-lucide="calendar"></i>
-              <div>
-                <strong>Due Today</strong>
-                <small>Rent due today</small>
-              </div>
-            </button>
-            <button type="button" class="template-pill" data-tpl="overdue">
-              <i data-lucide="alert-triangle"></i>
-              <div>
-                <strong>Overdue Notice</strong>
-                <small>Urgent unpaid dues</small>
-              </div>
-            </button>
-            <button type="button" class="template-pill" data-tpl="receipt">
-              <i data-lucide="check-circle-2"></i>
-              <div>
-                <strong>Payment Thank You</strong>
-                <small>Confirm receipt & balance</small>
-              </div>
-            </button>
-          </div>
+          <select id="reminder-template-select" class="form-control reminder-template-select">
+            <option value="gentle" selected>Gentle Reminder — Polite notice for upcoming rent</option>
+            <option value="due_today">Due Today — Rent due today</option>
+            <option value="overdue">Overdue Notice — Urgent unpaid dues</option>
+            <option value="receipt">Payment Thank You — Confirm receipt & balance</option>
+          </select>
         </div>
 
         <!-- Real Character & Words Length View Stats Bar -->
