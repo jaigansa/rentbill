@@ -8,7 +8,8 @@
   <title>RentBill - Property & Rent Manager</title>
   
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/print.css" media="print">
   <link rel="manifest" href="/manifest.json">
@@ -290,8 +291,8 @@
       <form id="form-property">
         <input type="hidden" id="prop-id">
         <div class="form-group">
-          <label for="prop-name">Property / Flat / Unit Name *</label>
-          <input type="text" id="prop-name" placeholder="e.g. Flat 302, Green Villa" required>
+          <label for="prop-name">Property Name *</label>
+          <input type="text" id="prop-name" placeholder="Flat 302, Green Villa" required>
         </div>
         <div class="form-group">
           <label for="prop-type">Unit Type</label>
@@ -303,21 +304,21 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="prop-address">Address / Location</label>
-          <input type="text" id="prop-address" placeholder="e.g. 2nd Floor, MG Road">
+          <label for="prop-address">Address</label>
+          <input type="text" id="prop-address" placeholder="MG Road, ...">
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="prop-rent">Default Rent (₹)</label>
+            <label for="prop-rent">Rent (₹)</label>
             <input type="number" id="prop-rent" step="any" min="0" placeholder="10000">
           </div>
           <div class="form-group">
-            <label for="prop-elec-rate">Electricity Rate (₹/unit)</label>
+            <label for="prop-elec-rate">Elec Rate (₹/unit)</label>
             <input type="number" id="prop-elec-rate" step="any" min="0" placeholder="9.50">
           </div>
         </div>
 
-        <div class="form-divider" style="margin-top:8px;">Water Billing Mode</div>
+        <div class="form-divider" style="margin-top:8px;">Water Mode</div>
         <div class="form-group">
           <label for="prop-water-type">Water Billing Type</label>
           <select id="prop-water-type">
@@ -327,15 +328,15 @@
         </div>
         <div class="form-row">
           <div class="form-group" id="group-prop-water-fixed">
-            <label for="prop-water">Water Charge (Fixed ₹)</label>
+            <label for="prop-water">Water Charge (₹)</label>
             <input type="number" id="prop-water" step="any" min="0" placeholder="200">
           </div>
           <div class="form-group" id="group-prop-water-meter" style="display:none;">
-            <label for="prop-water-rate">Water Rate (₹/unit)</label>
+            <label for="prop-water-rate">Rate (₹/unit)</label>
             <input type="number" id="prop-water-rate" step="any" min="0" placeholder="15.00">
           </div>
           <div class="form-group">
-            <label for="prop-maint">Maintenance Charge (₹)</label>
+            <label for="prop-maint">Maintenance (₹)</label>
             <input type="number" id="prop-maint" step="any" min="0" placeholder="500">
           </div>
         </div>
@@ -376,26 +377,26 @@
             </button>
             <input type="file" id="tenant-photo-file-input" accept="image/*" style="display:none;">
             <input type="hidden" id="tenant-photo">
-            <span class="tenant-photo-hint">Optional profile picture / photo</span>
+            <span class="tenant-photo-hint">Optional photo</span>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="tenant-name">Tenant Full Name *</label>
-          <input type="text" id="tenant-name" placeholder="e.g. Rahul Sharma" required>
+          <label for="tenant-name">Name *</label>
+          <input type="text" id="tenant-name" placeholder="Rahul Sharma" required>
         </div>
         <div class="form-group">
-          <label for="tenant-phone">Phone / WhatsApp Number *</label>
-          <input type="tel" id="tenant-phone" placeholder="e.g. 9876543210" required>
+          <label for="tenant-phone">Phone Number *</label>
+          <input type="tel" id="tenant-phone" placeholder="9876543210" required>
           <small id="hint-tenant-phone" class="form-inline-feedback" style="display:none;"></small>
         </div>
         <div class="form-group">
-          <label for="tenant-email">Email (Optional)</label>
-          <input type="email" id="tenant-email" placeholder="e.g. rahul@example.com">
+          <label for="tenant-email">Email</label>
+          <input type="email" id="tenant-email" placeholder="rahul@example.com">
         </div>
         <div class="form-group" style="margin-bottom: 14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label style="margin-bottom:0; font-weight:600; font-size:0.85rem;">Co-occupants / Roommates</label>
+            <label style="margin-bottom:0; font-weight:600; font-size:0.85rem;">Co-occupants</label>
             <button type="button" class="btn btn-sm btn-secondary" id="btn-add-co-occupant" style="padding: 2px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; border-radius: var(--radius-sm);">
               <i data-lucide="plus" style="width:12px; height:12px;"></i> Add Person
             </button>
@@ -405,38 +406,38 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="tenant-prop-id">Assigned Property / Unit</label>
+          <label for="tenant-prop-id">Property / Unit</label>
           <select id="tenant-prop-id" required>
-            <option value="">-- Select Property --</option>
+            <option value="">-- Select --</option>
           </select>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="tenant-deposit">Security Deposit (₹)</label>
+            <label for="tenant-deposit">Deposit (₹)</label>
             <input type="number" id="tenant-deposit" step="any" min="0" placeholder="20000">
           </div>
           <div class="form-group">
-            <label for="tenant-opening-arrear">Opening Arrear Amount (₹)</label>
+            <label for="tenant-opening-arrear">Opening Arrear (₹)</label>
             <input type="number" id="tenant-opening-arrear" step="any" min="0" placeholder="0.00">
             <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
-              Initial past unpaid dues carried forward into the tenant's first bill.
+                Unpaid dues carried to first bill.
             </small>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label for="tenant-move-in">Move-in Date</label>
+            <label for="tenant-move-in">Move-in</label>
             <input type="date" id="tenant-move-in">
           </div>
           <div class="form-group" id="group-tenant-status">
-            <label for="tenant-is-active">Tenant Residency Status</label>
+            <label for="tenant-is-active">Status</label>
             <select id="tenant-is-active">
               <option value="1">Active</option>
               <option value="0">Deactivated</option>
             </select>
             <small style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">
-              Deactivating marks the tenant as moved-out.
+            Marks tenant as moved-out.
             </small>
           </div>
         </div>
@@ -448,15 +449,15 @@
             Move-in Meter Readings (Initial Starting Values)
           </div>
           <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">
-            Recorded on move-in so the tenant's first bill automatically starts from these meter readings.
+          First bill starts from these readings.
           </p>
           <div class="form-row">
             <div class="form-group">
-              <label for="tenant-init-elec">Starting Electricity Meter</label>
+              <label for="tenant-init-elec">Elec Meter</label>
               <input type="number" id="tenant-init-elec" step="any" min="0" placeholder="0.0">
             </div>
             <div class="form-group">
-              <label for="tenant-init-water">Starting Water Meter</label>
+              <label for="tenant-init-water">Water Meter</label>
               <input type="number" id="tenant-init-water" step="any" min="0" placeholder="0.0">
             </div>
           </div>
@@ -467,7 +468,7 @@
           <summary class="owner-payment-summary">
             <div class="owner-payment-summary-title">
               <i data-lucide="credit-card"></i>
-              <span>Owner Payment Details <span class="owner-payment-sub">(For Rent Collection)</span></span>
+              <span>Payment Details <span class="owner-payment-sub">(For Rent Collection)</span></span>
             </div>
             <div class="owner-payment-summary-right">
               <span class="owner-payment-badge" id="tenant-payment-badge">Optional</span>
@@ -476,32 +477,32 @@
           </summary>
           <div class="owner-payment-body">
             <p class="owner-payment-hint">
-              Included in bills &amp; QR code for tenant payments.
+            Shown in bills & QR code.
             </p>
             <div class="owner-payment-grid">
               <div class="form-group">
                 <label for="tenant-payment-upi">
-                  <i data-lucide="qr-code"></i> UPI ID / VPA
+                  <i data-lucide="qr-code"></i> UPI ID
                 </label>
-                <input type="text" id="tenant-payment-upi" placeholder="e.g. landlord@oksbi">
+                <input type="text" id="tenant-payment-upi" placeholder="landlord@upi">
               </div>
               <div class="form-group">
                 <label for="tenant-payment-bank-name">
-                  <i data-lucide="building"></i> Bank Name
+                  <i data-lucide="building"></i> Bank
                 </label>
-                <input type="text" id="tenant-payment-bank-name" placeholder="e.g. HDFC Bank">
+                <input type="text" id="tenant-payment-bank-name" placeholder="HDFC Bank">
               </div>
               <div class="form-group">
                 <label for="tenant-payment-account-no">
-                  <i data-lucide="hash"></i> Account Number
+                  <i data-lucide="hash"></i> Account No
                 </label>
-                <input type="text" id="tenant-payment-account-no" placeholder="e.g. 123456789012" inputmode="numeric">
+                <input type="text" id="tenant-payment-account-no" placeholder="123456789012" inputmode="numeric">
               </div>
               <div class="form-group">
                 <label for="tenant-payment-ifsc">
                   <i data-lucide="shield-check"></i> IFSC Code
                 </label>
-                <input type="text" id="tenant-payment-ifsc" placeholder="e.g. SBIN0001234" style="text-transform:uppercase;">
+                <input type="text" id="tenant-payment-ifsc" placeholder="SBIN0001234" style="text-transform:uppercase;">
               </div>
             </div>
           </div>
@@ -511,7 +512,7 @@
         <div class="form-divider" style="margin-top:14px;">Documents &amp; Agreements</div>
         <div class="tenant-docs-section">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-            <span style="font-size:0.78rem; color:var(--text-muted);">Rental agreements &amp; ID proofs (PDF or Images).</span>
+            <span style="font-size:0.78rem; color:var(--text-muted);">Agreements & ID proofs (PDF/Image).</span>
             <input type="file" id="tenant-doc-file-input" accept=".pdf,image/png,image/jpeg,image/webp" style="display:none;" multiple>
             <button type="button" class="btn btn-outline btn-sm" id="btn-trigger-tenant-doc" style="white-space:nowrap;">
               <i data-lucide="paperclip" style="width:14px;height:14px;"></i> Attach File
@@ -585,7 +586,7 @@
               <span class="badge badge-warning" style="font-size:0.7rem; font-weight:600;">Move-Out Settlement</span>
             </div>
             <div id="vacant-calc-subtitle" style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;">
-              Calculate final settlement &amp; vacate property unit
+            Final move-out settlement
             </div>
           </div>
         </div>
@@ -625,11 +626,11 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-move-out-date">Move-Out Date *</label>
+                <label for="vacant-move-out-date">Move-Out *</label>
                 <input type="date" id="vacant-move-out-date" required>
               </div>
               <div class="form-group">
-                <label for="vacant-move-in-display">Move-In Date</label>
+                <label for="vacant-move-in-display">Move-In</label>
                 <input type="text" id="vacant-move-in-display" readonly class="input-readonly">
               </div>
             </div>
@@ -653,12 +654,12 @@
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="vacant-prev-elec">Previous Meter</label>
+                  <label for="vacant-prev-elec">Prev Meter</label>
                   <input type="number" id="vacant-prev-elec" step="any" readonly class="input-readonly">
                 </div>
                 <div class="form-group">
-                  <label for="vacant-curr-elec">Final Move-Out Meter</label>
-                  <input type="number" id="vacant-curr-elec" step="any" min="0" placeholder="e.g. 1450">
+                  <label for="vacant-curr-elec">Final Meter</label>
+                  <input type="number" id="vacant-curr-elec" step="any" min="0" placeholder="1450">
                 </div>
                 <div class="form-group">
                   <label for="vacant-elec-units">Units Used</label>
@@ -675,12 +676,12 @@
               </div>
               <div class="form-row" id="vacant-water-meter-row" style="display:none;">
                 <div class="form-group">
-                  <label for="vacant-prev-water">Previous Meter</label>
+                  <label for="vacant-prev-water">Prev Meter</label>
                   <input type="number" id="vacant-prev-water" step="any" readonly class="input-readonly">
                 </div>
                 <div class="form-group">
-                  <label for="vacant-curr-water">Final Move-Out Meter</label>
-                  <input type="number" id="vacant-curr-water" step="any" min="0" placeholder="e.g. 230">
+                  <label for="vacant-curr-water">Final Meter</label>
+                  <input type="number" id="vacant-curr-water" step="any" min="0" placeholder="230">
                 </div>
                 <div class="form-group">
                   <label for="vacant-water-units">Units Used</label>
@@ -688,7 +689,7 @@
                 </div>
               </div>
               <div class="form-group" id="vacant-water-fixed-row" style="margin-bottom:0;">
-                <label for="vacant-water-fixed-charge">Water Charge for Final Period (₹)</label>
+                <label for="vacant-water-fixed-charge">Water Charge (₹)</label>
                 <input type="number" id="vacant-water-fixed-charge" step="any" min="0" placeholder="0.00">
               </div>
             </div>
@@ -707,11 +708,11 @@
             </div>
             <div class="form-row" id="vacant-prorate-row" style="display:none;">
               <div class="form-group">
-                <label for="vacant-base-rent">Monthly Rent (₹)</label>
+                <label for="vacant-base-rent">Rent (₹)</label>
                 <input type="number" id="vacant-base-rent" step="any" min="0">
               </div>
               <div class="form-group">
-                <label for="vacant-occupied-days">Days Occupied</label>
+                <label for="vacant-occupied-days">Days</label>
                 <input type="number" id="vacant-occupied-days" min="0" max="31">
               </div>
               <div class="form-group">
@@ -729,37 +730,37 @@
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-arrears">Past Unpaid Bills (₹)</label>
+                <label for="vacant-deduct-arrears">Arrears (₹)</label>
                 <input type="number" id="vacant-deduct-arrears" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-deduct-painting">Painting / Whitewash (₹)</label>
+                <label for="vacant-deduct-painting">Painting (₹)</label>
                 <input type="number" id="vacant-deduct-painting" step="any" min="0" placeholder="0">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-cleaning">Cleaning &amp; Sanitization (₹)</label>
+                <label for="vacant-deduct-cleaning">Cleaning (₹)</label>
                 <input type="number" id="vacant-deduct-cleaning" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-deduct-repairs">Repairs &amp; Damages (₹)</label>
+                <label for="vacant-deduct-repairs">Repairs (₹)</label>
                 <input type="number" id="vacant-deduct-repairs" step="any" min="0" placeholder="0">
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label for="vacant-deduct-other">Other Deductions / Notice Shortfall (₹)</label>
+                <label for="vacant-deduct-other">Other Deductions (₹)</label>
                 <input type="number" id="vacant-deduct-other" step="any" min="0" placeholder="0">
               </div>
               <div class="form-group">
-                <label for="vacant-extra-credit">Extra Tenant Credit / Advance (₹)</label>
+                <label for="vacant-extra-credit">Credit / Advance (₹)</label>
                 <input type="number" id="vacant-extra-credit" step="any" min="0" placeholder="0">
               </div>
             </div>
             <div class="form-group" style="margin-bottom:0;">
-              <label for="vacant-deduct-notes">Remarks / Settlement Notes</label>
-              <input type="text" id="vacant-deduct-notes" placeholder="e.g. Wall touch-up, 1 tap repair, deep cleaning">
+              <label for="vacant-deduct-notes">Remarks</label>
+              <input type="text" id="vacant-deduct-notes" placeholder="Remarks">
             </div>
           </div>
 
@@ -994,37 +995,6 @@
     </div>
   </div>
 
-  <!-- Modal: Detailed Unit Overview Window -->
-  <div class="modal" id="modal-unit-detail">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-header" style="align-items:flex-start;">
-        <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
-          <div id="unit-detail-icon-wrap" class="unit-type-icon" style="width:42px; height:42px; border-radius:12px; flex-shrink:0;">
-          </div>
-          <div style="min-width:0; flex:1;">
-            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <h3 id="unit-detail-title" style="margin:0; font-size:1.15rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Unit Details</h3>
-              <span id="unit-detail-status-badge" class="badge">Status</span>
-            </div>
-            <div id="unit-detail-subtitle" style="font-size:0.8rem; color:var(--text-muted); display:flex; align-items:center; gap:4px; margin-top:2px;">
-              <i data-lucide="map-pin" style="width:12px; height:12px; flex-shrink:0;"></i>
-              <span id="unit-detail-address" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Address</span>
-            </div>
-          </div>
-        </div>
-        <button class="modal-close" data-close="modal-unit-detail">&times;</button>
-      </div>
-
-      <div class="modal-body" id="unit-detail-body" style="padding:16px 20px; display:flex; flex-direction:column; gap:16px; max-height:72vh; overflow-y:auto;">
-        <!-- Dynamically populated via App.showUnitDetail() -->
-      </div>
-
-      <div class="modal-footer" id="unit-detail-footer" style="padding:12px 20px; border-top:1px solid var(--border);">
-        <button type="button" class="btn btn-secondary" data-close="modal-unit-detail" onclick="App.closeModal('modal-unit-detail')">Close</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Modal: Add / Edit Expense Form -->
   <div class="modal" id="modal-expense">
     <div class="modal-dialog">
@@ -1042,8 +1012,8 @@
         </div>
 
         <div class="form-group">
-          <label for="expense-title">Expense Title / Description *</label>
-          <input type="text" id="expense-title" placeholder="e.g. Bathroom plumbing tap fix, Wall painting" required>
+          <label for="expense-title">Expense Title *</label>
+          <input type="text" id="expense-title" placeholder="Bathroom plumbing fix" required>
         </div>
 
         <div class="form-row">
@@ -1070,11 +1040,11 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="expense-date">Expense Date *</label>
+            <label for="expense-date">Date *</label>
             <input type="date" id="expense-date" required>
           </div>
           <div class="form-group">
-            <label for="expense-method">Payment Mode</label>
+            <label for="expense-method">Mode</label>
             <select id="expense-method">
               <option value="Cash">Cash</option>
               <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
@@ -1085,13 +1055,13 @@
         </div>
 
         <div class="form-group">
-          <label for="expense-paid-to">Paid To / Vendor / Technician (Optional)</label>
-          <input type="text" id="expense-paid-to" placeholder="e.g. Ramesh Plumber (9876543210)">
+          <label for="expense-paid-to">Paid To</label>
+          <input type="text" id="expense-paid-to" placeholder="Ramesh Plumber">
         </div>
 
         <div class="form-group">
-          <label for="expense-notes">Notes / Bill Reference (Optional)</label>
-          <input type="text" id="expense-notes" placeholder="e.g. Bill #104, replaced kitchen mixer tap">
+          <label for="expense-notes">Notes</label>
+          <input type="text" id="expense-notes" placeholder="Bill #104">
         </div>
 
         <div class="modal-footer">
@@ -1112,7 +1082,7 @@
       <form id="form-bill">
         <input type="hidden" id="bill-id">
         <div class="form-group">
-          <label for="bill-tenant-select">Select Tenant *</label>
+          <label for="bill-tenant-select">Tenant *</label>
           <select id="bill-tenant-select" required>
             <option value="">-- Choose Tenant --</option>
           </select>
@@ -1124,7 +1094,7 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="bill-month">Rent For (Month) *</label>
+            <label for="bill-month">Month *</label>
             <input type="month" id="bill-month" required>
             <div id="bill-month-text" style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-top:3px; min-height:1rem;"></div>
           </div>
@@ -1137,20 +1107,20 @@
         <div class="form-divider">Rent & Utilities Breakdown</div>
 
         <div class="form-group">
-          <label for="bill-base-rent">Base Rent Amount (₹) *</label>
+          <label for="bill-base-rent">Base Rent (₹) *</label>
           <input type="number" id="bill-base-rent" step="any" min="0" required>
         </div>
 
         <!-- Electricity Meter Calculation Box -->
         <div class="calc-box">
           <div class="calc-box-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span><i data-lucide="zap" style="color:var(--warning); vertical-align:-2px;"></i> Electricity Meter Calculation</span>
+            <span><i data-lucide="zap" style="color:var(--warning); vertical-align:-2px;"></i> Electricity</span>
             <span id="badge-elec-meter-source" class="badge badge-date" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
           </div>
           <div class="form-row">
             <div class="form-group">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label for="bill-prev-meter" style="margin-bottom:0;">Previous Reading</label>
+                <label for="bill-prev-meter" style="margin-bottom:0;">Previous</label>
                 <button type="button" class="btn-text" id="btn-unlock-prev-elec" style="font-size:0.72rem; padding:0; display:none;" title="Click to manually adjust previous reading">
                   <i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Edit
                 </button>
@@ -1159,7 +1129,7 @@
               <small id="hint-prev-elec" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;"></small>
             </div>
             <div class="form-group">
-              <label for="bill-curr-meter">Current Reading *</label>
+              <label for="bill-curr-meter">Current *</label>
               <input type="number" id="bill-curr-meter" step="any" min="0" value="0">
               <small id="warn-curr-elec" style="font-size:0.72rem; color:var(--danger); display:none; margin-top:2px; font-weight:600;">Must be ≥ Previous</small>
             </div>
@@ -1182,7 +1152,7 @@
 
         <!-- Water Billing Section (Fixed or Metered) -->
         <div class="form-group">
-          <label for="bill-water-type">Water Billing Mode</label>
+          <label for="bill-water-type">Water Mode</label>
           <select id="bill-water-type">
             <option value="FIXED">Fixed Water Charge</option>
             <option value="METER">Water Meter Calculation</option>
@@ -1191,20 +1161,20 @@
 
         <!-- Fixed Water Input -->
         <div class="form-group" id="bill-water-fixed-box">
-          <label for="bill-water">Water Charge (Fixed ₹)</label>
+          <label for="bill-water">Water Charge (₹)</label>
           <input type="number" id="bill-water" step="any" min="0" value="0">
         </div>
 
         <!-- Metered Water Box -->
         <div class="calc-box" id="bill-water-meter-box" style="display:none;">
           <div class="calc-box-title" style="display:flex; justify-content:space-between; align-items:center;">
-            <span><i data-lucide="droplet" style="color:var(--primary); vertical-align:-2px;"></i> Water Meter Calculation</span>
+            <span><i data-lucide="droplet" style="color:var(--primary); vertical-align:-2px;"></i> Water Meter</span>
             <span id="badge-water-meter-source" class="badge badge-date" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
           </div>
           <div class="form-row">
             <div class="form-group">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <label for="bill-prev-water-meter" style="margin-bottom:0;">Previous Reading</label>
+                <label for="bill-prev-water-meter" style="margin-bottom:0;">Previous</label>
                 <button type="button" class="btn-text" id="btn-unlock-prev-water" style="font-size:0.72rem; padding:0; display:none;" title="Click to manually adjust previous reading">
                   <i data-lucide="lock" style="width:12px; height:12px; vertical-align:-1px;"></i> Edit
                 </button>
@@ -1213,7 +1183,7 @@
               <small id="hint-prev-water" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;"></small>
             </div>
             <div class="form-group">
-              <label for="bill-curr-water-meter">Current Reading *</label>
+              <label for="bill-curr-water-meter">Current *</label>
               <input type="number" id="bill-curr-water-meter" step="any" min="0" value="0">
               <small id="warn-curr-water" style="font-size:0.72rem; color:var(--danger); display:none; margin-top:2px; font-weight:600;">Must be ≥ Previous</small>
             </div>
@@ -1241,12 +1211,12 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="bill-other">Other Charges (₹)</label>
+            <label for="bill-other">Other (₹)</label>
             <input type="number" id="bill-other" step="any" value="0">
           </div>
           <div class="form-group">
-            <label for="bill-other-desc">Reason for Other Charges</label>
-            <input type="text" id="bill-other-desc" placeholder="e.g. Late fee or AC repair">
+            <label for="bill-other-desc">Reason</label>
+            <input type="text" id="bill-other-desc" placeholder="Late fee, AC repair">
           </div>
         </div>
 
@@ -1258,8 +1228,8 @@
             <input type="number" id="bill-discount" step="any" min="0" value="0" placeholder="0">
           </div>
           <div class="form-group">
-            <label for="bill-discount-reason">Reason for Discount</label>
-            <input type="text" id="bill-discount-reason" placeholder="e.g. Early payment, Festive waiver">
+            <label for="bill-discount-reason">Reason</label>
+            <input type="text" id="bill-discount-reason" placeholder="Early payment">
           </div>
         </div>
 
@@ -1267,22 +1237,22 @@
         <div class="form-group" id="group-bill-prev-balance">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
             <label for="bill-prev-balance" style="margin-bottom:0;">
-              <i data-lucide="history" style="width:14px; height:14px; vertical-align:-2px; color:var(--danger);"></i> Previous Arrears / Unpaid Due (₹)
+              <i data-lucide="history" style="width:14px; height:14px; vertical-align:-2px; color:var(--danger);"></i> Previous Arrears (₹)
             </label>
             <span id="badge-prev-balance" class="badge badge-overdue" style="font-size:0.7rem; font-weight:normal; display:none;">Auto Carried Over</span>
           </div>
           <input type="number" id="bill-prev-balance" step="any" value="0">
-          <small id="hint-prev-balance" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">Carried forward from previous unpaid bill</small>
+          <small id="hint-prev-balance" style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:2px;">From previous unpaid bill</small>
         </div>
 
         <div class="bill-total-banner">
-          <span>Total Bill Amount:</span>
+          <span>Total:</span>
           <span class="total-highlight" id="bill-calculated-total">₹0.00</span>
         </div>
 
         <div class="form-group">
           <label for="bill-notes">Notes</label>
-          <input type="text" id="bill-notes" placeholder="e.g. Please pay via UPI before 5th">
+          <input type="text" id="bill-notes" placeholder="Pay via UPI before 5th">
         </div>
 
         <div class="modal-footer">
@@ -1298,52 +1268,72 @@
     <div class="modal-dialog modal-lg">
       <div class="modal-header">
         <div>
-          <h3 style="margin-bottom:2px;"><i data-lucide="layers" style="vertical-align:-2px; margin-right:6px; color:var(--primary);"></i> Batch Generate Monthly Bills</h3>
-          <span style="font-size:0.8rem; color:var(--text-muted);">Enter EB readings &amp; generate all monthly bills in one shot</span>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:2px;">
+            <i data-lucide="layers" style="width:16px; height:16px; color:var(--primary);"></i>
+            <h3 style="margin:0; font-size:1.15rem;">Batch Generate Bills</h3>
+          </div>
+          <span style="font-size:0.78rem; color:var(--text-muted);">Enter meter readings for all tenants &amp; generate monthly bills in one shot</span>
         </div>
         <button class="modal-close" data-close="modal-batch-bills">&times;</button>
       </div>
       <form id="form-batch-bills">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="batch-billing-month">Billing Month *</label>
-            <input type="month" id="batch-billing-month" required>
-          </div>
-          <div class="form-group">
-            <label for="batch-due-date">Due Date *</label>
-            <input type="date" id="batch-due-date" required>
+
+        <!-- Billing Setup -->
+        <div class="app-card" style="margin-bottom:14px;">
+          <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:10px; padding-left:2px;">Billing Setup</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="batch-billing-month">Billing Month *</label>
+              <input type="month" id="batch-billing-month" required>
+            </div>
+            <div class="form-group">
+              <label for="batch-due-date">Due Date *</label>
+              <input type="date" id="batch-due-date" required>
+            </div>
           </div>
         </div>
 
         <!-- Meter Reading Entry Roll -->
-        <div class="batch-meter-section" style="margin-top:6px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+        <div class="app-card" style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
             <div>
-              <strong style="font-size:0.92rem;"><i data-lucide="gauge" style="width:16px;height:16px;vertical-align:-2px;color:var(--primary);margin-right:4px;"></i>Electricity (EB) &amp; Meter Readings</strong>
-              <div style="font-size:0.75rem; color:var(--text-muted);">Enter the latest meter reading for each tenant. Units &amp; amounts calculate in real-time.</div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:700; color:var(--text-main);">
+                <i data-lucide="gauge" style="width:14px; height:14px; color:var(--primary);"></i>
+                Meter Readings
+              </div>
+              <div style="font-size:0.72rem; color:var(--text-muted);">Enter latest reading per tenant</div>
             </div>
             <span class="badge badge-date" id="batch-meter-count-badge">0 Tenants</span>
           </div>
 
-          <div id="batch-meter-entries-container" style="max-height:380px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); padding:8px;">
+          <div id="batch-meter-entries-container" style="max-height:400px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface);">
             <!-- Populated dynamically via JS -->
-            <div class="empty-state">Loading active tenants &amp; previous readings...</div>
+            <div class="empty-state compact" style="padding:24px 16px;">
+              <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Empty</div>
+              <div style="font-size:0.82rem; color:var(--text-main); margin-top:4px;">Loading active tenants &amp; previous readings…</div>
+            </div>
           </div>
         </div>
 
         <!-- Real-time Roll Summary Strip -->
-        <div class="batch-roll-summary" id="batch-roll-summary" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); padding:10px 14px; border-radius:var(--radius-sm); border:1px solid var(--border); margin-top:12px;">
+        <div class="batch-roll-summary" id="batch-roll-summary" style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--radius-md); padding:12px 16px; margin-top:0;">
           <div>
-            <span style="font-size:0.8rem; color:var(--text-muted);">Total Estimated Billing:</span>
-            <strong style="font-size:1.05rem; margin-left:6px; color:var(--primary);" id="batch-total-roll-amount">₹0.00</strong>
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Total Estimated Billing</span>
+            <strong style="font-size:1.3rem; margin-left:6px; color:var(--primary); font-variant-numeric: tabular-nums;" id="batch-total-roll-amount">₹0.00</strong>
           </div>
-          <span style="font-size:0.75rem; color:var(--text-muted);" id="batch-total-units-summary">0 EB units</span>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.78rem; color:var(--text-muted);" id="batch-total-units-summary">0 units</span>
+            <span style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">·</span>
+            <span style="font-size:0.78rem; color:var(--text-muted);" id="batch-tenant-count-summary">0 tenants</span>
+          </div>
         </div>
 
-        <div class="modal-footer" style="padding-bottom:0; padding-inline:0;">
+        <div class="modal-footer" style="padding-top:16px; padding-bottom:0;">
           <button type="button" class="btn btn-secondary" data-close="modal-batch-bills">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-batch-bills">
-            <i data-lucide="zap"></i> Generate Bills (<span id="batch-submit-count">0</span>)
+          <button type="submit" class="btn btn-primary" id="btn-submit-batch-bills" style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="zap"></i>
+            <span>Generate Bills</span>
+            <span id="batch-submit-count" style="font-size:0.78rem; opacity:0.9;">(0)</span>
           </button>
         </div>
       </form>
@@ -1363,15 +1353,15 @@
           <!-- Populated dynamically with bill number, tenant and balance -->
         </div>
         <div class="form-group">
-          <label for="pay-amount">Payment Amount (₹) *</label>
+          <label for="pay-amount">Amount (₹) *</label>
           <input type="number" id="pay-amount" step="any" min="1" required>
         </div>
         <div class="form-group">
-          <label for="pay-date">Payment Date *</label>
+          <label for="pay-date">Date *</label>
           <input type="date" id="pay-date" required>
         </div>
         <div class="form-group">
-          <label for="pay-method">Payment Mode</label>
+          <label for="pay-method">Mode</label>
           <select id="pay-method">
             <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
             <option value="Cash">Cash</option>
@@ -1380,12 +1370,12 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="pay-ref">Transaction ID / Reference (Optional)</label>
+          <label for="pay-ref">Reference</label>
           <input type="text" id="pay-ref" placeholder="UPI Ref / Bank Ref Number">
         </div>
         <div class="form-group">
-          <label for="pay-notes">Payment Notes</label>
-          <input type="text" id="pay-notes" placeholder="e.g. Received via GPay">
+          <label for="pay-notes">Notes</label>
+          <input type="text" id="pay-notes" placeholder="Received via GPay">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close="modal-payment">Cancel</button>
@@ -1409,16 +1399,16 @@
         <input type="hidden" id="edit-pay-id">
         <input type="hidden" id="edit-pay-bill-id">
         <div class="form-group">
-          <label for="edit-pay-amount">Payment Amount (₹) *</label>
+          <label for="edit-pay-amount">Amount (₹) *</label>
           <input type="number" id="edit-pay-amount" step="any" min="0.01" required>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="edit-pay-date">Payment Date *</label>
+            <label for="edit-pay-date">Date *</label>
             <input type="date" id="edit-pay-date" required>
           </div>
           <div class="form-group">
-            <label for="edit-pay-method">Payment Mode</label>
+            <label for="edit-pay-method">Mode</label>
             <select id="edit-pay-method">
               <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
               <option value="Cash">Cash</option>
@@ -1428,12 +1418,12 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="edit-pay-ref">Transaction ID / Reference (Optional)</label>
+          <label for="edit-pay-ref">Reference</label>
           <input type="text" id="edit-pay-ref" placeholder="UPI Ref / Bank Ref Number">
         </div>
         <div class="form-group">
-          <label for="edit-pay-notes">Payment Notes</label>
-          <input type="text" id="edit-pay-notes" placeholder="e.g. Received via GPay">
+          <label for="edit-pay-notes">Notes</label>
+          <input type="text" id="edit-pay-notes" placeholder="Received via GPay">
         </div>
         <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
           <button type="button" class="btn btn-outline" id="btn-delete-payment-record" style="color:var(--danger); border-color:rgba(239, 68, 68, 0.4);">
@@ -1889,22 +1879,22 @@
       </div>
       <form id="form-pin-setup">
         <p class="settings-desc" style="margin-bottom:14px;">
-          Set a memorable 4-digit numeric PIN to protect your rental records whenever the app is opened or backgrounded.
+          Set a 4-digit PIN to protect your rental records.
         </p>
 
         <div class="form-group" id="group-current-pin" style="display:none;">
-          <label for="input-current-pin">Current 4-Digit PIN *</label>
+          <label for="input-current-pin">Current PIN *</label>
           <input type="password" id="input-current-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" autocomplete="off">
         </div>
 
         <div class="form-group">
-          <label for="input-new-pin">New 4-Digit PIN *</label>
+          <label for="input-new-pin">New PIN *</label>
           <input type="password" id="input-new-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
           <small id="hint-new-pin" class="form-inline-feedback" style="color:var(--text-muted);">Must be exactly 4 numbers (0-9).</small>
         </div>
 
         <div class="form-group">
-          <label for="input-confirm-pin">Confirm New 4-Digit PIN *</label>
+          <label for="input-confirm-pin">Confirm PIN *</label>
           <input type="password" id="input-confirm-pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="••••" required autocomplete="off">
           <small id="hint-confirm-pin" class="form-inline-feedback" style="display:none;"></small>
         </div>

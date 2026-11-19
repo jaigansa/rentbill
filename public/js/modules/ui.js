@@ -326,7 +326,7 @@ export const UI = {
           // Trigger physical vibration if device supports it
           try {
             if (navigator.vibrate) navigator.vibrate(60);
-          } catch (e) {}
+          } catch {}
 
           const cb = this.activeDeleteCallback;
           this.activeDeleteCallback = null;
@@ -384,37 +384,22 @@ export const UI = {
     const dropdownMenu = parentDropdown.querySelector('.card-dropdown-menu');
     if (!dropdownMenu) return;
 
-    // Detect mobile / touch view
-    const isMobile = window.innerWidth <= 820 || (window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
-
-    if (isMobile) {
-      // Close any active inline dropdowns first
-      document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
-
-      // Extract card title and subtitle for context in the sheet header
-      const card = buttonEl.closest('.app-card, .ledger-entry-card');
-      let title = 'Options';
-      let subtitle = 'Select an action';
-
-      if (card) {
-        const titleEl = card.querySelector('.card-title, .ledger-entry-desc, .card-amount-val');
-        const subEl = card.querySelector('.card-subtitle, .ledger-entry-date');
-        if (titleEl) title = titleEl.textContent.trim();
-        if (subEl) subtitle = subEl.textContent.trim();
-      }
-
-      this.openActionSheetFromDropdown(dropdownMenu, title, subtitle);
-      return;
-    }
-
-    const wasActive = parentDropdown.classList.contains('active');
-    
-    // Close other dropdowns first
+    // Close any active inline dropdowns first
     document.querySelectorAll('.card-dropdown.active').forEach(d => d.classList.remove('active'));
-    
-    if (!wasActive) {
-      parentDropdown.classList.add('active');
+
+    // Extract card title and subtitle for context in the sheet header
+    const card = buttonEl.closest('.app-card, .ledger-entry-card');
+    let title = 'Options';
+    let subtitle = 'Select an action';
+
+    if (card) {
+      const titleEl = card.querySelector('.card-title, .ledger-entry-desc, .card-amount-val');
+      const subEl = card.querySelector('.card-subtitle, .ledger-entry-date');
+      if (titleEl) title = titleEl.textContent.trim();
+      if (subEl) subtitle = subEl.textContent.trim();
     }
+
+    this.openActionSheetFromDropdown(dropdownMenu, title, subtitle);
   },
 
   openActionSheetFromDropdown(dropdownMenu, title, subtitle) {
