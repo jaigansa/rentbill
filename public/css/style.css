@@ -1577,33 +1577,8 @@ textarea:hover::-webkit-scrollbar-thumb {
   color: var(--text-main);
 }
 
-.nav-item::before {
-  content: "";
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  opacity: 0;
-  transform: translateX(-50%) scale(0.8);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
-  z-index: -1;
-}
-
 .nav-item.active {
   color: var(--primary);
-}
-
-.nav-item.active::before {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-  background: var(--primary-light);
-  border-color: var(--primary);
-  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .nav-item.active .nav-icon {
@@ -2433,14 +2408,6 @@ select {
   box-shadow: var(--shadow-xs);
 }
 
-.ledger-entry-card.entry-payment {
-  border-left: 3.5px solid var(--success);
-}
-
-.ledger-entry-card.entry-bill {
-  border-left: 3.5px solid var(--primary);
-}
-
 .ledger-entry-header {
   display: flex;
   justify-content: space-between;
@@ -2660,7 +2627,6 @@ select {
   background: var(--bg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--primary);
   color: var(--text-main);
 }
 
@@ -3142,10 +3108,6 @@ select {
   box-shadow: var(--shadow-sm);
   gap: 12px;
   transition: transform 0.15s ease;
-}
-
-.action-card.card-unbilled {
-  border-left: 4px solid var(--warning);
 }
 
 .batch-bill-banner {
@@ -4182,11 +4144,6 @@ select {
   box-shadow: var(--shadow-sm);
 }
 
-.vacant-stat-box.vacant-stat-tenant { border-left: 3px solid var(--primary); }
-.vacant-stat-box.vacant-stat-unit { border-left: 3px solid var(--text-subtle); }
-.vacant-stat-box.vacant-stat-deposit { border-left: 3px solid var(--success); }
-.vacant-stat-box.vacant-stat-arrears { border-left: 3px solid var(--danger); }
-
 .vacant-stat-label {
   font-size: 0.68rem;
   font-weight: 700;
@@ -4246,9 +4203,6 @@ select {
 .vacant-meter-box:hover {
   border-color: rgba(245, 158, 11, 0.3);
 }
-
-.vacant-meter-elec { border-left: 3px solid var(--warning); }
-.vacant-meter-water { border-left: 3px solid var(--primary); }
 
 .vacant-pill-btn {
   background: var(--surface-alt);
