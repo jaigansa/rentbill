@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -47,23 +50,41 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Get tag name
-        id: get_tag
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
       - name: Build binary
-        id: build
         env:
           CGO_ENABLED: 0
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
           make ${{ matrix.make_target }}
-          echo "binary=${{ matrix.artifact }}" >> $GITHUB_OUTPUT
-          echo "path=$(pwd)/${{ matrix.artifact }}" >> $GITHUB_OUTPUT
+          echo "${{ matrix.artifact }}" >> $GITHUB_OUTPUT
 
-      - name: Create release
-        id: create_release
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: release/
+
+      - name: List downloaded files
+        run: ls -lh release/
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -92,6 +113,6 @@ jobs:
             ```bash
             ./rentbill
             ```
-          files: ${{ steps.build.outputs.path }}
+          files: release/*
           draft: false
           prerelease: false
