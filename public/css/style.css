@@ -110,14 +110,14 @@
     --glass-bg: rgba(18, 19, 22, 0.94);
     --glass-border: rgba(49, 51, 61, 0.3);
 
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.35);
-    --shadow-lg: 0 12px 28px -4px rgba(0, 0, 0, 0.65), 0 4px 12px -2px rgba(0, 0, 0, 0.45);
-    --shadow-xl: 0 20px 36px -6px rgba(0, 0, 0, 0.75), 0 8px 16px -4px rgba(0, 0, 0, 0.55);
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.3), 0 2px 6px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 16px -2px rgba(0, 0, 0, 0.3), 0 2px 6px -1px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 12px 24px -4px rgba(0, 0, 0, 0.35), 0 4px 12px -2px rgba(0, 0, 0, 0.2);
 
     --bg-input: #0e0f11;
-    --accent-glow: rgba(245, 158, 11, 0.3);
+    --accent-glow: rgba(245, 158, 11, 0.15);
     --accent-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
     --value-text-shadow: 0 0 12px var(--accent-glow);
 
@@ -166,7 +166,7 @@
   --shadow-xl: 0 20px 36px -6px rgba(0, 0, 0, 0.75), 0 8px 16px -4px rgba(0, 0, 0, 0.55);
 
   --bg-input: #0e0f11;
-  --accent-glow: rgba(245, 158, 11, 0.3);
+  --accent-glow: rgba(245, 158, 11, 0.15);
   --accent-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
   --value-text-shadow: 0 0 12px var(--accent-glow);
 
@@ -1557,7 +1557,7 @@ textarea:hover::-webkit-scrollbar-thumb {
   align-items: center;
   justify-content: space-evenly;
   z-index: 50;
-  box-shadow: 0 -8px 24px -4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 -4px 12px -2px rgba(0, 0, 0, 0.2);
 }
 
 .nav-item {
@@ -3736,7 +3736,7 @@ select {
   text-align: center;
   position: relative;
   background: var(--surface);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.15);
   animation: zoomPopupIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
@@ -3789,7 +3789,7 @@ select {
   height: 200px;
   border-radius: 50%;
   object-fit: cover;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border: 4px solid var(--surface);
   outline: 1px solid var(--border);
 }
@@ -3888,7 +3888,7 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
 }
 
 .reminder-header-icon i,
@@ -3929,7 +3929,7 @@ select {
 .channel-pill.active {
   border-color: var(--primary);
   background: var(--primary-light);
-  box-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 .channel-pill.active strong { color: var(--primary); }
@@ -3949,7 +3949,7 @@ select {
 .template-pill.active {
   border-color: var(--primary);
   background: var(--primary-light);
-  box-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 .template-pill.active strong { color: var(--primary); }
@@ -4052,11 +4052,11 @@ select {
 
 /* Send Button */
 .reminder-send-btn {
-  box-shadow: 0 0 14px var(--accent-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .reminder-send-btn:hover {
-  box-shadow: 0 0 20px var(--accent-glow);
+  box-shadow: 0 0 12px var(--accent-glow);
   transform: translateY(-1px);
 }
 
@@ -4130,7 +4130,7 @@ select {
   align-items: center;
   justify-content: center;
   margin-bottom: 12px;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.1);
 }
 
 .lock-icon-circle i,
@@ -4174,7 +4174,7 @@ select {
   background: var(--primary);
   border-color: var(--primary);
   transform: scale(1.15);
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2);
 }
 
 .pin-dots-wrapper.shake {
@@ -4228,7 +4228,7 @@ select {
   background: var(--surface-alt);
   border-color: rgba(148, 163, 184, 0.5);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
 }
 
 .pin-key:active {
@@ -4458,7 +4458,7 @@ select {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 .vacant-settlement-card {
@@ -4564,7 +4564,7 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 0 14px var(--success-bg);
+  box-shadow: 0 0 8px var(--success-bg);
 }
 
 .vacant-net-banner.refund .net-banner-label {
@@ -4603,7 +4603,7 @@ select {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 0 14px var(--danger-bg);
+  box-shadow: 0 0 8px var(--danger-bg);
 }
 
 .vacant-net-banner.due .net-banner-label {
@@ -4674,11 +4674,11 @@ select {
 
 .vacant-confirm-btn {
   min-width: 200px;
-  box-shadow: 0 0 14px var(--danger-bg);
+  box-shadow: 0 0 8px var(--danger-bg);
 }
 
 .vacant-confirm-btn:hover {
-  box-shadow: 0 0 20px var(--danger-bg);
+  box-shadow: 0 0 12px var(--danger-bg);
   transform: translateY(-1px);
 }
 
@@ -4846,7 +4846,7 @@ select {
   background: var(--primary-light);
   color: var(--primary);
   letter-spacing: 0.02em;
-  box-shadow: 0 0 8px var(--accent-glow);
+  box-shadow: 0 0 4px var(--accent-glow);
 }
 
 /* Integrated Month Selector */
@@ -4918,7 +4918,7 @@ select {
   border-radius: 50%;
   background: var(--primary);
   flex-shrink: 0;
-  box-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 /* Progress Track */
@@ -4935,7 +4935,7 @@ select {
   height: 100%;
   border-radius: 999px;
   background: var(--primary-gradient);
-  box-shadow: 0 0 12px var(--accent-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
   transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -4978,7 +4978,7 @@ select {
 .fintech-col:hover {
   transform: translateY(-2px);
   border-color: rgba(245, 158, 11, 0.4);
-  box-shadow: 0 0 14px var(--accent-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
   background: var(--surface);
 }
 
