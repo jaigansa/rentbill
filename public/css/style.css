@@ -4753,10 +4753,10 @@ select {
   transform: scale(0.97);
 }
 
-.fintech-col.primary { border-top: 3px solid var(--primary); }
-.fintech-col.warning { border-top: 3px solid var(--warning); }
-.fintech-col.danger { border-top: 3px solid var(--danger); }
-.fintech-col.success { border-top: 3px solid var(--success); }
+.fintech-col.primary { }
+.fintech-col.warning { }
+.fintech-col.danger { }
+.fintech-col.success { }
 
 .fintech-col.primary .fintech-col-header i,
 .fintech-col.primary .fintech-col-header [data-lucide] {
