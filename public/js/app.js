@@ -495,12 +495,6 @@ const App = {
         netProfitEl.style.color = np >= 0 ? 'var(--success)' : 'var(--danger)';
       }
 
-      const depositsEl = document.getElementById('dash-total-deposits');
-      if (depositsEl) {
-        depositsEl.textContent = this.formatMoney(data.total_deposits_held || 0, true);
-        depositsEl.title = `Total security deposits held in trust across ${data.active_tenants_count || 0} active tenants: ${this.formatFullMoney(data.total_deposits_held || 0)}`;
-      }
-
       // 4. Action Required Feed
       const actionFeed = document.getElementById('dash-action-feed');
       const actionBadge = document.getElementById('dash-action-count');
