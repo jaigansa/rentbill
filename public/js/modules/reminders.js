@@ -28,6 +28,23 @@ export const Reminders = {
       subtitle.textContent = `Tenant: ${tenantName} ${propName ? '(' + propName + ')' : ''}`;
     }
 
+    // Sync tenant info card
+    const tenantAvatarEl = document.getElementById('reminder-tenant-avatar-char');
+    const tenantNameEl = document.getElementById('reminder-tenant-name');
+    const tenantUnitEl = document.getElementById('reminder-tenant-unit');
+    const tenantBalanceEl = document.getElementById('reminder-tenant-balance');
+    if (tenantAvatarEl) tenantAvatarEl.textContent = (tenantName[0] || 'T').toUpperCase();
+    if (tenantNameEl) tenantNameEl.textContent = tenantName;
+    if (tenantUnitEl) {
+      const unit = (tenant && tenant.property_name) || (bill && bill.property_name) || '';
+      const phone = (tenant && tenant.phone) || '';
+      tenantUnitEl.textContent = unit && phone ? `${unit} • ${phone}` : (unit || phone || '');
+    }
+    if (tenantBalanceEl) {
+      const balance = bill ? ((bill.total_amount || 0) - (bill.paid_amount || 0)) : 0;
+      tenantBalanceEl.textContent = balance > 0 ? `₹${balance.toFixed(2)} due` : '₹0.00 due';
+    }
+
     // Default channel: based on tenant.preferred_channel
     let activeChannel = (tenant && tenant.preferred_channel === 'WHATSAPP') ? 'whatsapp' : 'sms_rcs';
 
