@@ -1563,16 +1563,17 @@ textarea:hover::-webkit-scrollbar-thumb {
 .nav-item {
   height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
-  padding: 6px 0;
+  padding: 6px 10px;
   user-select: none;
 }
 
