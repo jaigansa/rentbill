@@ -1675,7 +1675,20 @@
         <!-- Real WhatsApp Chat Screen Preview for Reminders -->
         <div class="reminder-preview-card">
           <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:8px; padding-left:2px;">Preview</div>
-          <div id="reminder-whatsapp-screen" class="whatsapp-chat-container reminder-whatsapp-preview">
+
+          <!-- WhatsApp Message Bubble Only (shown when WhatsApp channel selected) -->
+          <div id="reminder-wa-bubble-only" class="reminder-wa-bubble-only" style="display:none;">
+            <div class="whatsapp-chat-bubble wa-sent">
+              <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
+              <div class="whatsapp-bubble-meta">
+                <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
+                <span class="whatsapp-ticks" title="Delivered">✓✓</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Full WhatsApp Chat Screen (shown when SMS/Email selected for reference) -->
+          <div id="reminder-whatsapp-screen" class="whatsapp-chat-container reminder-whatsapp-preview" style="display:none;">
             <div class="whatsapp-chat-header">
               <div class="whatsapp-chat-avatar">
                 <span id="reminder-wa-avatar-char">T</span>
@@ -1692,9 +1705,9 @@
             </div>
             <div class="whatsapp-chat-body">
               <div class="whatsapp-chat-bubble">
-                <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content"></div>
+                <div class="whatsapp-bubble-text" id="reminder-wa-bubble-content-full"></div>
                 <div class="whatsapp-bubble-meta">
-                  <span class="whatsapp-bubble-time" id="reminder-wa-time">10:00 AM</span>
+                  <span class="whatsapp-bubble-time" id="reminder-wa-time-full">10:00 AM</span>
                   <span class="whatsapp-ticks" title="Delivered">✓✓</span>
                 </div>
               </div>

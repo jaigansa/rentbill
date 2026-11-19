@@ -74,6 +74,7 @@ export const Reminders = {
     const waAvatarEl = document.getElementById('reminder-wa-avatar-char');
     const waTimeEl = document.getElementById('reminder-wa-time');
     const waBubbleEl = document.getElementById('reminder-wa-bubble-content');
+    const waBubbleOnlyEl = document.getElementById('reminder-wa-bubble-only');
     const waScreen = document.getElementById('reminder-whatsapp-screen');
     const rawContainer = document.getElementById('reminder-raw-container');
     const btnViewWa = document.getElementById('btn-reminder-view-wa');
@@ -86,22 +87,25 @@ export const Reminders = {
       waTimeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
     }
 
+    // Sync bubble-only preview
+    if (waBubbleOnlyEl) {
+      const bubbleAvatar = waBubbleOnlyEl.querySelector('.wa-avatar-char');
+      if (bubbleAvatar) bubbleAvatar.textContent = (tenantName[0] || 'T').toUpperCase();
+    }
+
     const setViewMode = (mode) => {
       if (mode === 'whatsapp') {
-        if (btnViewWa) btnViewWa.classList.add('active');
-        if (btnViewRaw) btnViewRaw.classList.remove('active');
-        if (waScreen) waScreen.style.display = 'block';
+        // WhatsApp channel: show ONLY the message bubble
+        if (waBubbleOnlyEl) waBubbleOnlyEl.style.display = 'block';
+        if (waScreen) waScreen.style.display = 'none';
         if (rawContainer) rawContainer.style.display = 'none';
       } else {
-        if (btnViewRaw) btnViewRaw.classList.add('active');
-        if (btnViewWa) btnViewWa.classList.remove('active');
-        if (rawContainer) rawContainer.style.display = 'block';
+        // SMS/Email: show raw text editor
+        if (waBubbleOnlyEl) waBubbleOnlyEl.style.display = 'none';
         if (waScreen) waScreen.style.display = 'none';
+        if (rawContainer) rawContainer.style.display = 'block';
       }
     };
-
-    if (btnViewWa) btnViewWa.onclick = () => setViewMode('whatsapp');
-    if (btnViewRaw) btnViewRaw.onclick = () => setViewMode('raw');
 
     // Default view mode based on channel
     setViewMode(activeChannel === 'whatsapp' ? 'whatsapp' : 'raw');
