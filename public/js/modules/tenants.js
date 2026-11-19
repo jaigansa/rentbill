@@ -11,37 +11,6 @@ export const Tenants = {
     return Math.abs(hash) % 8;
   },
 
-  getAvatarColor(name) {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
-      (!document.documentElement.getAttribute('data-theme') && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    const lightColors = [
-      { bg: '#e8f0fe', text: '#1967d2', border: '#c2e7ff' }, // Blue
-      { bg: '#fce8e6', text: '#c5221f', border: '#fad2cf' }, // Red
-      { bg: '#fef7e0', text: '#b06000', border: '#feefc3' }, // Yellow/Amber
-      { bg: '#e6f4ea', text: '#137333', border: '#ceead6' }, // Green
-      { bg: '#f3e8fd', text: '#8430ce', border: '#e9d2fd' }, // Purple
-      { bg: '#e4f7fb', text: '#007b83', border: '#cbf0f8' }, // Teal
-      { bg: '#feefe3', text: '#af3a03', border: '#fedfc8' }, // Orange
-      { bg: '#fce4ec', text: '#b80672', border: '#f8bbd0' }, // Pink
-    ];
-
-    const darkColors = [
-      { bg: 'rgba(59, 130, 246, 0.22)', text: '#93c5fd', border: 'rgba(59, 130, 246, 0.45)' },
-      { bg: 'rgba(239, 68, 68, 0.22)', text: '#fca5a5', border: 'rgba(239, 68, 68, 0.45)' },
-      { bg: 'rgba(245, 158, 11, 0.22)', text: '#fcd34d', border: 'rgba(245, 158, 11, 0.45)' },
-      { bg: 'rgba(16, 185, 129, 0.22)', text: '#6ee7b7', border: 'rgba(16, 185, 129, 0.45)' },
-      { bg: 'rgba(168, 85, 247, 0.22)', text: '#d8b4fe', border: 'rgba(168, 85, 247, 0.45)' },
-      { bg: 'rgba(20, 184, 166, 0.22)', text: '#5eead4', border: 'rgba(20, 184, 166, 0.45)' },
-      { bg: 'rgba(249, 115, 22, 0.22)', text: '#fdba74', border: 'rgba(249, 115, 22, 0.45)' },
-      { bg: 'rgba(236, 72, 153, 0.22)', text: '#f472b6', border: 'rgba(236, 72, 153, 0.45)' },
-    ];
-
-    const colors = isDark ? darkColors : lightColors;
-    const index = this.getAvatarColorIndex(name);
-    return colors[index];
-  },
-
   getInitials(name) {
     if (!name) return '?';
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -544,10 +513,6 @@ export const Tenants = {
             : (Number(t.opening_arrear) || 0));
 
       const cleanPhone = (t.phone || '').replace(/[^0-9+]/g, '');
-      const waPhone = cleanPhone.replace(/^\+/, '');
-      const waUrl = waPhone ? `https://wa.me/${waPhone}` : '#';
-      const email = (t.email || '').trim();
-
       return `
       <div class="app-card tenant-card tenant-compact-card" id="tenant-card-${t.id}" data-tenant-id="${t.id}">
         <!-- Row 1: Header (Avatar 36px + Info + Micro Contact Icons + 3-Dot Menu) -->
@@ -568,12 +533,6 @@ export const Tenants = {
             ${cleanPhone ? `
               <a href="tel:${cleanPhone}" class="micro-action-btn" title="Call ${t.name}">
                 <i data-lucide="phone"></i>
-              </a>
-              <a href="sms:${cleanPhone}" class="micro-action-btn" title="SMS ${t.name}">
-                <i data-lucide="message-square"></i>
-              </a>
-              <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="micro-action-btn micro-wa" title="WhatsApp ${t.name}">
-                <i data-lucide="message-circle"></i>
               </a>
             ` : ''}
             <div class="card-dropdown">
@@ -743,13 +702,13 @@ export const Tenants = {
         isLongPress = true;
         this.toggleTenantCardExpand(tenantId);
         if (navigator.vibrate) {
-          try { navigator.vibrate(50); } catch (e) {}
+          try { navigator.vibrate(50); } catch {}
         }
       };
 
       const startPress = (e) => {
-        // Ignore if clicking interactive children (links, buttons, dropdowns, quick actions, avatar zoom, financial bar)
-        if (e.target.closest('a, button, .card-dropdown, .card-dropdown-menu, .tenant-quick-actions, .tenant-avatar, .tenant-financial-bar')) {
+        // Ignore if clicking interactive children (links, buttons, dropdowns, avatar zoom)
+        if (e.target.closest('a, button, .card-dropdown, .card-dropdown-menu, .tenant-avatar')) {
           return;
         }
         isLongPress = false;
@@ -1001,10 +960,6 @@ export const Tenants = {
         }
       }
     });
-  },
-
-  async deactivateTenant(id) {
-    await this.openVacantCalculation(id);
   },
 
   async reactivateTenant(id) {

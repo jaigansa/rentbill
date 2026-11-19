@@ -5141,11 +5141,6 @@ select {
   color: var(--primary);
 }
 
-.micro-action-btn.micro-wa i,
-.micro-action-btn.micro-wa [data-lucide] {
-  color: var(--whatsapp);
-}
-
 .micro-action-btn:hover {
   background: var(--surface);
   border-color: var(--border-focus);
